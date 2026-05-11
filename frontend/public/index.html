@@ -966,23 +966,36 @@ textarea{resize:vertical;min-height:80px}
 
 <script>
 // =====================================================
-// SMARTLAB - CONNEXION À LA BASE DE DONNÉES EN LIGNE
+// SMARTLAB - CONNEXION DIRECTE À SUPABASE
 // =====================================================
 
-// Configuration de l'API en ligne
-const API_URL = 'https://smartlab-rqs3.onrender.com/api';
+// Configuration Supabase (vos identifiants)
+const SUPABASE_URL = 'https://xyfhlgdyzzxvhryjvqcm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';  // À remplacer par votre vraie clé
+
+// Fonction pour appeler Supabase
+async function callSupabase(endpoint, options = {}) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+        ...options,
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+    return response.json();
+}
 
 // =====================================================
 // CHARGEMENT DES DONNÉES DYNAMIQUES
 // =====================================================
 
-// Fonction pour charger les essais depuis Supabase
+// Charger les essais depuis Supabase
 async function chargerEssais() {
     try {
-        const response = await fetch(`${API_URL}/essais`);
-        const essais = await response.json();
+        const essais = await callSupabase('essais?select=*&order=id.desc');
         
-        // Mettre à jour le tableau des essais
         const tbody = document.getElementById('essais-tbody');
         if (tbody && essais.length > 0) {
             tbody.innerHTML = essais.map(essai => `
@@ -1006,40 +1019,51 @@ async function chargerEssais() {
     }
 }
 
-// Fonction pour charger les statistiques du dashboard
+// Charger les statistiques
 async function chargerStats() {
     try {
-        const response = await fetch(`${API_URL}/dashboard/stats`);
-        const stats = await response.json();
+        const essais = await callSupabase('essais?select=statut');
         
-        // Mettre à jour les cartes de statistiques
+        const enCours = essais.filter(e => e.statut === 'en_cours').length;
+        const termines = essais.filter(e => e.statut === 'termine').length;
+        
         const statValues = document.querySelectorAll('.stat-value');
         if (statValues.length >= 4) {
-            statValues[0].textContent = stats.essaisEnCours || 47;
-            statValues[1].textContent = stats.essaisComplete || 128;
-            // Les 2 autres restent statiques pour l'instant
+            statValues[0].textContent = enCours || 0;
+            statValues[1].textContent = termines || 0;
         }
         
-        console.log('✅ Statistiques chargées:', stats);
-        return stats;
+        console.log('✅ Statistiques chargées');
+        return { enCours, termines };
     } catch (error) {
-        console.error('❌ Erreur chargement stats:', error);
+        console.error('❌ Erreur stats:', error);
     }
 }
 
-// Fonction pour ajouter un essai
+// Ajouter un essai
 async function ajouterEssai(essaiData) {
     try {
-        const response = await fetch(`${API_URL}/essais`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/essais`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(essaiData)
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                numero: essaiData.numero || 'EA-' + Date.now(),
+                type_essai: essaiData.type_essai || 'Essai générique',
+                client_nom: essaiData.client_nom || 'Client',
+                technicien: essaiData.technicien || 'Technicien',
+                statut: 'en_cours',
+                date_creation: new Date().toISOString()
+            })
         });
         
         const nouvelEssai = await response.json();
         console.log('✅ Essai ajouté:', nouvelEssai);
         
-        // Recharger la liste
         chargerEssais();
         chargerStats();
         
@@ -1062,31 +1086,19 @@ function navigate(id, el) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (el) el.classList.add('active');
+  
   const titles = {
-    dashboard: 'Dashboard',
-    essais: 'Gestion des Essais',
-    echantillons: 'Échantillons',
-    rapports: 'Rapports',
-    equipements: 'Équipements & Étalonnages',
-    personnel: 'Personnel & Habilitations',
-    nonconformites: 'Non-Conformités',
-    audits: 'Audits Qualité',
-    clients: 'Clients',
-    devis: 'Devis & Factures',
-    projets: 'Projets',
-    utilisateurs: 'Utilisateurs',
-    parametres: 'Paramétrage'
+    dashboard: 'Dashboard', essais: 'Gestion des Essais', echantillons: 'Échantillons',
+    rapports: 'Rapports', equipements: 'Équipements & Étalonnages',
+    personnel: 'Personnel & Habilitations', nonconformites: 'Non-Conformités',
+    audits: 'Audits Qualité', clients: 'Clients', devis: 'Devis & Factures',
+    projets: 'Projets', utilisateurs: 'Utilisateurs', parametres: 'Paramétrage'
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
   
-  // Recharger les données quand on change de page
   if (id === 'dashboard') chargerStats();
   if (id === 'essais') chargerEssais();
 }
-
-// =====================================================
-// SIDEBAR TOGGLE
-// =====================================================
 
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
@@ -1099,27 +1111,12 @@ function toggleSidebar() {
   }
 }
 
-// =====================================================
-// MODALS
-// =====================================================
-
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 });
-
-// =====================================================
-// TABS
-// =====================================================
 
 function switchTab(el, targetId) {
   const parent = el.parentElement;
@@ -1127,10 +1124,7 @@ function switchTab(el, targetId) {
   el.classList.add('active');
 }
 
-// =====================================================
-// CHART
-// =====================================================
-
+// Graphique
 const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const vals = [8,12,7,15,11,4,9];
 const maxV = Math.max(...vals);
@@ -1138,74 +1132,35 @@ const chart = document.getElementById('chart1');
 if (chart) {
   chart.innerHTML = days.map((d,i) => {
     const pct = (vals[i]/maxV)*100;
-    return `<div class="bar-wrap">
-      <div class="bar" style="height:${pct}%" title="${vals[i]} essais"></div>
-      <div class="bar-label">${d}</div>
-    </div>`;
+    return `<div class="bar-wrap"><div class="bar" style="height:${pct}%" title="${vals[i]} essais"></div><div class="bar-label">${d}</div></div>`;
   }).join('');
 }
 
-// =====================================================
-// INDICATEUR DE CONNEXION (coin en bas à droite)
-// =====================================================
-
+// Indicateur de connexion
 async function verifierConnexion() {
     try {
-        const response = await fetch(`${API_URL}/health`);
-        const data = await response.json();
+        await callSupabase('essais?limit=1');
         
-        // Ajouter un indicateur vert si connexion OK
         const statusDiv = document.createElement('div');
         statusDiv.id = 'status-indicator';
-        statusDiv.style.cssText = `
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #00d4aa;
-            color: #fff;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-            z-index: 1000;
-            cursor: pointer;
-        `;
-        statusDiv.innerHTML = '✅ Base de données en ligne';
-        statusDiv.onclick = () => console.log('Connecté à', API_URL);
+        statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#00d4aa;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;z-index:1000;cursor:pointer`;
+        statusDiv.innerHTML = '✅ Base de données en ligne (Supabase)';
+        statusDiv.onclick = () => console.log('Connecté à Supabase');
         
-        // Supprimer l'ancien indicateur s'il existe
         const oldStatus = document.getElementById('status-indicator');
         if (oldStatus) oldStatus.remove();
-        
         document.body.appendChild(statusDiv);
-        console.log('✅ Connecté au backend:', API_URL);
+        console.log('✅ Connecté à Supabase');
     } catch (error) {
-        console.error('❌ Backend hors ligne:', error);
-        
-        // Indicateur rouge si hors ligne
         const statusDiv = document.createElement('div');
         statusDiv.id = 'status-indicator';
-        statusDiv.style.cssText = `
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #ef4444;
-            color: #fff;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-            z-index: 1000;
-        `;
+        statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#ef4444;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;z-index:1000`;
         statusDiv.innerHTML = '⚠️ Mode hors ligne - Données locales';
         document.body.appendChild(statusDiv);
     }
 }
 
-// =====================================================
-// SERVICE WORKER (PWA)
-// =====================================================
-
+// Service Worker PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -1214,11 +1169,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// =====================================================
-// INITIALISATION AU CHARGEMENT DE LA PAGE
-// =====================================================
-
-// Charger les données au démarrage
+// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 SMARTLAB - Application démarrée');
     verifierConnexion();
@@ -1226,43 +1177,13 @@ document.addEventListener('DOMContentLoaded', () => {
     chargerEssais();
 });
 
-// Rendre les fonctions accessibles globalement
+// Exporter les fonctions globales
 window.navigate = navigate;
 window.toggleSidebar = toggleSidebar;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.switchTab = switchTab;
 window.ajouterEssai = ajouterEssai;
-
-// =====================================================
-// FORMULAIRE NOUVEL ESSAI
-// =====================================================
-
-// Intercepter la soumission du formulaire de nouvel essai
-document.addEventListener('DOMContentLoaded', () => {
-    const modalFooter = document.querySelector('#modal-nouvel-essai .modal-footer');
-    if (modalFooter) {
-        const btnEnregistrer = modalFooter.querySelector('.btn-primary');
-        if (btnEnregistrer) {
-            btnEnregistrer.onclick = async () => {
-                // Récupérer les valeurs du formulaire
-                const typeEssai = document.querySelector('#modal-nouvel-essai select:first-child')?.value;
-                const client = document.querySelector('#modal-nouvel-essai select:nth-child(3)')?.value;
-                const technicien = document.querySelector('#modal-nouvel-essai select:nth-child(5)')?.value;
-                
-                await ajouterEssai({
-                    numero: 'EA-' + Date.now(),
-                    type_essai: typeEssai || 'Essai générique',
-                    client_nom: client || 'Client',
-                    technicien: technicien || 'Technicien'
-                });
-                
-                closeModal('modal-nouvel-essai');
-                alert('✅ Essai ajouté avec succès !');
-            };
-        }
-    }
-});
 </script>
 </body>
 </html>
