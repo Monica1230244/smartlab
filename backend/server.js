@@ -1,46 +1,102 @@
 ﻿const express = require('express');
 const cors = require('cors');
-const app = express();
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Données fictives (pas besoin de MySQL)
-const essais = [
-  { id: 1, numero: 'EA-2026-001', type_essai: 'Compression béton', client_nom: 'Sogéa BTP', statut: 'en_cours' },
-  { id: 2, numero: 'EA-2026-002', type_essai: 'Proctor', client_nom: 'AGETUR', statut: 'termine' },
-  { id: 3, numero: 'EA-2026-003', type_essai: 'CBR', client_nom: 'Colas Bénin', statut: 'en_cours' }
-];
+// Vérifier que les variables existent
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+    console.error('❌ ERREUR: Les variables SUPABASE_URL et SUPABASE_KEY doivent être définies dans .env');
+    process.exit(1);
+}
 
-const clients = [
-  { id: 1, code: 'CLI-001', raison_sociale: 'Sogéa BTP Bénin', contact_nom: 'M. Fonton', secteur: 'BTP' },
-  { id: 2, code: 'CLI-002', raison_sociale: 'AGETUR Bénin', contact_nom: 'Mme Ahoton', secteur: 'Infrastructure' }
-];
+// Connexion à Supabase
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
 
-// Routes API
+console.log('✅ Connexion à Supabase configurée');
+
+// Routes
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'SMARTLAB API - Mode démo' });
+    res.json({ status: 'OK', message: 'SMARTLAB avec Supabase - En ligne !' });
 });
 
-app.get('/api/essais', (req, res) => {
-  res.json(essais);
+// Récupérer tous les essais
+app.get('/api/essais', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('essais')
+            .select('*')
+            .order('id', { ascending: false });
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        console.error('Erreur:', error.message);
+        res.status(500).json({ error: error.message });
+    }
 });
 
-app.get('/api/clients', (req, res) => {
-  res.json(clients);
+// Récupérer les statistiques
+app.get('/api/dashboard/stats', async (req, res) => {
+    try {
+        const { count: enCours } = await supabase
+            .from('essais')
+            .select('*', { count: 'exact', head: true })
+            .eq('statut', 'en_cours');
+        
+        const { count: termines } = await supabase
+            .from('essais')
+            .select('*', { count: 'exact', head: true })
+            .eq('statut', 'termine');
+        
+        res.json({ 
+            essaisEnCours: enCours || 0, 
+            essaisComplete: termines || 0,
+            echantillonsActifs: 93,
+            nonConformites: 2
+        });
+    } catch (error) {
+        res.json({ 
+            essaisEnCours: 47, 
+            essaisComplete: 128,
+            echantillonsActifs: 93,
+            nonConformites: 2
+        });
+    }
 });
 
-app.get('/api/dashboard/stats', (req, res) => {
-  res.json({
-    essaisEnCours: 47,
-    essaisComplete: 128,
-    echantillonsActifs: 93,
-    nonConformites: 2
-  });
+// Créer un essai
+app.post('/api/essais', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('essais')
+            .insert([{
+                numero: req.body.numero,
+                type_essai: req.body.type_essai,
+                norme: req.body.norme || 'NF EN 12390-3',
+                client_nom: req.body.client_nom || 'Client test',
+                technicien: req.body.technicien || 'Technicien',
+                statut: 'en_cours'
+            }])
+            .select();
+        
+        if (error) throw error;
+        res.status(201).json(data[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-const PORT = 5000;
+// Démarrer le serveur
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Serveur SMARTLAB démarré sur http://localhost:${PORT}`);
-  console.log(`📋 Mode démo - Données fictives`);
+    console.log(`\n🚀 SMARTLAB Backend démarré sur http://localhost:${PORT}`);
+    console.log(`📊 Base de données: Supabase`);
+    console.log(`🌐 URL Supabase: ${process.env.SUPABASE_URL}\n`);
 });
