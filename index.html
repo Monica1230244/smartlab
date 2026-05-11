@@ -965,7 +965,94 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <script>
-// ---- NAVIGATION ----
+// =====================================================
+// SMARTLAB - CONNEXION À LA BASE DE DONNÉES EN LIGNE
+// =====================================================
+
+// Configuration de l'API en ligne
+const API_URL = 'https://smartlab-rqs3.onrender.com/api';
+
+// =====================================================
+// CHARGEMENT DES DONNÉES DYNAMIQUES
+// =====================================================
+
+// Fonction pour charger les essais depuis Supabase
+async function chargerEssais() {
+    try {
+        const response = await fetch(`${API_URL}/essais`);
+        const essais = await response.json();
+        
+        // Mettre à jour le tableau des essais
+        const tbody = document.getElementById('essais-tbody');
+        if (tbody && essais.length > 0) {
+            tbody.innerHTML = essais.map(essai => `
+                <tr onclick="openModal('modal-essai-detail')">
+                    <td><strong>${essai.numero || 'EA-001'}</strong></td>
+                    <td><span class="chip">${essai.type_essai || 'Béton'}</span></td>
+                    <td>${essai.client_nom || 'Client'}</td>
+                    <td>${essai.technicien || 'Technicien'}</td>
+                    <td>${essai.phase || 'Phase 1'}</td>
+                    <td><span class="status ${essai.statut === 'en_cours' ? 'info' : 'success'}">${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</span></td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openModal('modal-essai-detail')">Voir</button></td>
+                </tr>
+            `).join('');
+        }
+        
+        console.log('✅ Essais chargés:', essais.length);
+        return essais;
+    } catch (error) {
+        console.error('❌ Erreur chargement essais:', error);
+        return [];
+    }
+}
+
+// Fonction pour charger les statistiques du dashboard
+async function chargerStats() {
+    try {
+        const response = await fetch(`${API_URL}/dashboard/stats`);
+        const stats = await response.json();
+        
+        // Mettre à jour les cartes de statistiques
+        const statValues = document.querySelectorAll('.stat-value');
+        if (statValues.length >= 4) {
+            statValues[0].textContent = stats.essaisEnCours || 47;
+            statValues[1].textContent = stats.essaisComplete || 128;
+            // Les 2 autres restent statiques pour l'instant
+        }
+        
+        console.log('✅ Statistiques chargées:', stats);
+        return stats;
+    } catch (error) {
+        console.error('❌ Erreur chargement stats:', error);
+    }
+}
+
+// Fonction pour ajouter un essai
+async function ajouterEssai(essaiData) {
+    try {
+        const response = await fetch(`${API_URL}/essais`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(essaiData)
+        });
+        
+        const nouvelEssai = await response.json();
+        console.log('✅ Essai ajouté:', nouvelEssai);
+        
+        // Recharger la liste
+        chargerEssais();
+        chargerStats();
+        
+        return nouvelEssai;
+    } catch (error) {
+        console.error('❌ Erreur ajout essai:', error);
+    }
+}
+
+// =====================================================
+// NAVIGATION
+// =====================================================
+
 const pages = document.querySelectorAll('.page');
 const navItems = document.querySelectorAll('.nav-item');
 
@@ -991,9 +1078,16 @@ function navigate(id, el) {
     parametres: 'Paramétrage'
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
+  
+  // Recharger les données quand on change de page
+  if (id === 'dashboard') chargerStats();
+  if (id === 'essais') chargerEssais();
 }
 
-// ---- SIDEBAR TOGGLE ----
+// =====================================================
+// SIDEBAR TOGGLE
+// =====================================================
+
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const mn = document.getElementById('main');
@@ -1005,27 +1099,38 @@ function toggleSidebar() {
   }
 }
 
-// ---- MODALS ----
+// =====================================================
+// MODALS
+// =====================================================
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
 }
+
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
+
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) overlay.classList.remove('open');
   });
 });
 
-// ---- TABS ----
+// =====================================================
+// TABS
+// =====================================================
+
 function switchTab(el, targetId) {
   const parent = el.parentElement;
   parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
 }
 
-// ---- CHART ----
+// =====================================================
+// CHART
+// =====================================================
+
 const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const vals = [8,12,7,15,11,4,9];
 const maxV = Math.max(...vals);
@@ -1040,14 +1145,124 @@ if (chart) {
   }).join('');
 }
 
-// Enregistrement du Service Worker pour PWA
+// =====================================================
+// INDICATEUR DE CONNEXION (coin en bas à droite)
+// =====================================================
+
+async function verifierConnexion() {
+    try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+        
+        // Ajouter un indicateur vert si connexion OK
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'status-indicator';
+        statusDiv.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #00d4aa;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            z-index: 1000;
+            cursor: pointer;
+        `;
+        statusDiv.innerHTML = '✅ Base de données en ligne';
+        statusDiv.onclick = () => console.log('Connecté à', API_URL);
+        
+        // Supprimer l'ancien indicateur s'il existe
+        const oldStatus = document.getElementById('status-indicator');
+        if (oldStatus) oldStatus.remove();
+        
+        document.body.appendChild(statusDiv);
+        console.log('✅ Connecté au backend:', API_URL);
+    } catch (error) {
+        console.error('❌ Backend hors ligne:', error);
+        
+        // Indicateur rouge si hors ligne
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'status-indicator';
+        statusDiv.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            z-index: 1000;
+        `;
+        statusDiv.innerHTML = '⚠️ Mode hors ligne - Données locales';
+        document.body.appendChild(statusDiv);
+    }
+}
+
+// =====================================================
+// SERVICE WORKER (PWA)
+// =====================================================
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('Service Worker enregistré:', reg))
-      .catch(err => console.log('Erreur SW:', err));
+      .then(reg => console.log('✅ Service Worker enregistré:', reg))
+      .catch(err => console.log('❌ Erreur SW:', err));
   });
 }
+
+// =====================================================
+// INITIALISATION AU CHARGEMENT DE LA PAGE
+// =====================================================
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 SMARTLAB - Application démarrée');
+    verifierConnexion();
+    chargerStats();
+    chargerEssais();
+});
+
+// Rendre les fonctions accessibles globalement
+window.navigate = navigate;
+window.toggleSidebar = toggleSidebar;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.switchTab = switchTab;
+window.ajouterEssai = ajouterEssai;
+
+// =====================================================
+// FORMULAIRE NOUVEL ESSAI
+// =====================================================
+
+// Intercepter la soumission du formulaire de nouvel essai
+document.addEventListener('DOMContentLoaded', () => {
+    const modalFooter = document.querySelector('#modal-nouvel-essai .modal-footer');
+    if (modalFooter) {
+        const btnEnregistrer = modalFooter.querySelector('.btn-primary');
+        if (btnEnregistrer) {
+            btnEnregistrer.onclick = async () => {
+                // Récupérer les valeurs du formulaire
+                const typeEssai = document.querySelector('#modal-nouvel-essai select:first-child')?.value;
+                const client = document.querySelector('#modal-nouvel-essai select:nth-child(3)')?.value;
+                const technicien = document.querySelector('#modal-nouvel-essai select:nth-child(5)')?.value;
+                
+                await ajouterEssai({
+                    numero: 'EA-' + Date.now(),
+                    type_essai: typeEssai || 'Essai générique',
+                    client_nom: client || 'Client',
+                    technicien: technicien || 'Technicien'
+                });
+                
+                closeModal('modal-nouvel-essai');
+                alert('✅ Essai ajouté avec succès !');
+            };
+        }
+    }
+});
 </script>
 </body>
 </html>
