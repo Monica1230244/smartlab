@@ -964,44 +964,43 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<script type="module">
+<script>
 // =====================================================
-// SMARTLAB - SUPABASE SDK (Version corrigée)
+// SMARTLAB - JSON BIN (Base de données en ligne, pas de CORS)
 // =====================================================
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// Configuration JSON Bin
+const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/$2a$10$YnReOZFXy7g2akRXDxzufe8CTq5ctuiWimN6KFSr9rsnPR8agXgc.';  // À remplacer
+const JSONBIN_KEY = '$2a$10$YnReOZFXy7g2akRXDxzufe8CTq5ctuiWimN6KFSr9rsnPR8agXgc.';  // À remplacer
 
-// Configuration Supabase
-const SUPABASE_URL = 'https://xyfhlgdyzxxvhrjyvqcm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_EmGwHAdzu7Ue5h_Yvi2Nw_iZ7AA';
-
-// Création du client
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Remplacer par vos vraies valeurs après création du bin
+// Exemple: const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/65a1b2c3d4e5f6';
+// Exemple: const JSONBIN_KEY = '$2a$10$xxxxx';
 
 // Indicateur de connexion
 const statusDiv = document.createElement('div');
 statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#333;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;z-index:1000;cursor:pointer`;
-statusDiv.innerHTML = '🔄 Connexion Supabase...';
+statusDiv.innerHTML = '🔄 Connexion en cours...';
 document.body.appendChild(statusDiv);
 
-// Test de connexion
+// Tester la connexion
 async function testConnexion() {
     try {
-        const { data, error } = await supabase
-            .from('essais')
-            .select('*')
-            .limit(1);
+        const response = await fetch(`${JSONBIN_URL}/latest`, {
+            headers: { 'X-Master-Key': JSONBIN_KEY }
+        });
         
-        if (error) throw error;
-        
-        statusDiv.style.background = '#00d4aa';
-        statusDiv.innerHTML = '✅ Base de données en ligne (Supabase)';
-        console.log('✅ Connecté à Supabase');
-        return true;
+        if (response.ok) {
+            statusDiv.style.background = '#00d4aa';
+            statusDiv.innerHTML = '✅ Base de données en ligne (JSON Bin)';
+            console.log('✅ Connecté à JSON Bin');
+            return true;
+        }
+        throw new Error('Connexion échouée');
     } catch (error) {
         statusDiv.style.background = '#ef4444';
-        statusDiv.innerHTML = '⚠️ Mode démo - Données locales';
-        console.error('❌ Erreur Supabase:', error.message);
+        statusDiv.innerHTML = '⚠️ Erreur de connexion';
+        console.error('❌ Erreur:', error);
         return false;
     }
 }
@@ -1009,59 +1008,56 @@ async function testConnexion() {
 // Charger les essais
 async function chargerEssais() {
     try {
-        const { data: essais, error } = await supabase
-            .from('essais')
-            .select('*')
-            .order('id', { ascending: false });
+        const response = await fetch(`${JSONBIN_URL}/latest`, {
+            headers: { 'X-Master-Key': JSONBIN_KEY }
+        });
         
-        if (error) throw error;
+        const data = await response.json();
+        const essais = data.record.essais || [];
         
-        console.log('✅ Essais chargés:', essais?.length || 0);
+        console.log('✅ Essais chargés:', essais.length);
         
         const tbody = document.getElementById('essais-tbody');
-        if (tbody && essais && essais.length > 0) {
+        if (tbody && essais.length > 0) {
             tbody.innerHTML = essais.map(essai => `
-                <tr onclick="window.openModal('modal-essai-detail')">
-                    <td><strong>${essai.numero || 'N/A'}</strong></td>
-                    <td><span class="chip">${essai.type_essai || '-'}</span></td>
-                    <td>${essai.client_nom || '-'}</td>
-                    <td>${essai.technicien || '-'}</td>
+                <tr onclick="openModal('modal-essai-detail')">
+                    <td><strong>${essai.numero}</strong></td>
+                    <td><span class="chip">${essai.type_essai}</span></td>
+                    <td>${essai.client_nom}</td>
+                    <td>${essai.technicien}</td>
                     <td>${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</td>
                     <td><span class="status ${essai.statut === 'en_cours' ? 'info' : 'success'}">${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</span></td>
-                    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();window.openModal('modal-essai-detail')">Voir</button></td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openModal('modal-essai-detail')">Voir</button></td>
                  `
             ).join('');
         }
         
-        // Stats dashboard
-        if (essais) {
-            const enCours = essais.filter(e => e.statut === 'en_cours').length;
-            const termines = essais.filter(e => e.statut === 'termine').length;
-            const statValues = document.querySelectorAll('.stat-value');
-            if (statValues.length >= 2) {
-                statValues[0].textContent = enCours;
-                statValues[1].textContent = termines;
-            }
+        // Mettre à jour les stats
+        const stats = data.record.stats || {};
+        const statValues = document.querySelectorAll('.stat-value');
+        if (statValues.length >= 4) {
+            statValues[0].textContent = stats.essaisEnCours || essais.filter(e => e.statut === 'en_cours').length;
+            statValues[1].textContent = stats.essaisComplete || essais.filter(e => e.statut === 'termine').length;
         }
+        
     } catch (error) {
-        console.error('❌ Erreur essais:', error);
+        console.error('❌ Erreur:', error);
     }
 }
 
 // =====================================================
-// NAVIGATION ET UI
+// NAVIGATION (votre code existant)
 // =====================================================
 
 const pages = document.querySelectorAll('.page');
 const navItems = document.querySelectorAll('.nav-item');
 
-window.navigate = function(id, el) {
+function navigate(id, el) {
   pages.forEach(p => p.classList.remove('active'));
   navItems.forEach(n => n.classList.remove('active'));
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (el) el.classList.add('active');
-  
   const titles = {
     dashboard: 'Dashboard', essais: 'Gestion des Essais', echantillons: 'Échantillons',
     rapports: 'Rapports', equipements: 'Équipements', personnel: 'Personnel',
@@ -1070,12 +1066,11 @@ window.navigate = function(id, el) {
     parametres: 'Paramétrage'
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
-  
   if (id === 'dashboard') chargerEssais();
   if (id === 'essais') chargerEssais();
-};
+}
 
-window.toggleSidebar = function() {
+function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const mn = document.getElementById('main');
   if (window.innerWidth <= 768) {
@@ -1084,29 +1079,20 @@ window.toggleSidebar = function() {
     sb.classList.toggle('collapsed');
     mn.style.marginLeft = sb.classList.contains('collapsed') ? '64px' : '240px';
   }
-};
+}
 
-window.openModal = function(id) { 
-    const modal = document.getElementById(id);
-    if (modal) modal.classList.add('open');
-};
-
-window.closeModal = function(id) { 
-    const modal = document.getElementById(id);
-    if (modal) modal.classList.remove('open');
-};
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { 
-      if (e.target === overlay) overlay.classList.remove('open'); 
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 });
 
-window.switchTab = function(el, targetId) {
+function switchTab(el, targetId) {
   const parent = el.parentElement;
   parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-};
+}
 
 // Graphique
 const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
@@ -1129,11 +1115,17 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Démarrage
+// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 SMARTLAB démarré');
     testConnexion().then(() => chargerEssais());
 });
+
+window.navigate = navigate;
+window.toggleSidebar = toggleSidebar;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.switchTab = switchTab;
 </script>
 </body>
 </html>
