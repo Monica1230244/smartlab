@@ -1,87 +1,47 @@
-﻿import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import toast from 'react-hot-toast';
+import React from 'react';
+import ResourcePage from '../components/ResourcePage';
 
-const Essais = () => {
-    const [essais, setEssais] = useState([]);
-    const [loading, setLoading] = useState(true);
+const statusOptions = [
+  { value: 'en_attente', label: 'En attente' },
+  { value: 'en_cours', label: 'En cours' },
+  { value: 'termine', label: 'Termine' }
+];
 
-    useEffect(() => {
-        fetchEssais();
-    }, []);
+const priorityOptions = [
+  { value: 'normale', label: 'Normale' },
+  { value: 'haute', label: 'Haute' },
+  { value: 'urgente', label: 'Urgente' }
+];
 
-    const fetchEssais = async () => {
-        try {
-            const res = await api.get('/essais');
-            setEssais(res.data);
-        } catch (err) {
-            console.error('Erreur:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+const fields = [
+  { name: 'numero', label: 'Numero essai', required: true, placeholder: 'EA-2026-052' },
+  { name: 'type_essai', label: 'Type essai', required: true, placeholder: 'Beton - Rc28' },
+  { name: 'client_nom', label: 'Client', required: true, placeholder: 'Sogea BTP Benin' },
+  { name: 'echantillon', label: 'Echantillon', placeholder: 'ECH-052' },
+  { name: 'technicien', label: 'Technicien', placeholder: 'Nom technicien' },
+  { name: 'date', label: 'Date', type: 'date' },
+  { name: 'statut', label: 'Statut', required: true, options: statusOptions, defaultValue: 'en_cours' },
+  { name: 'priorite', label: 'Priorite', options: priorityOptions, defaultValue: 'normale' }
+];
 
-    return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px' }}>Gestion des Essais</h1>
-                <button
-                    onClick={() => toast.success('Formulaire d\'ajout (simulation)')}
-                    style={{
-                        background: 'var(--accent)',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        cursor: 'pointer'
-                    }}
-                >+ Nouvel Essai</button>
-            </div>
+const columns = [
+  { name: 'numero', label: 'N essai' },
+  { name: 'type_essai', label: 'Type' },
+  { name: 'client_nom', label: 'Client' },
+  { name: 'technicien', label: 'Technicien' },
+  { name: 'statut', label: 'Statut' },
+  { name: 'priorite', label: 'Priorite' }
+];
 
-            <div style={{
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '1px solid var(--border)'
-            }}>
-                {loading ? (
-                    <p>Chargement...</p>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                <th style={{ padding: '12px', textAlign: 'left' }}>N° Essai</th>
-                                <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
-                                <th style={{ padding: '12px', textAlign: 'left' }}>Client</th>
-                                <th style={{ padding: '12px', textAlign: 'left' }}>Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {essais.map((essai) => (
-                                <tr key={essai.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '12px' }}><strong>{essai.numero}</strong></td>
-                                    <td style={{ padding: '12px' }}>{essai.type_essai}</td>
-                                    <td style={{ padding: '12px' }}>{essai.client_nom || '-'}</td>
-                                    <td style={{ padding: '12px' }}>
-                                        <span style={{
-                                            background: essai.statut === 'en_cours' ? 'rgba(59,158,255,0.1)' : 'rgba(0,212,170,0.1)',
-                                            color: essai.statut === 'en_cours' ? 'var(--accent)' : 'var(--accent2)',
-                                            padding: '4px 12px',
-                                            borderRadius: '20px',
-                                            fontSize: '12px'
-                                        }}>{essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-                {!loading && essais.length === 0 && (
-                    <p style={{ textAlign: 'center', color: 'var(--text3)', padding: '40px' }}>Aucun essai trouvé</p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-export default Essais;
+export default function Essais() {
+  return (
+    <ResourcePage
+      title="Gestion des essais"
+      subtitle="Creation, suivi et mise a jour des essais de laboratoire."
+      resource="essais"
+      fields={fields}
+      columns={columns}
+      primaryLabel="Nouvel essai"
+    />
+  );
+}
