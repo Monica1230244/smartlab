@@ -1,0 +1,5 @@
+{
+  "cors": {
+    "allowedOrigins": ["https://monica1230244.github.io"]
+  }
+}
