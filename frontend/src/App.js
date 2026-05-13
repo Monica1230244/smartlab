@@ -10,6 +10,12 @@ import Devis from './pages/Devis';
 import Commandes from './pages/Commandes';
 import Echantillons from './pages/Echantillons';
 import Rapports from './pages/Rapports';
+import Equipements from './pages/Equipements';
+import Audits from './pages/Audits';
+import NonConformites from './pages/NonConformites';
+import Personnel from './pages/Personnel';
+import Processus from './pages/Processus';
+import Parametres from './pages/Parametres';
 
 function App() {
   return (
@@ -23,6 +29,12 @@ function App() {
           <Route path="/commandes" element={<Commandes />} />
           <Route path="/echantillons" element={<Echantillons />} />
           <Route path="/rapports" element={<Rapports />} />
+          <Route path="/equipements" element={<Equipements />} />
+          <Route path="/audits" element={<Audits />} />
+          <Route path="/non-conformites" element={<NonConformites />} />
+          <Route path="/personnel" element={<Personnel />} />
+          <Route path="/processus" element={<Processus />} />
+          <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

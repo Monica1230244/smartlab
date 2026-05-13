@@ -55,6 +55,7 @@ button {
   inset: 0 auto 0 0;
   z-index: 20;
   box-shadow: var(--shadow);
+  overflow-y: auto;
 }
 
 .brand {
@@ -350,7 +351,7 @@ button {
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
 }
 
@@ -594,6 +595,85 @@ tbody tr:hover {
   color: var(--text2);
 }
 
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+
+.infoPanel,
+.processCard {
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.infoPanel h2,
+.processCard h3 {
+  margin: 0 0 8px;
+}
+
+.infoPanel p,
+.processCard p {
+  color: var(--text2);
+  margin: 8px 0 0;
+}
+
+.miniForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.scoreBox {
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  padding: 14px;
+}
+
+.scoreBox strong {
+  color: var(--accent);
+  display: block;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.scoreBox.ok strong {
+  color: var(--accent2);
+}
+
+.scoreBox.ko strong {
+  color: var(--accent4);
+}
+
+.processGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.processCard {
+  min-height: 170px;
+}
+
+.processCard span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -640,7 +720,8 @@ tbody tr:hover {
   }
 
   .statsGrid,
-  .formGrid {
+  .formGrid,
+  .infoGrid {
     grid-template-columns: 1fr;
   }
 

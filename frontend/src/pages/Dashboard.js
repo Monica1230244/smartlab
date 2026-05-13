@@ -18,8 +18,10 @@ function Dashboard() {
   const cards = [
     { label: 'Clients', value: stats.clients, tone: 'blue' },
     { label: 'Essais en cours', value: stats.essaisEnCours, tone: 'green' },
-    { label: 'Devis ouverts', value: stats.devisOuverts, tone: 'amber' },
-    { label: 'Commandes actives', value: stats.commandesActives, tone: 'red' }
+    { label: 'Equipements suivis', value: stats.equipements, tone: 'amber' },
+    { label: 'Habilitations actives', value: stats.habilitations, tone: 'green' },
+    { label: 'Non-conformites', value: stats.nonConformites, tone: 'red' },
+    { label: 'Commandes actives', value: stats.commandesActives, tone: 'blue' }
   ];
 
   return (

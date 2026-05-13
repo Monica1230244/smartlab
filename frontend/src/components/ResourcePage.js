@@ -15,10 +15,10 @@ function formatValue(value, field) {
 
 function statusTone(value) {
   const key = String(value || '').toLowerCase();
-  if (['termine', 'paye', 'livree', 'valide', 'envoye', 'signe'].includes(key)) return 'success';
-  if (['en_cours', 'en_essai', 'controle', 'recu'].includes(key)) return 'info';
-  if (['haute', 'urgente', 'brouillon', 'nouvelle', 'en_attente'].includes(key)) return 'warning';
-  if (['annulee', 'archive'].includes(key)) return 'danger';
+  if (['termine', 'paye', 'livree', 'valide', 'envoye', 'signe', 'conforme', 'accepte', 'active', 'actif', 'realise', 'cloture', 'cloturee'].includes(key)) return 'success';
+  if (['en_cours', 'en_essai', 'controle', 'recu', 'en_traitement', 'planifie', 'en_preparation'].includes(key)) return 'info';
+  if (['haute', 'urgente', 'brouillon', 'nouvelle', 'en_attente', 'a_surveiller', 'en_suivi', 'a_renouveler', 'a_configurer', 'ouverte'].includes(key)) return 'warning';
+  if (['annulee', 'archive', 'hors_service', 'refuse', 'suspendue', 'inactif'].includes(key)) return 'danger';
   return 'neutral';
 }
 

@@ -6,9 +6,15 @@ const navItems = [
   { to: '/essais', label: 'Gestion des Essais', icon: 'ES', badge: '5' },
   { to: '/echantillons', label: 'Echantillons', icon: 'EC' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
+  { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
+  { to: '/equipements', label: 'Equipements', icon: 'EQ' },
+  { to: '/personnel', label: 'Personnel & Habilitations', icon: 'RH' },
+  { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC', badge: '2' },
+  { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
   { to: '/devis', label: 'Devis & Factures', icon: 'DV' },
-  { to: '/commandes', label: 'Commandes', icon: 'CM' }
+  { to: '/commandes', label: 'Commandes', icon: 'CM' },
+  { to: '/parametres', label: 'Parametrage', icon: 'PR' }
 ];
 
 const titles = {
@@ -18,7 +24,13 @@ const titles = {
   '/devis': 'Devis & Factures',
   '/commandes': 'Commandes',
   '/echantillons': 'Echantillons',
-  '/rapports': 'Rapports'
+  '/rapports': 'Rapports',
+  '/equipements': 'Equipements',
+  '/audits': 'Audits Qualite',
+  '/non-conformites': 'Non-Conformites',
+  '/personnel': 'Personnel & Habilitations',
+  '/processus': 'Processus ISO 17025',
+  '/parametres': 'Parametrage'
 };
 
 function Layout() {
@@ -38,14 +50,21 @@ function Layout() {
 
         <div className="navSectionLabel">Principal</div>
         <nav className="navList">
-          {navItems.slice(0, 4).map((item) => (
+          {navItems.slice(0, 5).map((item) => (
+            <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
+          ))}
+        </nav>
+
+        <div className="navSectionLabel">Qualite ISO</div>
+        <nav className="navList">
+          {navItems.slice(5, 10).map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>
 
         <div className="navSectionLabel">Administration</div>
         <nav className="navList">
-          {navItems.slice(4).map((item) => (
+          {navItems.slice(10).map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>

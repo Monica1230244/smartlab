@@ -28,6 +28,28 @@ const seedData = {
   rapports: [
     { id: 'rap-1', numero: 'RAP-2026-046', essai: 'EA-2026-050', client_nom: 'AGETUR Benin', date: today, statut: 'valide' },
     { id: 'rap-2', numero: 'RAP-2026-045', essai: 'EA-2026-049', client_nom: 'MAEP', date: today, statut: 'brouillon' }
+  ],
+  equipements: [
+    { id: 'eq-1', code: 'EQ-001', designation: 'Presse hydraulique 3000 kN', famille: 'Beton', dernier_etalonnage: today, prochain_etalonnage: today, statut: 'conforme' },
+    { id: 'eq-2', code: 'EQ-002', designation: 'Balance de precision', famille: 'Metrologie', dernier_etalonnage: today, prochain_etalonnage: today, statut: 'a_surveiller' }
+  ],
+  audits: [
+    { id: 'aud-1', reference: 'AUD-2026-001', type: 'Audit interne ISO 17025', pilote: 'Responsable Qualite', date: today, statut: 'planifie' },
+    { id: 'aud-2', reference: 'REV-2026-001', type: 'Revue de direction', pilote: 'Directeur General', date: today, statut: 'en_preparation' }
+  ],
+  nonConformites: [
+    { id: 'nc-1', reference: 'NC-2026-002', origine: 'Reception echantillon', description: 'Echantillon recu sans identification complete', responsable: 'Responsable Laboratoire', echeance: today, statut: 'ouverte' },
+    { id: 'nc-2', reference: 'NC-2026-001', origine: 'Reclamation client', description: 'Demande de verification sur rapport transmis', responsable: 'Responsable Technique', echeance: today, statut: 'en_traitement' }
+  ],
+  personnel: [
+    { id: 'per-1', nom: 'ADOHO Cedric', role: 'Operateur technique', atelier: 'Beton', qualification: 'accepte', habilitation: 'active', prochaine_revue: today },
+    { id: 'per-2', nom: 'DOSSOU Rachel', role: 'Responsable Laboratoire', atelier: 'Sols', qualification: 'en_suivi', habilitation: 'active', prochaine_revue: today },
+    { id: 'per-3', nom: 'KASSIN Harrison', role: 'Responsable Technique', atelier: 'Tous domaines', qualification: 'accepte', habilitation: 'active', prochaine_revue: today }
+  ],
+  parametres: [
+    { id: 'par-1', module: 'Normes', valeur: 'ISO/IEC 17025, ISO 9001, ASTM, NF, Eurocode', statut: 'actif' },
+    { id: 'par-2', module: 'Rapports', valeur: 'Modeles PDF/Word personnalisables', statut: 'actif' },
+    { id: 'par-3', module: 'Modules', valeur: 'Technique, Qualite, Administratif, Utilisateurs', statut: 'actif' }
   ]
 };
 
@@ -79,6 +101,9 @@ export function getStats() {
     essaisEnCours: data.essais.filter((item) => item.statut === 'en_cours').length,
     devisOuverts: data.devis.filter((item) => item.statut !== 'paye').length,
     commandesActives: data.commandes.filter((item) => item.statut !== 'livree').length,
+    nonConformites: data.nonConformites.filter((item) => item.statut !== 'cloturee').length,
+    equipements: data.equipements.length,
+    habilitations: data.personnel.filter((item) => item.habilitation === 'active').length,
     chiffreAffaires: data.devis.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
