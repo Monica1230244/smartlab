@@ -964,46 +964,71 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // =====================================================
-// SMARTLAB - CONNEXION SUPABASE (VERSION CORRECTE)
+// SMARTLAB - SUPABASE DIRECT (SANS PROXY)
 // =====================================================
 
-// Configuration - METTEZ VOS VRAIES INFOS ICI
+// Initialisation Supabase
 const SUPABASE_URL = 'https://xyfhlgdyzxxvhrjyvqcm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EmGwHAdzu7Ue5h_Yvi2Nw_iZ7AA';
 
-// Fonction pour appeler l'API Supabase
-async function supabaseFetch(endpoint) {
-    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-    const url = `${proxyUrl}${SUPABASE_URL}/rest/v1/${endpoint}`;
-    
-    const response = await fetch(url, {
-        headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json'
-        }
-    });
-    return response.json();
+// Création du client Supabase
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Indicateur de statut
+const statusDiv = document.createElement('div');
+statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#333;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;z-index:1000;cursor:pointer`;
+statusDiv.innerHTML = '🔄 Connexion en cours...';
+document.body.appendChild(statusDiv);
+
+// Test de connexion
+async function testConnexion() {
+    try {
+        const { data, error } = await supabase
+            .from('essais')
+            .select('*')
+            .limit(1);
+        
+        if (error) throw error;
+        
+        statusDiv.style.background = '#00d4aa';
+        statusDiv.innerHTML = '✅ Base de données en ligne (Supabase)';
+        console.log('✅ Connecté à Supabase');
+        return true;
+    } catch (error) {
+        statusDiv.style.background = '#ef4444';
+        statusDiv.innerHTML = '⚠️ Mode démo - Données locales';
+        console.error('❌ Erreur Supabase:', error.message);
+        return false;
+    }
 }
 
-// Charger les essais
+// =====================================================
+// CHARGEMENT DES DONNÉES
+// =====================================================
+
 async function chargerEssais() {
     try {
-        console.log('Chargement des essais...');
-        const essais = await supabaseFetch('essais?select=*&order=id.desc');
-        console.log('Essais reçus:', essais);
+        const { data: essais, error } = await supabase
+            .from('essais')
+            .select('*')
+            .order('id', { ascending: false });
+        
+        if (error) throw error;
+        
+        console.log('✅ Essais chargés:', essais?.length || 0);
         
         const tbody = document.getElementById('essais-tbody');
-        if (tbody && essais.length > 0) {
+        if (tbody && essais && essais.length > 0) {
             tbody.innerHTML = essais.map(essai => `
                 <tr onclick="openModal('modal-essai-detail')">
                     <td><strong>${essai.numero || 'N/A'}</strong></td>
-                    <td><span class="chip">${essai.type_essai || 'Type'}</span></td>
+                    <td><span class="chip">${essai.type_essai || '-'}</span></td>
                     <td>${essai.client_nom || '-'}</td>
                     <td>${essai.technicien || '-'}</td>
-                    <td>${essai.statut === 'en_cours' ? 'Phase 6' : 'Terminé'}</td>
+                    <td>${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</td>
                     <td><span class="status ${essai.statut === 'en_cours' ? 'info' : 'success'}">${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</span></td>
                     <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openModal('modal-essai-detail')">Voir</button></td>
                  `
@@ -1011,94 +1036,28 @@ async function chargerEssais() {
         } else if (tbody) {
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Aucun essai trouvé</td></tr>';
         }
-    } catch (error) {
-        console.error('Erreur chargement essais:', error);
-        document.getElementById('essais-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:red">❌ Erreur de connexion à la base de données</td></tr>';
-    }
-}
-
-// Charger les statistiques
-async function chargerStats() {
-    try {
-        const essais = await supabaseFetch('essais?select=statut');
-        const enCours = essais.filter(e => e.statut === 'en_cours').length;
-        const termines = essais.filter(e => e.statut === 'termine').length;
         
-        const statValues = document.querySelectorAll('.stat-value');
-        if (statValues.length >= 4) {
-            statValues[0].textContent = enCours;
-            statValues[1].textContent = termines;
+        // Mettre à jour les stats
+        if (essais) {
+            const enCours = essais.filter(e => e.statut === 'en_cours').length;
+            const termines = essais.filter(e => e.statut === 'termine').length;
+            
+            const statValues = document.querySelectorAll('.stat-value');
+            if (statValues.length >= 2) {
+                statValues[0].textContent = enCours;
+                statValues[1].textContent = termines;
+            }
         }
-        console.log(`Stats: ${enCours} en cours, ${termines} terminés`);
-    } catch (error) {
-        console.error('Erreur chargement stats:', error);
-    }
-}
-
-// Ajouter un essai
-async function ajouterEssai(essaiData) {
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/essais`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({
-                numero: 'EA-' + Date.now(),
-                type_essai: essaiData.type_essai,
-                client_nom: essaiData.client_nom,
-                technicien: essaiData.technicien,
-                statut: 'en_cours',
-                created_at: new Date().toISOString()
-            })
-        });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        console.log('✅ Essai ajouté');
-        chargerEssais();
-        chargerStats();
-        alert('✅ Essai ajouté avec succès !');
+        return essais;
     } catch (error) {
-        console.error('Erreur ajout:', error);
-        alert('❌ Erreur lors de l\'ajout');
+        console.error('❌ Erreur chargement essais:', error);
+        return [];
     }
 }
 
 // =====================================================
-// INDICATEUR DE STATUT
-// =====================================================
-
-async function verifierConnexion() {
-    try {
-        await supabaseFetch('essais?limit=1');
-        
-        const statusDiv = document.createElement('div');
-        statusDiv.id = 'status-indicator';
-        statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#00d4aa;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;z-index:1000;cursor:pointer`;
-        statusDiv.innerHTML = '✅ Base de données en ligne (Supabase)';
-        statusDiv.onclick = () => window.open('https://supabase.com', '_blank');
-        
-        const oldStatus = document.getElementById('status-indicator');
-        if (oldStatus) oldStatus.remove();
-        document.body.appendChild(statusDiv);
-        console.log('✅ Connecté à Supabase');
-    } catch (error) {
-        const statusDiv = document.createElement('div');
-        statusDiv.id = 'status-indicator';
-        statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#ef4444;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;z-index:1000;cursor:pointer`;
-        statusDiv.innerHTML = '⚠️ Erreur de connexion - Vérifier Supabase';
-        statusDiv.onclick = () => console.error('Erreur:', error);
-        document.body.appendChild(statusDiv);
-        console.error('❌ Erreur connexion Supabase:', error);
-    }
-}
-
-// =====================================================
-// NAVIGATION (version simplifiée)
+// NAVIGATION ET UI
 // =====================================================
 
 const pages = document.querySelectorAll('.page');
@@ -1120,7 +1079,7 @@ function navigate(id, el) {
   };
   document.getElementById('topbar-title').textContent = titles[id] || id;
   
-  if (id === 'dashboard') chargerStats();
+  if (id === 'dashboard') chargerEssais();
   if (id === 'essais') chargerEssais();
 }
 
@@ -1160,24 +1119,24 @@ if (chart) {
   }).join('');
 }
 
-// Service Worker PWA
+// Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('✅ Service Worker enregistré'))
-      .catch(err => console.log('❌ Erreur SW:', err));
+      .then(reg => console.log('✅ SW enregistré'))
+      .catch(err => console.log('❌ SW:', err));
   });
 }
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 SMARTLAB - Application démarrée');
-    verifierConnexion();
-    chargerStats();
-    chargerEssais();
+    console.log('🚀 SMARTLAB démarré');
+    testConnexion().then(() => {
+        chargerEssais();
+    });
 });
 
-// Exporter les fonctions
+// Export
 window.navigate = navigate;
 window.toggleSidebar = toggleSidebar;
 window.openModal = openModal;
