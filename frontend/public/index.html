@@ -964,23 +964,24 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+<script type="module">
 // =====================================================
-// SMARTLAB - SUPABASE DIRECT (SANS PROXY)
+// SMARTLAB - SUPABASE SDK (Version corrigée)
 // =====================================================
 
-// Initialisation Supabase
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// Configuration Supabase
 const SUPABASE_URL = 'https://xyfhlgdyzxxvhrjyvqcm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EmGwHAdzu7Ue5h_Yvi2Nw_iZ7AA';
 
-// Création du client Supabase
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Création du client
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Indicateur de statut
+// Indicateur de connexion
 const statusDiv = document.createElement('div');
 statusDiv.style.cssText = `position:fixed;bottom:10px;right:10px;background:#333;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;z-index:1000;cursor:pointer`;
-statusDiv.innerHTML = '🔄 Connexion en cours...';
+statusDiv.innerHTML = '🔄 Connexion Supabase...';
 document.body.appendChild(statusDiv);
 
 // Test de connexion
@@ -1005,10 +1006,7 @@ async function testConnexion() {
     }
 }
 
-// =====================================================
-// CHARGEMENT DES DONNÉES
-// =====================================================
-
+// Charger les essais
 async function chargerEssais() {
     try {
         const { data: essais, error } = await supabase
@@ -1023,36 +1021,30 @@ async function chargerEssais() {
         const tbody = document.getElementById('essais-tbody');
         if (tbody && essais && essais.length > 0) {
             tbody.innerHTML = essais.map(essai => `
-                <tr onclick="openModal('modal-essai-detail')">
+                <tr onclick="window.openModal('modal-essai-detail')">
                     <td><strong>${essai.numero || 'N/A'}</strong></td>
                     <td><span class="chip">${essai.type_essai || '-'}</span></td>
                     <td>${essai.client_nom || '-'}</td>
                     <td>${essai.technicien || '-'}</td>
                     <td>${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</td>
                     <td><span class="status ${essai.statut === 'en_cours' ? 'info' : 'success'}">${essai.statut === 'en_cours' ? 'En cours' : 'Terminé'}</span></td>
-                    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openModal('modal-essai-detail')">Voir</button></td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();window.openModal('modal-essai-detail')">Voir</button></td>
                  `
             ).join('');
-        } else if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Aucun essai trouvé</td></tr>';
         }
         
-        // Mettre à jour les stats
+        // Stats dashboard
         if (essais) {
             const enCours = essais.filter(e => e.statut === 'en_cours').length;
             const termines = essais.filter(e => e.statut === 'termine').length;
-            
             const statValues = document.querySelectorAll('.stat-value');
             if (statValues.length >= 2) {
                 statValues[0].textContent = enCours;
                 statValues[1].textContent = termines;
             }
         }
-        
-        return essais;
     } catch (error) {
-        console.error('❌ Erreur chargement essais:', error);
-        return [];
+        console.error('❌ Erreur essais:', error);
     }
 }
 
@@ -1063,7 +1055,7 @@ async function chargerEssais() {
 const pages = document.querySelectorAll('.page');
 const navItems = document.querySelectorAll('.nav-item');
 
-function navigate(id, el) {
+window.navigate = function(id, el) {
   pages.forEach(p => p.classList.remove('active'));
   navItems.forEach(n => n.classList.remove('active'));
   const page = document.getElementById('page-' + id);
@@ -1081,9 +1073,9 @@ function navigate(id, el) {
   
   if (id === 'dashboard') chargerEssais();
   if (id === 'essais') chargerEssais();
-}
+};
 
-function toggleSidebar() {
+window.toggleSidebar = function() {
   const sb = document.getElementById('sidebar');
   const mn = document.getElementById('main');
   if (window.innerWidth <= 768) {
@@ -1092,20 +1084,29 @@ function toggleSidebar() {
     sb.classList.toggle('collapsed');
     mn.style.marginLeft = sb.classList.contains('collapsed') ? '64px' : '240px';
   }
-}
+};
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.openModal = function(id) { 
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('open');
+};
+
+window.closeModal = function(id) { 
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('open');
+};
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  overlay.addEventListener('click', e => { 
+      if (e.target === overlay) overlay.classList.remove('open'); 
+  });
 });
 
-function switchTab(el, targetId) {
+window.switchTab = function(el, targetId) {
   const parent = el.parentElement;
   parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-}
+};
 
 // Graphique
 const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
@@ -1128,20 +1129,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Initialisation
+// Démarrage
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 SMARTLAB démarré');
-    testConnexion().then(() => {
-        chargerEssais();
-    });
+    testConnexion().then(() => chargerEssais());
 });
-
-// Export
-window.navigate = navigate;
-window.toggleSidebar = toggleSidebar;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.switchTab = switchTab;
 </script>
 </body>
 </html>
