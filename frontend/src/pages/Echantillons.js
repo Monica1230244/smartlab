@@ -21,7 +21,7 @@ const columns = [
   { name: 'client_nom', label: 'Client' },
   { name: 'nature', label: 'Nature' },
   { name: 'reception', label: 'Reception' },
-  { name: 'statut', label: 'Statut' }
+  { name: 'statut', label: 'Statut', badge: true }
 ];
 
 export default function Echantillons() {

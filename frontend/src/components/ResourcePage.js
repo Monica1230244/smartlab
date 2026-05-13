@@ -13,6 +13,15 @@ function formatValue(value, field) {
   return value || '-';
 }
 
+function statusTone(value) {
+  const key = String(value || '').toLowerCase();
+  if (['termine', 'paye', 'livree', 'valide', 'envoye', 'signe'].includes(key)) return 'success';
+  if (['en_cours', 'en_essai', 'controle', 'recu'].includes(key)) return 'info';
+  if (['haute', 'urgente', 'brouillon', 'nouvelle', 'en_attente'].includes(key)) return 'warning';
+  if (['annulee', 'archive'].includes(key)) return 'danger';
+  return 'neutral';
+}
+
 function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel }) {
   const [records, setRecords] = useState([]);
   const [query, setQuery] = useState('');
@@ -121,7 +130,15 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
               {filteredRecords.map((record) => (
                 <tr key={record.id}>
                   {columns.map((column) => (
-                    <td key={column.name}>{formatValue(record[column.name], column)}</td>
+                    <td key={column.name}>
+                      {column.badge ? (
+                        <span className={`statusBadge ${statusTone(record[column.name])}`}>
+                          {formatValue(record[column.name], column)}
+                        </span>
+                      ) : (
+                        formatValue(record[column.name], column)
+                      )}
+                    </td>
                   ))}
                   <td>
                     <div className="rowActions">

@@ -29,8 +29,8 @@ const columns = [
   { name: 'type_essai', label: 'Type' },
   { name: 'client_nom', label: 'Client' },
   { name: 'technicien', label: 'Technicien' },
-  { name: 'statut', label: 'Statut' },
-  { name: 'priorite', label: 'Priorite' }
+  { name: 'statut', label: 'Statut', badge: true },
+  { name: 'priorite', label: 'Priorite', badge: true }
 ];
 
 export default function Essais() {

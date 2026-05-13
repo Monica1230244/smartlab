@@ -22,7 +22,7 @@ const columns = [
   { name: 'client_nom', label: 'Client' },
   { name: 'objet', label: 'Objet' },
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
-  { name: 'statut', label: 'Statut' }
+  { name: 'statut', label: 'Statut', badge: true }
 ];
 
 export default function Devis() {

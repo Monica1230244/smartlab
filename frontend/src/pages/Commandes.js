@@ -22,7 +22,7 @@ const columns = [
   { name: 'client_nom', label: 'Client' },
   { name: 'reference_devis', label: 'Devis' },
   { name: 'objet', label: 'Objet' },
-  { name: 'statut', label: 'Statut' }
+  { name: 'statut', label: 'Statut', badge: true }
 ];
 
 export default function Commandes() {

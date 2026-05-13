@@ -21,7 +21,7 @@ const columns = [
   { name: 'essai', label: 'Essai' },
   { name: 'client_nom', label: 'Client' },
   { name: 'date', label: 'Date' },
-  { name: 'statut', label: 'Statut' }
+  { name: 'statut', label: 'Statut', badge: true }
 ];
 
 export default function Rapports() {
