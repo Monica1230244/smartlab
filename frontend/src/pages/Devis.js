@@ -8,14 +8,6 @@ const statusOptions = [
   { value: 'paye', label: 'Paye' }
 ];
 
-const clientOptions = [
-  { value: 'Sogea BTP Benin', label: 'Sogea BTP', fill: { client_whatsapp: '+229 97 12 34 56' } },
-  { value: 'AGETUR Benin', label: 'AGETUR Benin', fill: { client_whatsapp: '+229 95 67 89 01' } },
-  { value: 'Colas Benin', label: 'Colas Benin', fill: { client_whatsapp: '+229 91 44 20 10' } },
-  { value: 'SERHAU-SEM', label: 'SERHAU-SEM', fill: { client_whatsapp: '+229 96 20 44 11' } },
-  { value: 'SONEB', label: 'SONEB', fill: { client_whatsapp: '+229 90 10 22 33' } }
-];
-
 const projetOptions = [
   { value: 'Pont de Cotonou', label: 'Pont de Cotonou' },
   { value: 'Route Nationale 1', label: 'Route Nationale 1' },
@@ -26,7 +18,15 @@ const projetOptions = [
 
 const fields = [
   { name: 'numero', label: 'Numero', required: true, placeholder: 'DEV-2026-032', hidden: true },
-  { name: 'client_nom', label: 'Client', required: true, options: clientOptions },
+  {
+    name: 'client_nom',
+    label: 'Client',
+    required: true,
+    optionsResource: 'clients',
+    optionValue: 'raison_sociale',
+    optionLabel: 'raison_sociale',
+    fillFrom: { client_whatsapp: 'telephone' }
+  },
   { name: 'projet', label: 'Projet', options: projetOptions },
   { name: 'client_whatsapp', label: 'WhatsApp client', required: true, placeholder: '+229 97 12 34 56' },
   { name: 'objet', label: 'Objet du devis', required: true, placeholder: 'Ex: Essais beton - Pont de Cotonou', full: true },

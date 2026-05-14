@@ -213,6 +213,7 @@ function ResourcePage({
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dynamicOptions, setDynamicOptions] = useState({});
 
   const refresh = async () => {
     setLoading(true);
@@ -238,6 +239,32 @@ function ResourcePage({
       window.removeEventListener('smartlab:data-changed', handler);
     };
   }, [resource]);
+
+  useEffect(() => {
+    let active = true;
+    const optionFields = fields.filter((field) => field.optionsResource);
+    if (optionFields.length === 0) return () => {
+      active = false;
+    };
+
+    const loadOptions = async () => {
+      const entries = await Promise.all(optionFields.map(async (field) => {
+        const sourceRecords = await listRecords(field.optionsResource);
+        const options = sourceRecords.map((record) => ({
+          value: record[field.optionValue] || record[field.optionLabel] || record.id,
+          label: record[field.optionLabel] || record[field.optionValue] || record.id,
+          fill: Object.fromEntries(Object.entries(field.fillFrom || {}).map(([target, source]) => [target, record[source] || '']))
+        }));
+        return [field.name, options];
+      }));
+      if (active) setDynamicOptions(Object.fromEntries(entries));
+    };
+
+    loadOptions();
+    return () => {
+      active = false;
+    };
+  }, [fields]);
 
   const filteredRecords = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -496,17 +523,18 @@ function ResourcePage({
                         </div>
                         <div className="lineItemsTotal">Total : <strong>{formatMoney(lineItemsTotal(form[field.name]))} FCFA</strong></div>
                       </div>
-                    ) : field.options ? (
+                    ) : (field.options || dynamicOptions[field.name]) ? (
                       <select
                         value={form[field.name]}
                         required={field.required}
                         onChange={(event) => {
-                          const option = field.options.find((item) => item.value === event.target.value);
+                          const options = field.options || dynamicOptions[field.name] || [];
+                          const option = options.find((item) => item.value === event.target.value);
                           setForm((current) => ({ ...current, [field.name]: event.target.value, ...(option?.fill || {}) }));
                         }}
                       >
                         <option value="">Selectionner</option>
-                        {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {(field.options || dynamicOptions[field.name] || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                     ) : (
                       <input
