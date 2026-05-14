@@ -68,7 +68,7 @@ function headers(extra = {}) {
 }
 
 function resourceUrl(resource) {
-  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=updated_at.desc`;
+  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=updated_at.asc`;
 }
 
 function rowUrl(id) {
@@ -151,7 +151,7 @@ export async function upsertRecord(resource, record) {
   const exists = records.some((item) => item.id === nextRecord.id);
   data[resource] = exists
     ? records.map((item) => (item.id === nextRecord.id ? nextRecord : item))
-    : [nextRecord, ...records];
+    : [...records, nextRecord];
   saveData(data);
 
   try {
