@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'smartlab_mobile_records_v2';
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
-const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhrjyvqcm.supabase.co';
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAdzu7Ue5h_Yvi2Nw_iZ7AA';
 const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
 
 const today = new Date().toISOString().slice(0, 10);
