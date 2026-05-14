@@ -3,7 +3,13 @@ import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
 
 function emptyForm(fields) {
-  return fields.reduce((acc, field) => ({ ...acc, [field.name]: field.defaultValue || '' }), {});
+  return fields.reduce((acc, field) => {
+    const value = field.defaultValue;
+    return {
+      ...acc,
+      [field.name]: Array.isArray(value) ? value.map((item) => ({ ...item })) : value || ''
+    };
+  }, {});
 }
 
 const AUTO_NUMBERING = {
@@ -39,6 +45,9 @@ function formatValue(value, field) {
   if (field.type === 'money') {
     return `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
   }
+  if (field.type === 'lineItems') {
+    return Array.isArray(value) ? `${value.length} ligne(s)` : '-';
+  }
   return value || '-';
 }
 
@@ -69,13 +78,50 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
+function lineItemTotal(item) {
+  return Number(item.quantite || 0) * Number(item.prix_unitaire || 0);
+}
+
+function lineItemsTotal(items) {
+  return (Array.isArray(items) ? items : []).reduce((sum, item) => sum + lineItemTotal(item), 0);
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('fr-FR');
+}
+
 function buildPdfHtml({ title, fields, record }) {
-  const rows = fields.map((field) => `
-    <tr>
-      <th>${escapeHtml(field.label)}</th>
-      <td>${escapeHtml(formatValue(record[field.name], field))}</td>
-    </tr>
-  `).join('');
+  const rows = fields.filter((field) => !field.hidden).map((field) => {
+    if (field.type === 'lineItems') {
+      const items = Array.isArray(record[field.name]) ? record[field.name] : [];
+      const itemRows = items.map((item) => `
+        <tr>
+          <td>${escapeHtml(item.designation)}</td>
+          <td>${escapeHtml(item.quantite)}</td>
+          <td>${escapeHtml(formatMoney(item.prix_unitaire))}</td>
+          <td>${escapeHtml(formatMoney(lineItemTotal(item)))}</td>
+        </tr>
+      `).join('');
+      return `
+        <tr>
+          <th>${escapeHtml(field.label)}</th>
+          <td>
+            <table class="inner">
+              <thead><tr><th>Designation</th><th>Qte</th><th>P.U.</th><th>Total</th></tr></thead>
+              <tbody>${itemRows}</tbody>
+              <tfoot><tr><th colspan="3">Total</th><th>${escapeHtml(formatMoney(lineItemsTotal(items)))} FCFA</th></tr></tfoot>
+            </table>
+          </td>
+        </tr>
+      `;
+    }
+    return `
+      <tr>
+        <th>${escapeHtml(field.label)}</th>
+        <td>${escapeHtml(formatValue(record[field.name], field))}</td>
+      </tr>
+    `;
+  }).join('');
 
   return `
     <!doctype html>
@@ -91,6 +137,8 @@ function buildPdfHtml({ title, fields, record }) {
           table { width: 100%; border-collapse: collapse; margin-top: 18px; }
           th, td { border: 1px solid #dbe4f0; padding: 12px; text-align: left; }
           th { width: 34%; background: #f1f5f9; color: #334155; }
+          table.inner { margin: 0; }
+          table.inner th { width: auto; }
           footer { margin-top: 32px; color: #64748b; font-size: 12px; }
         </style>
       </head>
@@ -214,7 +262,10 @@ function ResourcePage({
 
   const openEdit = (record) => {
     setEditing(record.id);
-    setForm(fields.reduce((acc, field) => ({ ...acc, [field.name]: record[field.name] || '' }), {}));
+    setForm(fields.reduce((acc, field) => {
+      const value = record[field.name];
+      return { ...acc, [field.name]: Array.isArray(value) ? value.map((item) => ({ ...item })) : value || '' };
+    }, {}));
     setModalOpen(true);
   };
 
@@ -248,6 +299,42 @@ function ResourcePage({
     setTimeout(() => doc.print(), 250);
   };
 
+  const updateLineItem = (fieldName, index, key, value) => {
+    setForm((current) => {
+      const items = Array.isArray(current[fieldName]) ? current[fieldName] : [];
+      const nextItems = items.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [key]: value } : item
+      ));
+      return {
+        ...current,
+        [fieldName]: nextItems,
+        montant_ht: lineItemsTotal(nextItems)
+      };
+    });
+  };
+
+  const addLineItem = (fieldName) => {
+    setForm((current) => {
+      const items = Array.isArray(current[fieldName]) ? current[fieldName] : [];
+      return {
+        ...current,
+        [fieldName]: [...items, { designation: '', quantite: 1, prix_unitaire: 0 }]
+      };
+    });
+  };
+
+  const removeLineItem = (fieldName, index) => {
+    setForm((current) => {
+      const items = Array.isArray(current[fieldName]) ? current[fieldName] : [];
+      const nextItems = items.filter((_, itemIndex) => itemIndex !== index);
+      return {
+        ...current,
+        [fieldName]: nextItems,
+        montant_ht: lineItemsTotal(nextItems)
+      };
+    });
+  };
+
   const sendWhatsApp = (record) => {
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
     if (!phone) {
@@ -262,7 +349,11 @@ function ResourcePage({
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    const savedRecord = await upsertRecord(resource, { ...form, id: editing });
+    const lineItemsField = fields.find((field) => field.type === 'lineItems');
+    const payload = lineItemsField
+      ? { ...form, montant_ht: lineItemsTotal(form[lineItemsField.name]) }
+      : form;
+    const savedRecord = await upsertRecord(resource, { ...payload, id: editing });
     setRecords(await listRecords(resource));
     setSaving(false);
     if (savedRecord.__syncError) {
@@ -361,14 +452,57 @@ function ResourcePage({
             </div>
             <div className="modalBody">
               <div className="formGrid">
-                {fields.map((field) => (
+                {fields.filter((field) => !field.hidden).map((field) => (
                   <label key={field.name} className={field.full ? 'full' : ''}>
                     <span>{field.label}</span>
-                    {field.options ? (
+                    {field.type === 'lineItems' ? (
+                      <div className="lineItemsPanel">
+                        <div className="lineItemsHeader">
+                          <strong>Prestations</strong>
+                          <button type="button" className="ghostButton" onClick={() => addLineItem(field.name)}>+ Ligne</button>
+                        </div>
+                        <div className="lineItemsTable">
+                          <div className="lineItemsHead">
+                            <span>Designation</span>
+                            <span>Qte</span>
+                            <span>P.U. (FCFA)</span>
+                            <span>Total</span>
+                            <span></span>
+                          </div>
+                          {(Array.isArray(form[field.name]) ? form[field.name] : []).map((item, index) => (
+                            <div className="lineItemsRow" key={`${field.name}-${index}`}>
+                              <input
+                                value={item.designation || ''}
+                                placeholder="Designation"
+                                onChange={(event) => updateLineItem(field.name, index, 'designation', event.target.value)}
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.quantite || ''}
+                                onChange={(event) => updateLineItem(field.name, index, 'quantite', event.target.value)}
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.prix_unitaire || ''}
+                                onChange={(event) => updateLineItem(field.name, index, 'prix_unitaire', event.target.value)}
+                              />
+                              <strong>{formatMoney(lineItemTotal(item))}</strong>
+                              <button type="button" className="modalClose" onClick={() => removeLineItem(field.name, index)}>x</button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="lineItemsTotal">Total : <strong>{formatMoney(lineItemsTotal(form[field.name]))} FCFA</strong></div>
+                      </div>
+                    ) : field.options ? (
                       <select
                         value={form[field.name]}
                         required={field.required}
-                        onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+                        onChange={(event) => {
+                          const option = field.options.find((item) => item.value === event.target.value);
+                          setForm((current) => ({ ...current, [field.name]: event.target.value, ...(option?.fill || {}) }));
+                        }}
                       >
                         <option value="">Selectionner</option>
                         {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
