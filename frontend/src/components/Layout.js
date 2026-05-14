@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const navItems = [
@@ -35,7 +35,14 @@ const titles = {
 
 function Layout() {
   const [open, setOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState({ status: 'pending', message: 'Connexion Supabase...' });
   const location = useLocation();
+
+  useEffect(() => {
+    const handler = (event) => setSyncStatus(event.detail);
+    window.addEventListener('smartlab:sync-status', handler);
+    return () => window.removeEventListener('smartlab:sync-status', handler);
+  }, []);
 
   return (
     <div className="shell">
@@ -91,7 +98,7 @@ function Layout() {
             <span>RE</span>
             <input placeholder="Rechercher un essai, client, echantillon..." />
           </div>
-          <div className="syncPill">PWA prete</div>
+          <div className={`syncPill ${syncStatus.status}`}>{syncStatus.message}</div>
         </header>
         <section className="content">
           <Outlet />

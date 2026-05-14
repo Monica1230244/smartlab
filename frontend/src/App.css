@@ -286,6 +286,18 @@ button {
   white-space: nowrap;
 }
 
+.syncPill.offline {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: var(--accent4);
+}
+
+.syncPill.pending {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: var(--accent3);
+}
+
 .content {
   padding: 24px;
 }

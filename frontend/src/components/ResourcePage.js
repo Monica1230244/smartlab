@@ -28,14 +28,32 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm(fields));
   const [modalOpen, setModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const refresh = () => setRecords(listRecords(resource));
+  const refresh = async () => {
+    setLoading(true);
+    setRecords(await listRecords(resource));
+    setLoading(false);
+  };
 
   useEffect(() => {
-    refresh();
-    const handler = () => refresh();
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      const nextRecords = await listRecords(resource);
+      if (active) {
+        setRecords(nextRecords);
+        setLoading(false);
+      }
+    };
+    load();
+    const handler = () => load();
     window.addEventListener('smartlab:data-changed', handler);
-    return () => window.removeEventListener('smartlab:data-changed', handler);
+    return () => {
+      active = false;
+      window.removeEventListener('smartlab:data-changed', handler);
+    };
   }, [resource]);
 
   const filteredRecords = useMemo(() => {
@@ -62,17 +80,21 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
     setForm(emptyForm(fields));
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    upsertRecord(resource, { ...form, id: editing });
+    setSaving(true);
+    await upsertRecord(resource, { ...form, id: editing });
+    setRecords(await listRecords(resource));
+    setSaving(false);
     toast.success(editing ? 'Modification enregistree' : 'Ajout enregistre');
     closeModal();
   };
 
-  const remove = (record) => {
+  const remove = async (record) => {
     const label = record.numero || record.code || record.raison_sociale || record.reference || 'cet element';
     if (!window.confirm(`Supprimer ${label} ?`)) return;
-    deleteRecord(resource, record.id);
+    await deleteRecord(resource, record.id);
+    setRecords(await listRecords(resource));
     toast.success('Suppression effectuee');
   };
 
@@ -100,7 +122,7 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
 
       <div className="tablePanel">
         <div className="tableTools">
-          <strong>{records.length} element(s)</strong>
+          <strong>{loading ? 'Chargement...' : `${records.length} element(s)`}</strong>
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher..." />
         </div>
         <div className="tableScroll">
@@ -112,7 +134,7 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((record) => (
+              {!loading && filteredRecords.map((record) => (
                 <tr key={record.id}>
                   {columns.map((column) => (
                     <td key={column.name}>
@@ -133,7 +155,7 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
                   </td>
                 </tr>
               ))}
-              {filteredRecords.length === 0 && (
+              {!loading && filteredRecords.length === 0 && (
                 <tr>
                   <td colSpan={columns.length + 1} className="emptyCell">Aucun resultat</td>
                 </tr>
@@ -179,7 +201,7 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
             </div>
             <div className="modalFooter">
               <button type="button" className="ghostButton" onClick={closeModal}>Annuler</button>
-              <button className="primaryButton" type="submit">{editing ? 'Enregistrer' : 'Ajouter'}</button>
+              <button className="primaryButton" type="submit" disabled={saving}>{saving ? 'Synchronisation...' : editing ? 'Enregistrer' : 'Ajouter'}</button>
             </div>
           </form>
         </div>

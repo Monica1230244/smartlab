@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'smartlab_mobile_records_v2';
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
+const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -55,7 +58,24 @@ const seedData = {
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
-export function loadData() {
+function headers(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
+function resourceUrl(resource) {
+  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=updated_at.desc`;
+}
+
+function rowUrl(id) {
+  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?id=eq.${encodeURIComponent(id)}`;
+}
+
+function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seedData));
@@ -64,38 +84,106 @@ export function loadData() {
   return { ...clone(seedData), ...JSON.parse(saved) };
 }
 
-export function saveData(data) {
+function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   window.dispatchEvent(new CustomEvent('smartlab:data-changed'));
 }
 
-export function listRecords(resource) {
-  return loadData()[resource] || [];
+function saveLocalResource(resource, records) {
+  const data = loadData();
+  data[resource] = records;
+  saveData(data);
 }
 
-export function upsertRecord(resource, record) {
-  const data = loadData();
-  const records = data[resource] || [];
+function emitStatus(status, message) {
+  window.dispatchEvent(new CustomEvent('smartlab:sync-status', { detail: { status, message } }));
+}
+
+async function upsertRemote(resource, record) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+    method: 'POST',
+    headers: headers({ Prefer: 'resolution=merge-duplicates,return=representation' }),
+    body: JSON.stringify({
+      id: record.id,
+      resource,
+      payload: record,
+      updated_at: new Date().toISOString()
+    })
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function seedRemoteResource(resource) {
+  const records = seedData[resource] || [];
+  if (records.length === 0) return;
+  await Promise.all(records.map((record) => upsertRemote(resource, record)));
+}
+
+export async function listRecords(resource) {
+  try {
+    const response = await fetch(resourceUrl(resource), { headers: headers() });
+    if (!response.ok) throw new Error(await response.text());
+    const rows = await response.json();
+    if (rows.length === 0 && (seedData[resource] || []).length > 0) {
+      await seedRemoteResource(resource);
+      return listRecords(resource);
+    }
+    const records = rows.map((row) => row.payload);
+    saveLocalResource(resource, records);
+    emitStatus('online', 'Base Supabase connectee');
+    return records;
+  } catch (error) {
+    console.warn('Supabase indisponible, fallback local:', error);
+    emitStatus('offline', 'Mode local - creez la table smartlab_records dans Supabase');
+    return loadData()[resource] || [];
+  }
+}
+
+export async function upsertRecord(resource, record) {
   const nextRecord = {
     ...record,
     id: record.id || `${resource.slice(0, 3)}-${Date.now()}`
   };
+
+  const data = loadData();
+  const records = data[resource] || [];
   const exists = records.some((item) => item.id === nextRecord.id);
   data[resource] = exists
     ? records.map((item) => (item.id === nextRecord.id ? nextRecord : item))
     : [nextRecord, ...records];
   saveData(data);
+
+  try {
+    await upsertRemote(resource, nextRecord);
+    emitStatus('online', 'Modification synchronisee avec Supabase');
+  } catch (error) {
+    console.warn('Ecriture Supabase echouee:', error);
+    emitStatus('offline', 'Enregistre localement - Supabase non pret');
+  }
+
   return nextRecord;
 }
 
-export function deleteRecord(resource, id) {
+export async function deleteRecord(resource, id) {
   const data = loadData();
   data[resource] = (data[resource] || []).filter((item) => item.id !== id);
   saveData(data);
+
+  try {
+    const response = await fetch(rowUrl(id), { method: 'DELETE', headers: headers() });
+    if (!response.ok) throw new Error(await response.text());
+    emitStatus('online', 'Suppression synchronisee avec Supabase');
+  } catch (error) {
+    console.warn('Suppression Supabase echouee:', error);
+    emitStatus('offline', 'Suppression locale - Supabase non pret');
+  }
 }
 
-export function getStats() {
-  const data = loadData();
+export async function getStats() {
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'nonConformites', 'equipements', 'personnel'];
+  const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
+  const data = Object.fromEntries(entries);
   return {
     clients: data.clients.length,
     essaisEnCours: data.essais.filter((item) => item.statut === 'en_cours').length,

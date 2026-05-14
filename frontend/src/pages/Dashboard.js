@@ -2,17 +2,31 @@ import React, { useEffect, useState } from 'react';
 import { getStats, listRecords } from '../services/localStore';
 
 function Dashboard() {
-  const [stats, setStats] = useState(getStats());
+  const [stats, setStats] = useState({
+    clients: 0,
+    essaisEnCours: 0,
+    equipements: 0,
+    habilitations: 0,
+    nonConformites: 0,
+    commandesActives: 0,
+    chiffreAffaires: 0
+  });
   const [latest, setLatest] = useState([]);
 
   useEffect(() => {
-    const refresh = () => {
-      setStats(getStats());
-      setLatest(listRecords('essais').slice(0, 5));
+    let active = true;
+    const refresh = async () => {
+      const [nextStats, essais] = await Promise.all([getStats(), listRecords('essais')]);
+      if (!active) return;
+      setStats(nextStats);
+      setLatest(essais.slice(0, 5));
     };
     refresh();
     window.addEventListener('smartlab:data-changed', refresh);
-    return () => window.removeEventListener('smartlab:data-changed', refresh);
+    return () => {
+      active = false;
+      window.removeEventListener('smartlab:data-changed', refresh);
+    };
   }, []);
 
   const cards = [
@@ -30,7 +44,7 @@ function Dashboard() {
         <div>
           <p className="eyebrow">Vue generale</p>
           <h2>Gestion operationnelle du laboratoire</h2>
-          <p>Les donnees ajoutees depuis le mobile restent disponibles sur l'appareil et se mettent a jour immediatement dans les ecrans.</p>
+          <p>Les ajouts, modifications et suppressions sont synchronises avec Supabase lorsque la table cloud est disponible.</p>
         </div>
         <strong>{stats.chiffreAffaires.toLocaleString('fr-FR')} FCFA</strong>
       </div>
