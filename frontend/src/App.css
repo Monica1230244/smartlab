@@ -316,6 +316,13 @@ button {
   gap: 12px;
 }
 
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .pageHeader p,
 .welcomeBand p {
   color: var(--text3);
@@ -824,6 +831,10 @@ tbody tr:hover {
   .tableTools {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
   }
 
   .welcomeBand strong {

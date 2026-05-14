@@ -106,6 +106,46 @@ function buildPdfHtml({ title, fields, record }) {
   `;
 }
 
+function buildListPdfHtml({ title, columns, records }) {
+  const headers = columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('');
+  const rows = records.map((record) => `
+    <tr>
+      ${columns.map((column) => `<td>${escapeHtml(formatValue(record[column.name], column))}</td>`).join('')}
+    </tr>
+  `).join('');
+
+  return `
+    <!doctype html>
+    <html lang="fr">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #111827; margin: 28px; }
+          header { border-bottom: 3px solid #3b9eff; padding-bottom: 14px; margin-bottom: 22px; }
+          h1 { margin: 0; font-size: 24px; }
+          p { margin: 6px 0 0; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #dbe4f0; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #f1f5f9; color: #334155; }
+          footer { margin-top: 24px; color: #64748b; font-size: 11px; }
+        </style>
+      </head>
+      <body>
+        <header>
+          <h1>SMARTLAB - ${escapeHtml(title)}</h1>
+          <p>Liste complete - ${records.length} element(s) - ${new Date().toLocaleDateString('fr-FR')}</p>
+        </header>
+        <table>
+          <thead><tr>${headers}</tr></thead>
+          <tbody>${rows || `<tr><td colspan="${columns.length}">Aucune donnee</td></tr>`}</tbody>
+        </table>
+        <footer>Document genere depuis l'application SMARTLAB.</footer>
+      </body>
+    </html>
+  `;
+}
+
 function ResourcePage({
   title,
   subtitle,
@@ -196,6 +236,18 @@ function ResourcePage({
     setTimeout(() => doc.print(), 250);
   };
 
+  const generateListPdf = () => {
+    const doc = window.open('', '_blank');
+    if (!doc) {
+      toast.error('Fenetre PDF bloquee par le navigateur');
+      return;
+    }
+    doc.document.write(buildListPdfHtml({ title, columns, records }));
+    doc.document.close();
+    doc.focus();
+    setTimeout(() => doc.print(), 250);
+  };
+
   const sendWhatsApp = (record) => {
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
     if (!phone) {
@@ -213,7 +265,11 @@ function ResourcePage({
     const savedRecord = await upsertRecord(resource, { ...form, id: editing });
     setRecords(await listRecords(resource));
     setSaving(false);
-    toast.success(editing ? 'Modification enregistree' : 'Ajout enregistre');
+    if (savedRecord.__syncError) {
+      toast.error(`Enregistre localement, mais pas dans Supabase: ${savedRecord.__syncError}`);
+    } else {
+      toast.success(editing ? 'Modification enregistree dans Supabase' : 'Ajout enregistre dans Supabase');
+    }
     if (whatsappOnSubmit) sendWhatsApp(savedRecord);
     closeModal();
   };
@@ -233,7 +289,10 @@ function ResourcePage({
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <button type="button" className="secondaryButton" onClick={openCreate}>+ {primaryLabel}</button>
+        <div className="headerActions">
+          <button type="button" className="ghostButton" onClick={generateListPdf}>Generer PDF liste</button>
+          <button type="button" className="secondaryButton" onClick={openCreate}>+ {primaryLabel}</button>
+        </div>
       </div>
 
       {summaryCards.length > 0 && (
@@ -330,7 +389,9 @@ function ResourcePage({
             </div>
             <div className="modalFooter">
               <button type="button" className="ghostButton" onClick={closeModal}>Annuler</button>
-              <button type="button" className="ghostButton" onClick={() => generatePdf(form)}>Generer PDF</button>
+              {resource === 'devis' && (
+                <button type="button" className="ghostButton" onClick={() => generatePdf(form)}>Generer PDF</button>
+              )}
               <button className="primaryButton" type="submit" disabled={saving}>{saving ? 'Synchronisation...' : editing ? 'Enregistrer' : submitLabel || 'Ajouter'}</button>
             </div>
           </form>
