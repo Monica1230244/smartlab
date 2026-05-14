@@ -11,6 +11,7 @@ const statusOptions = [
 const fields = [
   { name: 'numero', label: 'Numero', required: true, placeholder: 'DEV-2026-032' },
   { name: 'client_nom', label: 'Client', required: true, placeholder: 'Nom client' },
+  { name: 'client_whatsapp', label: 'WhatsApp client', required: true, placeholder: '+229 97 12 34 56' },
   { name: 'objet', label: 'Objet', required: true, placeholder: 'Essais beton chantier...', full: true },
   { name: 'montant_ht', label: 'Montant HT', type: 'money', required: true, placeholder: '1500000' },
   { name: 'date', label: 'Date', type: 'date' },
@@ -20,6 +21,7 @@ const fields = [
 const columns = [
   { name: 'numero', label: 'N' },
   { name: 'client_nom', label: 'Client' },
+  { name: 'client_whatsapp', label: 'WhatsApp' },
   { name: 'objet', label: 'Objet' },
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
   { name: 'statut', label: 'Statut', badge: true }
@@ -42,6 +44,8 @@ export default function Devis() {
       columns={columns}
       primaryLabel="Nouveau Devis"
       summaryCards={summaryCards}
+      submitLabel="Envoyer au client"
+      whatsappOnSubmit
     />
   );
 }

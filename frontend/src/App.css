@@ -465,6 +465,13 @@ select:focus {
   border-color: var(--accent);
 }
 
+input[readonly] {
+  background: rgba(33, 45, 66, 0.72);
+  color: var(--accent2);
+  cursor: not-allowed;
+  font-weight: 800;
+}
+
 select option {
   background: var(--surface2);
 }

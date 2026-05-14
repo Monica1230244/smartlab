@@ -6,6 +6,35 @@ function emptyForm(fields) {
   return fields.reduce((acc, field) => ({ ...acc, [field.name]: field.defaultValue || '' }), {});
 }
 
+const AUTO_NUMBERING = {
+  audits: { field: 'reference', prefix: 'AUD', withYear: true, pad: 3 },
+  clients: { field: 'code', prefix: 'CLI', withYear: false, pad: 3 },
+  commandes: { field: 'numero', prefix: 'CMD', withYear: true, pad: 3 },
+  devis: { field: 'numero', prefix: 'DEV', withYear: true, pad: 3 },
+  echantillons: { field: 'code', prefix: 'ECH', withYear: false, pad: 3 },
+  equipements: { field: 'code', prefix: 'EQ', withYear: false, pad: 3 },
+  essais: { field: 'numero', prefix: 'EA', withYear: true, pad: 3 },
+  nonConformites: { field: 'reference', prefix: 'NC', withYear: true, pad: 3 },
+  rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 }
+};
+
+function nextAutomaticNumber(resource, records) {
+  const config = AUTO_NUMBERING[resource];
+  if (!config) return '';
+  const year = new Date().getFullYear();
+  const escapedPrefix = config.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = config.withYear
+    ? new RegExp(`^${escapedPrefix}-${year}-(\\d+)$`, 'i')
+    : new RegExp(`^${escapedPrefix}-(\\d+)$`, 'i');
+  const max = records.reduce((highest, record) => {
+    const value = String(record[config.field] || '');
+    const match = value.match(pattern);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+  const next = String(max + 1).padStart(config.pad, '0');
+  return config.withYear ? `${config.prefix}-${year}-${next}` : `${config.prefix}-${next}`;
+}
+
 function formatValue(value, field) {
   if (field.type === 'money') {
     return `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
@@ -22,7 +51,72 @@ function statusTone(value) {
   return 'neutral';
 }
 
-function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel, summaryCards = [] }) {
+function normalizeWhatsAppNumber(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('229')) return digits;
+  if (digits.length === 8) return `229${digits}`;
+  if (digits.length === 9 && digits.startsWith('0')) return `229${digits.slice(1)}`;
+  return digits;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function buildPdfHtml({ title, fields, record }) {
+  const rows = fields.map((field) => `
+    <tr>
+      <th>${escapeHtml(field.label)}</th>
+      <td>${escapeHtml(formatValue(record[field.name], field))}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <!doctype html>
+    <html lang="fr">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #111827; margin: 36px; }
+          header { border-bottom: 3px solid #3b9eff; padding-bottom: 16px; margin-bottom: 26px; }
+          h1 { margin: 0; font-size: 26px; }
+          p { margin: 6px 0 0; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+          th, td { border: 1px solid #dbe4f0; padding: 12px; text-align: left; }
+          th { width: 34%; background: #f1f5f9; color: #334155; }
+          footer { margin-top: 32px; color: #64748b; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <header>
+          <h1>SMARTLAB</h1>
+          <p>${escapeHtml(title)} - ${new Date().toLocaleDateString('fr-FR')}</p>
+        </header>
+        <table>${rows}</table>
+        <footer>Document genere depuis l'application SMARTLAB.</footer>
+      </body>
+    </html>
+  `;
+}
+
+function ResourcePage({
+  title,
+  subtitle,
+  resource,
+  fields,
+  columns,
+  primaryLabel,
+  summaryCards = [],
+  submitLabel,
+  whatsappOnSubmit = false
+}) {
   const [records, setRecords] = useState([]);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null);
@@ -64,7 +158,17 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm(fields));
+    const nextForm = emptyForm(fields);
+    const config = AUTO_NUMBERING[resource];
+    if (config && fields.some((field) => field.name === config.field)) {
+      nextForm[config.field] = nextAutomaticNumber(resource, records);
+    }
+    fields.forEach((field) => {
+      if (field.type === 'date' && !nextForm[field.name]) {
+        nextForm[field.name] = new Date().toISOString().slice(0, 10);
+      }
+    });
+    setForm(nextForm);
     setModalOpen(true);
   };
 
@@ -80,13 +184,37 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
     setForm(emptyForm(fields));
   };
 
+  const generatePdf = (record = form) => {
+    const doc = window.open('', '_blank');
+    if (!doc) {
+      toast.error('Fenetre PDF bloquee par le navigateur');
+      return;
+    }
+    doc.document.write(buildPdfHtml({ title, fields, record }));
+    doc.document.close();
+    doc.focus();
+    setTimeout(() => doc.print(), 250);
+  };
+
+  const sendWhatsApp = (record) => {
+    const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
+    if (!phone) {
+      toast.error('Numero WhatsApp client manquant');
+      return;
+    }
+    const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
+    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    await upsertRecord(resource, { ...form, id: editing });
+    const savedRecord = await upsertRecord(resource, { ...form, id: editing });
     setRecords(await listRecords(resource));
     setSaving(false);
     toast.success(editing ? 'Modification enregistree' : 'Ajout enregistre');
+    if (whatsappOnSubmit) sendWhatsApp(savedRecord);
     closeModal();
   };
 
@@ -191,6 +319,7 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
                         type={field.type === 'money' ? 'number' : field.type || 'text'}
                         value={form[field.name]}
                         required={field.required}
+                        readOnly={!editing && AUTO_NUMBERING[resource]?.field === field.name}
                         placeholder={field.placeholder}
                         onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
                       />
@@ -201,7 +330,8 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
             </div>
             <div className="modalFooter">
               <button type="button" className="ghostButton" onClick={closeModal}>Annuler</button>
-              <button className="primaryButton" type="submit" disabled={saving}>{saving ? 'Synchronisation...' : editing ? 'Enregistrer' : 'Ajouter'}</button>
+              <button type="button" className="ghostButton" onClick={() => generatePdf(form)}>Generer PDF</button>
+              <button className="primaryButton" type="submit" disabled={saving}>{saving ? 'Synchronisation...' : editing ? 'Enregistrer' : submitLabel || 'Ajouter'}</button>
             </div>
           </form>
         </div>

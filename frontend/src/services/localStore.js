@@ -17,8 +17,8 @@ const seedData = {
     { id: 'ess-3', numero: 'EA-2026-049', type_essai: 'Analyse eau', client_nom: 'MAEP', echantillon: 'ECH-049', technicien: 'C. Adoho', statut: 'en_attente', priorite: 'normale', date: today }
   ],
   devis: [
-    { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', objet: 'Pont Cotonou - 24 essais beton', montant_ht: 1850000, date: today, statut: 'envoye' },
-    { id: 'dev-2', numero: 'FAC-2026-028', client_nom: 'AGETUR Benin', objet: 'Route nationale - essais sols', montant_ht: 1240000, date: today, statut: 'paye' }
+    { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', objet: 'Pont Cotonou - 24 essais beton', montant_ht: 1850000, date: today, statut: 'envoye' },
+    { id: 'dev-2', numero: 'FAC-2026-028', client_nom: 'AGETUR Benin', client_whatsapp: '+229 95 67 89 01', objet: 'Route nationale - essais sols', montant_ht: 1240000, date: today, statut: 'paye' }
   ],
   commandes: [
     { id: 'cmd-1', numero: 'CMD-2026-014', client_nom: 'Sogea BTP Benin', reference_devis: 'DEV-2026-031', objet: 'Campagne beton phase 2', date: today, statut: 'en_cours' },
@@ -84,15 +84,15 @@ function loadData() {
   return { ...clone(seedData), ...JSON.parse(saved) };
 }
 
-function saveData(data) {
+function saveData(data, notify = true) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent('smartlab:data-changed'));
+  if (notify) window.dispatchEvent(new CustomEvent('smartlab:data-changed'));
 }
 
 function saveLocalResource(resource, records) {
   const data = loadData();
   data[resource] = records;
-  saveData(data);
+  saveData(data, false);
 }
 
 function emitStatus(status, message) {
