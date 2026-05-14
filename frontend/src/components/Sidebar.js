@@ -12,8 +12,16 @@ const Sidebar = () => {
         { path: '/', icon: '📊', label: 'Dashboard' },
         { path: '/essais', icon: '🧪', label: 'Essais' },
         { path: '/clients', icon: '🏢', label: 'Clients' },
+        { path: '/devis', icon: '📋', label: 'Devis' },
+        { path: '/commandes', icon: '🧾', label: 'Commandes' },
+        { path: '/projets', icon: '📁', label: 'Projets' },
         { path: '/equipements', icon: '⚙️', label: 'Équipements' },
+        { path: '/echantillons', icon: '📦', label: 'Échantillons' },
         { path: '/rapports', icon: '📄', label: 'Rapports' },
+        { path: '/personnel', icon: '👥', label: 'Personnel' },
+        { path: '/audits', icon: '✅', label: 'Audits' },
+        { path: '/non-conformites', icon: '⚠️', label: 'Non-conformités' },
+        { path: '/parametres', icon: '🔧', label: 'Paramètres' },
     ];
 
     return (

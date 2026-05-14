@@ -24,6 +24,10 @@ const seedData = {
     { id: 'cmd-1', numero: 'CMD-2026-014', client_nom: 'Sogea BTP Benin', reference_devis: 'DEV-2026-031', objet: 'Campagne beton phase 2', date: today, statut: 'en_cours' },
     { id: 'cmd-2', numero: 'CMD-2026-013', client_nom: 'Colas Benin', reference_devis: 'FAC-2026-025', objet: 'Voirie Akpakpa', date: today, statut: 'livree' }
   ],
+  projets: [
+    { id: 'prj-1', reference: 'PRJ-2026-001', nom: 'Pont de Cotonou', client_nom: 'Sogea BTP Benin', localisation: 'Cotonou', date_debut: today, date_fin_prevue: today, budget: 4800000, responsable: 'Responsable Technique', statut: 'en_cours', description: 'Campagne essais beton et acier.' },
+    { id: 'prj-2', reference: 'PRJ-2026-002', nom: 'Route Nationale 1', client_nom: 'AGETUR Benin', localisation: 'RN1', date_debut: today, date_fin_prevue: today, budget: 3200000, responsable: 'Responsable Laboratoire', statut: 'validation', description: 'Essais sols et granulometrie.' }
+  ],
   echantillons: [
     { id: 'ech-1', code: 'ECH-051', client_nom: 'Sogea BTP Benin', nature: 'Beton C25', reception: today, statut: 'recu' },
     { id: 'ech-2', code: 'ECH-050', client_nom: 'AGETUR Benin', nature: 'Sol lateritique', reception: today, statut: 'en_essai' }
@@ -183,7 +187,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'nonConformites', 'equipements', 'personnel'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

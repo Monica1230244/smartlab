@@ -16,6 +16,7 @@ import NonConformites from './pages/NonConformites';
 import Personnel from './pages/Personnel';
 import Processus from './pages/Processus';
 import Parametres from './pages/Parametres';
+import Projets from './pages/Projets';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/non-conformites" element={<NonConformites />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/processus" element={<Processus />} />
+          <Route path="/projets" element={<Projets />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

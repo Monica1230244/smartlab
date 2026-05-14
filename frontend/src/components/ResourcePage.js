@@ -21,6 +21,7 @@ const AUTO_NUMBERING = {
   equipements: { field: 'code', prefix: 'EQ', withYear: false, pad: 3 },
   essais: { field: 'numero', prefix: 'EA', withYear: true, pad: 3 },
   nonConformites: { field: 'reference', prefix: 'NC', withYear: true, pad: 3 },
+  projets: { field: 'reference', prefix: 'PRJ', withYear: true, pad: 3 },
   rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 }
 };
 
