@@ -26,14 +26,22 @@ const columns = [
 ];
 
 export default function Devis() {
+  const summaryCards = [
+    { label: 'Devis en attente', value: '8', tone: 'blue' },
+    { label: 'CA facture 2026', value: '13.1M', tone: 'green', note: 'FCFA' },
+    { label: 'En attente paiement', value: '2.8M', tone: 'amber', note: 'FCFA' },
+    { label: 'Impayes', value: '480k', tone: 'red', note: 'FCFA' }
+  ];
+
   return (
     <ResourcePage
-      title="Devis et factures"
-      subtitle="Ajout, modification et suppression des devis et factures."
+      title="Devis & Factures"
+      subtitle="Gestion administrative et commerciale"
       resource="devis"
       fields={fields}
       columns={columns}
-      primaryLabel="Nouveau devis"
+      primaryLabel="Nouveau Devis"
+      summaryCards={summaryCards}
     />
   );
 }

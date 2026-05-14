@@ -22,11 +22,12 @@ function statusTone(value) {
   return 'neutral';
 }
 
-function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel }) {
+function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel, summaryCards = [] }) {
   const [records, setRecords] = useState([]);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm(fields));
+  const [modalOpen, setModalOpen] = useState(false);
 
   const refresh = () => setRecords(listRecords(resource));
 
@@ -43,29 +44,36 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
     return records.filter((record) => Object.values(record).join(' ').toLowerCase().includes(needle));
   }, [records, query]);
 
-  const startCreate = () => {
+  const openCreate = () => {
     setEditing(null);
     setForm(emptyForm(fields));
+    setModalOpen(true);
   };
 
-  const startEdit = (record) => {
+  const openEdit = (record) => {
     setEditing(record.id);
     setForm(fields.reduce((acc, field) => ({ ...acc, [field.name]: record[field.name] || '' }), {}));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+    setForm(emptyForm(fields));
   };
 
   const submit = (event) => {
     event.preventDefault();
     upsertRecord(resource, { ...form, id: editing });
-    toast.success(editing ? 'Modification enregistrée' : 'Ajout enregistré');
-    startCreate();
+    toast.success(editing ? 'Modification enregistree' : 'Ajout enregistre');
+    closeModal();
   };
 
   const remove = (record) => {
-    const label = record.numero || record.code || record.raison_sociale || 'cet element';
+    const label = record.numero || record.code || record.raison_sociale || record.reference || 'cet element';
     if (!window.confirm(`Supprimer ${label} ?`)) return;
     deleteRecord(resource, record.id);
-    toast.success('Suppression effectuée');
+    toast.success('Suppression effectuee');
   };
 
   return (
@@ -75,43 +83,20 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <button className="secondaryButton" onClick={startCreate}>Nouveau</button>
+        <button type="button" className="secondaryButton" onClick={openCreate}>+ {primaryLabel}</button>
       </div>
 
-      <form className="editorPanel" onSubmit={submit}>
-        <div className="formHeader">
-          <strong>{editing ? 'Modifier' : primaryLabel}</strong>
-          {editing && <button type="button" className="ghostButton" onClick={startCreate}>Annuler</button>}
-        </div>
-        <div className="formGrid">
-          {fields.map((field) => (
-            <label key={field.name} className={field.full ? 'full' : ''}>
-              <span>{field.label}</span>
-              {field.options ? (
-                <select
-                  value={form[field.name]}
-                  required={field.required}
-                  onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
-                >
-                  <option value="">Selectionner</option>
-                  {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={field.type === 'money' ? 'number' : field.type || 'text'}
-                  value={form[field.name]}
-                  required={field.required}
-                  placeholder={field.placeholder}
-                  onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
-                />
-              )}
-            </label>
+      {summaryCards.length > 0 && (
+        <div className="statsGrid">
+          {summaryCards.map((card) => (
+            <div className={`statCard ${card.tone || 'blue'}`} key={card.label}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              {card.note && <small>{card.note}</small>}
+            </div>
           ))}
         </div>
-        <div className="formActions">
-          <button className="primaryButton" type="submit">{editing ? 'Enregistrer' : 'Ajouter'}</button>
-        </div>
-      </form>
+      )}
 
       <div className="tablePanel">
         <div className="tableTools">
@@ -142,8 +127,8 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
                   ))}
                   <td>
                     <div className="rowActions">
-                      <button className="ghostButton" onClick={() => startEdit(record)}>Modifier</button>
-                      <button className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+                      <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                      <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
                     </div>
                   </td>
                 </tr>
@@ -157,6 +142,48 @@ function ResourcePage({ title, subtitle, resource, fields, columns, primaryLabel
           </table>
         </div>
       </div>
+
+      {modalOpen && (
+        <div className="modalOverlay" onMouseDown={(event) => event.target === event.currentTarget && closeModal()}>
+          <form className="modalPanel" onSubmit={submit}>
+            <div className="modalHeader">
+              <strong>{editing ? 'Modifier' : primaryLabel}</strong>
+              <button type="button" className="modalClose" onClick={closeModal}>x</button>
+            </div>
+            <div className="modalBody">
+              <div className="formGrid">
+                {fields.map((field) => (
+                  <label key={field.name} className={field.full ? 'full' : ''}>
+                    <span>{field.label}</span>
+                    {field.options ? (
+                      <select
+                        value={form[field.name]}
+                        required={field.required}
+                        onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+                      >
+                        <option value="">Selectionner</option>
+                        {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type === 'money' ? 'number' : field.type || 'text'}
+                        value={form[field.name]}
+                        required={field.required}
+                        placeholder={field.placeholder}
+                        onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modalFooter">
+              <button type="button" className="ghostButton" onClick={closeModal}>Annuler</button>
+              <button className="primaryButton" type="submit">{editing ? 'Enregistrer' : 'Ajouter'}</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
