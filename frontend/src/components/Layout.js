@@ -36,10 +36,21 @@ const titles = {
   '/parametres': 'Parametrage'
 };
 
+const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
+
+function loadDismissedNotifications() {
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY) || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+
 function Layout() {
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState(loadDismissedNotifications);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -64,6 +75,7 @@ function Layout() {
 
       if (essaisEnCours > 0) {
         nextNotifications.push({
+          id: `essais-en-cours-${essaisEnCours}`,
           title: "Objets d'essais",
           message: `${essaisEnCours} objet${essaisEnCours > 1 ? 's' : ''} en cours.`,
           path: '/essais'
@@ -72,6 +84,7 @@ function Layout() {
 
       if (devisOuverts > 0) {
         nextNotifications.push({
+          id: `devis-ouverts-${devisOuverts}`,
           title: 'Devis',
           message: `${devisOuverts} devis a suivre ou a relancer.`,
           path: '/devis'
@@ -80,6 +93,7 @@ function Layout() {
 
       if (commandesActives > 0) {
         nextNotifications.push({
+          id: `commandes-actives-${commandesActives}`,
           title: 'Commandes',
           message: `${commandesActives} commande${commandesActives > 1 ? 's' : ''} active${commandesActives > 1 ? 's' : ''}.`,
           path: '/commandes'
@@ -88,6 +102,7 @@ function Layout() {
 
       if (nonConformitesOuvertes > 0) {
         nextNotifications.push({
+          id: `non-conformites-ouvertes-${nonConformitesOuvertes}`,
           title: 'Non-Conformites',
           message: `${nonConformitesOuvertes} non-conformite${nonConformitesOuvertes > 1 ? 's' : ''} non cloturee${nonConformitesOuvertes > 1 ? 's' : ''}.`,
           tone: 'offline',
@@ -95,7 +110,7 @@ function Layout() {
         });
       }
 
-      setNotifications(nextNotifications);
+      setNotifications(nextNotifications.filter((notification) => !dismissedNotificationIds.includes(notification.id)));
     };
 
     refreshNotifications();
@@ -105,7 +120,7 @@ function Layout() {
       cancelled = true;
       window.removeEventListener('smartlab:data-changed', refreshNotifications);
     };
-  }, []);
+  }, [dismissedNotificationIds]);
 
   const toggleNotifications = async () => {
     setNotificationsOpen((value) => !value);
@@ -128,9 +143,13 @@ function Layout() {
     }
   };
 
-  const openNotification = (path) => {
+  const openNotification = (notification) => {
+    const nextDismissedIds = Array.from(new Set([...dismissedNotificationIds, notification.id]));
+    localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(nextDismissedIds));
+    setDismissedNotificationIds(nextDismissedIds);
+    setNotifications((current) => current.filter((item) => item.id !== notification.id));
     setNotificationsOpen(false);
-    navigate(path);
+    navigate(notification.path);
   };
 
   return (
@@ -211,8 +230,8 @@ function Layout() {
                     <button
                       type="button"
                       className="notificationItem"
-                      key={notification.title}
-                      onClick={() => openNotification(notification.path)}
+                      key={notification.id}
+                      onClick={() => openNotification(notification)}
                     >
                       <span className={`notificationDot ${notification.tone || 'info'}`} />
                       <div>
