@@ -272,6 +272,10 @@ function ResourcePage({
     return records.filter((record) => Object.values(record).join(' ').toLowerCase().includes(needle));
   }, [records, query]);
 
+  const renderedSummaryCards = useMemo(() => (
+    typeof summaryCards === 'function' ? summaryCards(records) : summaryCards
+  ), [records, summaryCards]);
+
   const openCreate = () => {
     setEditing(null);
     const nextForm = emptyForm(fields);
@@ -414,9 +418,9 @@ function ResourcePage({
         </div>
       </div>
 
-      {summaryCards.length > 0 && (
+      {renderedSummaryCards.length > 0 && (
         <div className="statsGrid">
-          {summaryCards.map((card) => (
+          {renderedSummaryCards.map((card) => (
             <div className={`statCard ${card.tone || 'blue'}`} key={card.label}>
               <span>{card.label}</span>
               <strong>{card.value}</strong>

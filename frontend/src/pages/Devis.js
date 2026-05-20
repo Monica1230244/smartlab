@@ -54,18 +54,31 @@ const columns = [
   { name: 'statut', label: 'Statut', badge: true }
 ];
 
+function formatCompactMoney(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}M`;
+  if (amount >= 1000) return `${Math.round(amount / 1000).toLocaleString('fr-FR')}k`;
+  return amount.toLocaleString('fr-FR');
+}
+
 export default function Devis() {
-  const summaryCards = [
-    { label: 'Devis en attente', value: '8', tone: 'blue' },
-    { label: 'CA facture 2026', value: '13.1M', tone: 'green', note: 'FCFA' },
-    { label: 'En attente paiement', value: '2.8M', tone: 'amber', note: 'FCFA' },
-    { label: 'Impayes', value: '480k', tone: 'red', note: 'FCFA' }
-  ];
+  const summaryCards = (records) => {
+    const totalAmount = records.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
+    const sent = records.filter((item) => item.statut === 'envoye').length;
+    const signed = records.filter((item) => item.statut === 'signe').length;
+    const drafts = records.filter((item) => item.statut === 'brouillon').length;
+    return [
+      { label: 'Total devis', value: records.length, tone: 'blue' },
+      { label: 'Montant total', value: formatCompactMoney(totalAmount), tone: 'green', note: 'FCFA' },
+      { label: 'Devis envoyes', value: sent, tone: 'amber' },
+      { label: 'Devis signes', value: signed, tone: 'green', note: `${drafts} brouillon(s)` }
+    ];
+  };
 
   return (
     <ResourcePage
-      title="Devis & Factures"
-      subtitle="Gestion administrative et commerciale"
+      title="Devis"
+      subtitle="Creation, suivi et envoi des devis aux clients."
       resource="devis"
       fields={fields}
       columns={columns}
