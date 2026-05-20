@@ -166,7 +166,6 @@ function Layout() {
                 ))}
               </div>
             )}
-            <div className={`syncPill ${syncStatus.status}`}>{syncStatus.message}</div>
           </div>
         </header>
         <section className="content">
