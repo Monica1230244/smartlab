@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
@@ -45,17 +45,22 @@ function Layout() {
     {
       title: 'Connexion base',
       message: syncStatus.message,
-      tone: syncStatus.status
+      tone: syncStatus.status,
+      path: '/'
     },
     {
       title: 'Devis',
-      message: 'Les nouveaux devis envoyes aux clients apparaitront ici.'
+      message: 'Les nouveaux devis envoyes aux clients apparaitront ici.',
+      path: '/devis'
     },
     {
       title: 'Commandes',
-      message: 'Les commandes creees depuis un devis seront signalees ici.'
+      message: 'Les commandes creees depuis un devis seront signalees ici.',
+      path: '/commandes'
     }
   ];
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handler = (event) => setSyncStatus(event.detail);
@@ -82,6 +87,11 @@ function Layout() {
         body: 'Les notifications SMARTLAB sont activees.'
       });
     }
+  };
+
+  const openNotification = (path) => {
+    setNotificationsOpen(false);
+    navigate(path);
   };
 
   return (
@@ -146,7 +156,7 @@ function Layout() {
               aria-label="Notifications"
               aria-expanded={notificationsOpen}
             >
-              NT
+              <span className="notificationIcon" aria-hidden="true">🔔</span>
               <span>{notifications.length}</span>
             </button>
             {notificationsOpen && (
@@ -156,13 +166,18 @@ function Layout() {
                   <small>{notifications.length} alertes</small>
                 </div>
                 {notifications.map((notification) => (
-                  <div className="notificationItem" key={notification.title}>
+                  <button
+                    type="button"
+                    className="notificationItem"
+                    key={notification.title}
+                    onClick={() => openNotification(notification.path)}
+                  >
                     <span className={`notificationDot ${notification.tone || 'info'}`} />
                     <div>
                       <strong>{notification.title}</strong>
                       <p>{notification.message}</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

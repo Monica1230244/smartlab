@@ -311,6 +311,14 @@ button {
   text-align: center;
 }
 
+.notificationButton .notificationIcon {
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  min-width: auto;
+  padding: 0;
+}
+
 .notificationsPanel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -340,9 +348,21 @@ button {
 
 .notificationItem {
   align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
   display: flex;
   gap: 10px;
+  text-align: left;
   padding: 12px 2px 6px;
+  width: 100%;
+}
+
+.notificationItem:hover {
+  background: rgba(59, 158, 255, 0.07);
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .notificationItem strong {
