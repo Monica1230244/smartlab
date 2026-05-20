@@ -541,7 +541,7 @@ function ResourcePage({
                         type={field.type === 'money' ? 'number' : field.type || 'text'}
                         value={form[field.name]}
                         required={field.required}
-                        readOnly={!editing && AUTO_NUMBERING[resource]?.field === field.name}
+                        readOnly={field.readOnly || (!editing && AUTO_NUMBERING[resource]?.field === field.name)}
                         placeholder={field.placeholder}
                         onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
                       />

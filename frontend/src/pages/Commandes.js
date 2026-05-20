@@ -9,20 +9,45 @@ const statusOptions = [
 ];
 
 const fields = [
-  { name: 'numero', label: 'Numero commande', required: true, placeholder: 'CMD-2026-015' },
-  { name: 'client_nom', label: 'Client', required: true, placeholder: 'Nom client' },
-  { name: 'reference_devis', label: 'Reference devis', placeholder: 'DEV-2026-032' },
-  { name: 'objet', label: 'Objet', required: true, placeholder: 'Campagne essais...', full: true },
-  { name: 'date', label: 'Date', type: 'date' },
-  { name: 'statut', label: 'Statut', options: statusOptions, defaultValue: 'nouvelle' }
+  { name: 'numero', label: 'Numero commande', required: true, placeholder: 'CMD-2026-015', hidden: true },
+  {
+    name: 'reference_devis',
+    label: 'Reference devis',
+    required: true,
+    optionsResource: 'devis',
+    optionValue: 'numero',
+    optionLabel: 'numero',
+    fillFrom: {
+      client_nom: 'client_nom',
+      client_whatsapp: 'client_whatsapp',
+      projet: 'projet',
+      prestations: 'prestations',
+      montant_ht: 'montant_ht'
+    }
+  },
+  { name: 'client_nom', label: 'Client concerne', required: true, placeholder: 'Client du devis', readOnly: true },
+  { name: 'client_whatsapp', label: 'WhatsApp client', placeholder: '+229 ...', readOnly: true },
+  { name: 'projet', label: 'Projet', placeholder: 'Projet du devis', readOnly: true },
+  {
+    name: 'prestations',
+    label: 'Prestations',
+    type: 'lineItems',
+    full: true,
+    defaultValue: [
+      { designation: '', quantite: 1, prix_unitaire: 0 }
+    ]
+  },
+  { name: 'montant_ht', label: 'Montant HT', type: 'money', required: true, hidden: true },
+  { name: 'date', label: 'Date', type: 'date', hidden: true },
+  { name: 'statut', label: 'Statut', options: statusOptions, defaultValue: 'nouvelle', hidden: true }
 ];
 
 const columns = [
   { name: 'numero', label: 'N commande' },
-  { name: 'client_nom', label: 'Client' },
   { name: 'reference_devis', label: 'Devis' },
-  { name: 'objet', label: 'Objet' },
-  { name: 'statut', label: 'Statut', badge: true }
+  { name: 'client_nom', label: 'Client' },
+  { name: 'projet', label: 'Projet' },
+  { name: 'montant_ht', label: 'Montant', type: 'money' }
 ];
 
 export default function Commandes() {

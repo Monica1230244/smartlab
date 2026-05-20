@@ -17,12 +17,12 @@ const seedData = {
     { id: 'ess-3', numero: 'EA-2026-049', type_essai: 'Analyse eau', client_nom: 'MAEP', echantillon: 'ECH-049', technicien: 'C. Adoho', statut: 'en_attente', priorite: 'normale', date: today }
   ],
   devis: [
-    { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', objet: 'Pont Cotonou - 24 essais beton', montant_ht: 1850000, date: today, statut: 'envoye' },
-    { id: 'dev-2', numero: 'FAC-2026-028', client_nom: 'AGETUR Benin', client_whatsapp: '+229 95 67 89 01', objet: 'Route nationale - essais sols', montant_ht: 1240000, date: today, statut: 'paye' }
+    { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', projet: 'Pont de Cotonou', objet: 'Pont Cotonou - 24 essais beton', prestations: [{ designation: 'Compression beton Rc28 (lot 3)', quantite: 8, prix_unitaire: 150000 }, { designation: 'Proctor modifie', quantite: 4, prix_unitaire: 200000 }], montant_ht: 2000000, date: today, statut: 'envoye' },
+    { id: 'dev-2', numero: 'FAC-2026-028', client_nom: 'AGETUR Benin', client_whatsapp: '+229 95 67 89 01', projet: 'Route Nationale 1', objet: 'Route nationale - essais sols', prestations: [{ designation: 'Essais sols', quantite: 4, prix_unitaire: 310000 }], montant_ht: 1240000, date: today, statut: 'paye' }
   ],
   commandes: [
-    { id: 'cmd-1', numero: 'CMD-2026-014', client_nom: 'Sogea BTP Benin', reference_devis: 'DEV-2026-031', objet: 'Campagne beton phase 2', date: today, statut: 'en_cours' },
-    { id: 'cmd-2', numero: 'CMD-2026-013', client_nom: 'Colas Benin', reference_devis: 'FAC-2026-025', objet: 'Voirie Akpakpa', date: today, statut: 'livree' }
+    { id: 'cmd-1', numero: 'CMD-2026-014', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', projet: 'Pont de Cotonou', reference_devis: 'DEV-2026-031', prestations: [{ designation: 'Compression beton Rc28 (lot 3)', quantite: 8, prix_unitaire: 150000 }], montant_ht: 1200000, date: today, statut: 'en_cours' },
+    { id: 'cmd-2', numero: 'CMD-2026-013', client_nom: 'Colas Benin', client_whatsapp: '+229 91 44 20 10', projet: 'Voirie Akpakpa', reference_devis: 'FAC-2026-025', prestations: [{ designation: 'Controle voirie', quantite: 1, prix_unitaire: 900000 }], montant_ht: 900000, date: today, statut: 'livree' }
   ],
   projets: [
     { id: 'prj-1', reference: 'PRJ-2026-001', nom: 'Pont de Cotonou', client_nom: 'Sogea BTP Benin', localisation: 'Cotonou', date_debut: today, date_fin_prevue: today, budget: 4800000, responsable: 'Responsable Technique', statut: 'en_cours', description: 'Campagne essais beton et acier.' },
