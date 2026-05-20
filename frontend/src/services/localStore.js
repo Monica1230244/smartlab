@@ -12,9 +12,9 @@ const seedData = {
     { id: 'cli-3', code: 'CLI-003', raison_sociale: 'Colas Benin', contact_nom: 'M. Mensah', telephone: '+229 91 44 20 10', secteur: 'Voirie', email: 'projets@colas.bj' }
   ],
   essais: [
-    { id: 'ess-1', numero: 'EA-2026-051', type_essai: 'Beton - Rc28', client_nom: 'Sogea BTP Benin', echantillon: 'ECH-051', technicien: 'A. Cisse', statut: 'en_cours', priorite: 'haute', date: today },
-    { id: 'ess-2', numero: 'EA-2026-050', type_essai: 'Proctor modifie', client_nom: 'AGETUR Benin', echantillon: 'ECH-050', technicien: 'R. Dossou', statut: 'termine', priorite: 'normale', date: today },
-    { id: 'ess-3', numero: 'EA-2026-049', type_essai: 'Analyse eau', client_nom: 'MAEP', echantillon: 'ECH-049', technicien: 'C. Adoho', statut: 'en_attente', priorite: 'normale', date: today }
+    { id: 'ess-1', numero: 'EA-2026-051', nature: 'Beton C25', provenance: 'Pont de Cotonou', date_prelevement: today, essai_a_realiser: 'RC28', client_nom: 'Sogea BTP Benin', commentaire: 'Eprouvettes prelevees sur chantier.', technicien: 'A. Cisse', statut: 'en_cours', priorite: 'haute', date: today },
+    { id: 'ess-2', numero: 'EA-2026-050', nature: 'Sol lateritique', provenance: 'Route Nationale 1', date_prelevement: today, essai_a_realiser: 'OPM', client_nom: 'AGETUR Benin', commentaire: 'Materiau de couche de forme.', technicien: 'R. Dossou', statut: 'termine', priorite: 'normale', date: today },
+    { id: 'ess-3', numero: 'EA-2026-049', nature: 'Eau de forage', provenance: 'Forage MAEP', date_prelevement: today, essai_a_realiser: 'AE', client_nom: 'MAEP', commentaire: 'Prelevement conserve en flacon sterile.', technicien: 'C. Adoho', statut: 'en_attente', priorite: 'normale', date: today }
   ],
   devis: [
     { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', projet: 'Pont de Cotonou', objet: 'Pont Cotonou - 24 essais beton', prestations: [{ designation: 'Compression beton Rc28 (lot 3)', quantite: 8, prix_unitaire: 150000 }, { designation: 'Proctor modifie', quantite: 4, prix_unitaire: 200000 }], montant_ht: 2000000, date: today, statut: 'envoye' },
