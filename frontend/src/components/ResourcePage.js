@@ -47,7 +47,12 @@ function formatValue(value, field) {
     return `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
   }
   if (field.type === 'lineItems') {
-    return Array.isArray(value) ? `${value.length} ligne(s)` : '-';
+    if (!Array.isArray(value) || value.length === 0) return '-';
+    return value.map((item) => {
+      const quantity = item.quantite || 0;
+      const price = Number(item.prix_unitaire || 0).toLocaleString('fr-FR');
+      return `${item.designation || 'Prestation'} (${quantity} x ${price})`;
+    }).join(' | ');
   }
   return value || '-';
 }

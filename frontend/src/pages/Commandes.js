@@ -47,6 +47,7 @@ const columns = [
   { name: 'reference_devis', label: 'Devis' },
   { name: 'client_nom', label: 'Client' },
   { name: 'projet', label: 'Projet' },
+  { name: 'prestations', label: 'Prestations', type: 'lineItems' },
   { name: 'montant_ht', label: 'Montant', type: 'money' }
 ];
 

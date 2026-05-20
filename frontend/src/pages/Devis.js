@@ -50,6 +50,7 @@ const columns = [
   { name: 'client_nom', label: 'Client' },
   { name: 'projet', label: 'Projet' },
   { name: 'objet', label: 'Objet' },
+  { name: 'prestations', label: 'Prestations', type: 'lineItems' },
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
   { name: 'statut', label: 'Statut', badge: true }
 ];
