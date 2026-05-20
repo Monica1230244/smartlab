@@ -11,8 +11,10 @@ const Topbar = () => {
     const getTitle = () => {
         const path = location.pathname;
         if (path === '/') return 'Dashboard';
-        if (path === '/essais') return 'Gestion des Essais';
+        if (path === '/essais') return "Objets d'essais";
         if (path === '/clients') return 'Clients';
+        if (path === '/devis') return 'Devis';
+        if (path === '/projets') return 'Projets';
         if (path === '/equipements') return 'Équipements';
         if (path === '/rapports') return 'Rapports';
         return 'SMARTLAB';

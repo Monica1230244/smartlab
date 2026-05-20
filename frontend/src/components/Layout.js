@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
-  { to: '/essais', label: 'Gestion des Essais', icon: 'ES', badge: '5' },
+  { to: '/essais', label: "Objets d'essais", icon: 'OE', badge: '5' },
   { to: '/echantillons', label: 'Echantillons', icon: 'EC' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
@@ -12,17 +12,19 @@ const navItems = [
   { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC', badge: '2' },
   { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
-  { to: '/devis', label: 'Devis & Factures', icon: 'DV' },
+  { to: '/devis', label: 'Devis', icon: 'DV' },
   { to: '/commandes', label: 'Commandes', icon: 'CM' },
+  { to: '/projets', label: 'Projets', icon: 'PJ' },
   { to: '/parametres', label: 'Parametrage', icon: 'PR' }
 ];
 
 const titles = {
   '/': 'Dashboard',
   '/clients': 'Clients',
-  '/essais': 'Gestion des Essais',
-  '/devis': 'Devis & Factures',
+  '/essais': "Objets d'essais",
+  '/devis': 'Devis',
   '/commandes': 'Commandes',
+  '/projets': 'Projets',
   '/echantillons': 'Echantillons',
   '/rapports': 'Rapports',
   '/equipements': 'Equipements',
@@ -35,14 +37,52 @@ const titles = {
 
 function Layout() {
   const [open, setOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState({ status: 'pending', message: 'Connexion Supabase...' });
   const location = useLocation();
+
+  const notifications = [
+    {
+      title: 'Connexion base',
+      message: syncStatus.message,
+      tone: syncStatus.status
+    },
+    {
+      title: 'Devis',
+      message: 'Les nouveaux devis envoyes aux clients apparaitront ici.'
+    },
+    {
+      title: 'Commandes',
+      message: 'Les commandes creees depuis un devis seront signalees ici.'
+    }
+  ];
 
   useEffect(() => {
     const handler = (event) => setSyncStatus(event.detail);
     window.addEventListener('smartlab:sync-status', handler);
     return () => window.removeEventListener('smartlab:sync-status', handler);
   }, []);
+
+  const toggleNotifications = async () => {
+    setNotificationsOpen((value) => !value);
+
+    if (!('Notification' in window)) {
+      return;
+    }
+
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        return;
+      }
+    }
+
+    if (Notification.permission === 'granted') {
+      new Notification('SMARTLAB', {
+        body: 'Les notifications SMARTLAB sont activees.'
+      });
+    }
+  };
 
   return (
     <div className="shell">
@@ -98,7 +138,36 @@ function Layout() {
             <span>RE</span>
             <input placeholder="Rechercher un essai, client, echantillon..." />
           </div>
-          <div className={`syncPill ${syncStatus.status}`}>{syncStatus.message}</div>
+          <div className="topbarActions">
+            <button
+              type="button"
+              className="notificationButton"
+              onClick={toggleNotifications}
+              aria-label="Notifications"
+              aria-expanded={notificationsOpen}
+            >
+              NT
+              <span>{notifications.length}</span>
+            </button>
+            {notificationsOpen && (
+              <div className="notificationsPanel">
+                <div className="notificationsHeader">
+                  <strong>Notifications</strong>
+                  <small>{notifications.length} alertes</small>
+                </div>
+                {notifications.map((notification) => (
+                  <div className="notificationItem" key={notification.title}>
+                    <span className={`notificationDot ${notification.tone || 'info'}`} />
+                    <div>
+                      <strong>{notification.title}</strong>
+                      <p>{notification.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={`syncPill ${syncStatus.status}`}>{syncStatus.message}</div>
+          </div>
         </header>
         <section className="content">
           <Outlet />

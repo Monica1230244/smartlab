@@ -274,8 +274,112 @@ button {
   outline: none;
 }
 
-.syncPill {
+.topbarActions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
   margin-left: auto;
+  position: relative;
+}
+
+.notificationButton {
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.notificationButton:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notificationButton span {
+  background: var(--accent4);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 10px;
+  min-width: 18px;
+  padding: 2px 6px;
+  text-align: center;
+}
+
+.notificationsPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  min-width: 310px;
+  padding: 12px;
+  position: absolute;
+  right: 0;
+  top: 44px;
+  z-index: 50;
+}
+
+.notificationsHeader {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 2px 10px;
+}
+
+.notificationsHeader small {
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.notificationItem {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  padding: 12px 2px 6px;
+}
+
+.notificationItem strong {
+  color: var(--text);
+  display: block;
+  font-size: 13px;
+}
+
+.notificationItem p {
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+
+.notificationDot {
+  background: var(--accent);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 8px;
+  margin-top: 5px;
+  width: 8px;
+}
+
+.notificationDot.online {
+  background: var(--accent2);
+}
+
+.notificationDot.offline {
+  background: var(--accent4);
+}
+
+.notificationDot.pending {
+  background: var(--accent3);
+}
+
+.syncPill {
   background: rgba(0, 212, 170, 0.12);
   border: 1px solid rgba(0, 212, 170, 0.28);
   color: var(--accent2);
@@ -880,9 +984,21 @@ tbody tr:hover {
     padding: 10px 14px;
   }
 
-  .topbarSearch,
+  .topbarSearch {
+    display: none;
+  }
+
+  .topbarActions {
+    margin-left: auto;
+  }
+
   .syncPill {
     display: none;
+  }
+
+  .notificationsPanel {
+    min-width: min(310px, calc(100vw - 28px));
+    right: -4px;
   }
 
   .content {
