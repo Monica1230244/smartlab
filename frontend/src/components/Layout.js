@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { listRecords } from '../services/localStore';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
-  { to: '/essais', label: "Objets d'essais", icon: 'OE', badge: '5' },
+  { to: '/essais', label: "Objets d'essais", icon: 'OE' },
   { to: '/echantillons', label: 'Echantillons', icon: 'EC' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/equipements', label: 'Equipements', icon: 'EQ' },
   { to: '/personnel', label: 'Personnel & Habilitations', icon: 'RH' },
-  { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC', badge: '2' },
+  { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC' },
   { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
   { to: '/devis', label: 'Devis', icon: 'DV' },
@@ -38,34 +39,72 @@ const titles = {
 function Layout() {
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [syncStatus, setSyncStatus] = useState({ status: 'pending', message: 'Connexion Supabase...' });
+  const [notifications, setNotifications] = useState([]);
   const location = useLocation();
-
-  const notifications = [
-    {
-      title: 'Connexion base',
-      message: syncStatus.message,
-      tone: syncStatus.status,
-      path: '/'
-    },
-    {
-      title: 'Devis',
-      message: 'Les nouveaux devis envoyes aux clients apparaitront ici.',
-      path: '/devis'
-    },
-    {
-      title: 'Commandes',
-      message: 'Les commandes creees depuis un devis seront signalees ici.',
-      path: '/commandes'
-    }
-  ];
-
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handler = (event) => setSyncStatus(event.detail);
-    window.addEventListener('smartlab:sync-status', handler);
-    return () => window.removeEventListener('smartlab:sync-status', handler);
+    let cancelled = false;
+
+    const refreshNotifications = async () => {
+      const [essais, devis, commandes, nonConformites] = await Promise.all([
+        listRecords('essais'),
+        listRecords('devis'),
+        listRecords('commandes'),
+        listRecords('nonConformites')
+      ]);
+
+      if (cancelled) return;
+
+      const nextNotifications = [];
+      const essaisEnCours = essais.filter((item) => item.statut === 'en_cours').length;
+      const devisOuverts = devis.filter((item) => !['paye', 'accepte', 'annule'].includes(item.statut)).length;
+      const commandesActives = commandes.filter((item) => item.statut !== 'livree').length;
+      const nonConformitesOuvertes = nonConformites.filter((item) => item.statut !== 'cloturee').length;
+
+      if (essaisEnCours > 0) {
+        nextNotifications.push({
+          title: "Objets d'essais",
+          message: `${essaisEnCours} objet${essaisEnCours > 1 ? 's' : ''} en cours.`,
+          path: '/essais'
+        });
+      }
+
+      if (devisOuverts > 0) {
+        nextNotifications.push({
+          title: 'Devis',
+          message: `${devisOuverts} devis a suivre ou a relancer.`,
+          path: '/devis'
+        });
+      }
+
+      if (commandesActives > 0) {
+        nextNotifications.push({
+          title: 'Commandes',
+          message: `${commandesActives} commande${commandesActives > 1 ? 's' : ''} active${commandesActives > 1 ? 's' : ''}.`,
+          path: '/commandes'
+        });
+      }
+
+      if (nonConformitesOuvertes > 0) {
+        nextNotifications.push({
+          title: 'Non-Conformites',
+          message: `${nonConformitesOuvertes} non-conformite${nonConformitesOuvertes > 1 ? 's' : ''} non cloturee${nonConformitesOuvertes > 1 ? 's' : ''}.`,
+          tone: 'offline',
+          path: '/non-conformites'
+        });
+      }
+
+      setNotifications(nextNotifications);
+    };
+
+    refreshNotifications();
+    window.addEventListener('smartlab:data-changed', refreshNotifications);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('smartlab:data-changed', refreshNotifications);
+    };
   }, []);
 
   const toggleNotifications = async () => {
@@ -157,7 +196,7 @@ function Layout() {
               aria-expanded={notificationsOpen}
             >
               <span className="notificationIcon" aria-hidden="true">🔔</span>
-              <span>{notifications.length}</span>
+              {notifications.length > 0 && <span>{notifications.length}</span>}
             </button>
             {notificationsOpen && (
               <div className="notificationsPanel">
@@ -165,20 +204,24 @@ function Layout() {
                   <strong>Notifications</strong>
                   <small>{notifications.length} alertes</small>
                 </div>
-                {notifications.map((notification) => (
-                  <button
-                    type="button"
-                    className="notificationItem"
-                    key={notification.title}
-                    onClick={() => openNotification(notification.path)}
-                  >
-                    <span className={`notificationDot ${notification.tone || 'info'}`} />
-                    <div>
-                      <strong>{notification.title}</strong>
-                      <p>{notification.message}</p>
-                    </div>
-                  </button>
-                ))}
+                {notifications.length === 0 ? (
+                  <div className="notificationEmpty">Aucune notification active</div>
+                ) : (
+                  notifications.map((notification) => (
+                    <button
+                      type="button"
+                      className="notificationItem"
+                      key={notification.title}
+                      onClick={() => openNotification(notification.path)}
+                    >
+                      <span className={`notificationDot ${notification.tone || 'info'}`} />
+                      <div>
+                        <strong>{notification.title}</strong>
+                        <p>{notification.message}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>

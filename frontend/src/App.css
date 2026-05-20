@@ -378,6 +378,13 @@ button {
   margin: 3px 0 0;
 }
 
+.notificationEmpty {
+  color: var(--text3);
+  font-size: 13px;
+  padding: 18px 6px 8px;
+  text-align: center;
+}
+
 .notificationDot {
   background: var(--accent);
   border-radius: 50%;
