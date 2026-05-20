@@ -28,11 +28,11 @@ const fields = [
   { name: 'nature', label: 'Nature', required: true, placeholder: 'Beton C25, sol lateritique, eau...' },
   { name: 'provenance', label: 'Provenance', required: true, placeholder: 'Chantier, carriere, forage...' },
   { name: 'date_prelevement', label: 'Date de prelevement', type: 'date' },
+  { name: 'date', label: 'Date de reception', type: 'date' },
   { name: 'essai_a_realiser', label: 'Essai a realiser', required: true, options: essaiOptions },
   { name: 'client_nom', label: 'Client', required: true, placeholder: 'Sogea BTP Benin' },
   { name: 'commentaire', label: 'Commentaire', placeholder: 'Observations, conditions de prelevement...', full: true },
   { name: 'technicien', label: 'Technicien', placeholder: 'Nom technicien' },
-  { name: 'date', label: 'Date', type: 'date', hidden: true },
   { name: 'statut', label: 'Statut', required: true, options: statusOptions, defaultValue: 'en_cours' },
   { name: 'priorite', label: 'Priorite', options: priorityOptions, defaultValue: 'normale' }
 ];
@@ -41,6 +41,8 @@ const columns = [
   { name: 'numero', label: 'N essai' },
   { name: 'nature', label: 'Nature' },
   { name: 'provenance', label: 'Provenance' },
+  { name: 'date_prelevement', label: 'Prelevement' },
+  { name: 'date', label: 'Reception' },
   { name: 'essai_a_realiser', label: 'Essai' },
   { name: 'client_nom', label: 'Client' },
   { name: 'statut', label: 'Statut', badge: true },

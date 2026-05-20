@@ -10,7 +10,7 @@ const Sidebar = () => {
 
     const navItems = [
         { path: '/', icon: '📊', label: 'Dashboard' },
-        { path: '/essais', icon: '🧪', label: 'Essais' },
+        { path: '/essais', icon: '🧪', label: "Objets d'essais" },
         { path: '/clients', icon: '🏢', label: 'Clients' },
         { path: '/devis', icon: '📋', label: 'Devis' },
         { path: '/commandes', icon: '🧾', label: 'Commandes' },
