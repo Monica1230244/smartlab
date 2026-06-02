@@ -48,6 +48,8 @@ const seedData = {
     { id: 'nc-1', reference: 'NC-2026-002', origine: 'Reception echantillon', description: 'Echantillon recu sans identification complete', responsable: 'Responsable Laboratoire', echeance: today, statut: 'ouverte' },
     { id: 'nc-2', reference: 'NC-2026-001', origine: 'Reclamation client', description: 'Demande de verification sur rapport transmis', responsable: 'Responsable Technique', echeance: today, statut: 'en_traitement' }
   ],
+  notifications: [],
+  activityLogs: [],
   personnel: [
     { id: 'per-1', nom: 'ADOHO Cedric', role: 'Operateur technique', atelier: 'Beton', qualification: 'accepte', habilitation: 'active', prochaine_revue: today },
     { id: 'per-2', nom: 'DOSSOU Rachel', role: 'Responsable Laboratoire', atelier: 'Sols', qualification: 'en_suivi', habilitation: 'active', prochaine_revue: today },
@@ -187,7 +189,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel', 'notifications'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

@@ -134,9 +134,58 @@ function buildValidationCode(numero) {
   return `QR-${cleanNumber}-${suffix}`;
 }
 
+function buildValidationExpiry() {
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + 30);
+  return expiry.toISOString();
+}
+
 function buildValidationUrl(code) {
   const base = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, '');
   return `${base}/devis?validation=${encodeURIComponent(code || '')}`;
+}
+
+function currentRole() {
+  return localStorage.getItem('smartlab_current_role') || 'responsable_appel';
+}
+
+function roleLabel(role) {
+  const labels = {
+    responsable_appel: 'Responsable des appels',
+    responsable_technique: 'Responsable technique',
+    dg: 'DG',
+    responsable_labo: 'Responsable labo',
+    receptionniste: 'Receptionniste',
+    client: 'Client'
+  };
+  return labels[role] || role || 'Utilisateur';
+}
+
+function appendHistory(record, action, detail = '') {
+  const role = currentRole();
+  return [
+    ...(Array.isArray(record.historique_validations) ? record.historique_validations : []),
+    {
+      action,
+      detail,
+      role,
+      acteur: roleLabel(role),
+      date: new Date().toISOString()
+    }
+  ];
+}
+
+async function createSharedNotification({ title, message, path = '/', tone = 'info', targetRole = 'responsable_technique' }) {
+  return upsertRecord('notifications', {
+    id: `not-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    message,
+    path,
+    tone,
+    targetRole,
+    read: false,
+    created_at: new Date().toISOString()
+  });
 }
 
 function buildPdfHtml({ title, fields, record }) {
@@ -196,10 +245,12 @@ function buildPdfHtml({ title, fields, record }) {
         <meta charset="utf-8" />
         <title>${escapeHtml(title)}</title>
         <style>
-          body { font-family: Arial, sans-serif; color: #111827; margin: 36px; }
-          header { border-bottom: 3px solid #3b9eff; padding-bottom: 16px; margin-bottom: 26px; }
-          h1 { margin: 0; font-size: 26px; }
+          body { font-family: Arial, sans-serif; color: #111827; margin: 34px; }
+          header { border-bottom: 3px solid #3b9eff; display: flex; justify-content: space-between; gap: 18px; padding-bottom: 16px; margin-bottom: 26px; }
+          h1 { margin: 0; font-size: 28px; letter-spacing: .04em; }
+          h2 { margin: 0; font-size: 18px; color: #334155; }
           p { margin: 6px 0 0; color: #64748b; }
+          .meta { text-align: right; font-size: 12px; color: #64748b; }
           table { width: 100%; border-collapse: collapse; margin-top: 18px; }
           th, td { border: 1px solid #dbe4f0; padding: 12px; text-align: left; }
           th { width: 34%; background: #f1f5f9; color: #334155; }
@@ -208,15 +259,33 @@ function buildPdfHtml({ title, fields, record }) {
           .qrbox { display: flex; gap: 16px; align-items: center; }
           .qrbox img { width: 140px; height: 140px; border: 1px solid #dbe4f0; padding: 6px; }
           .qrbox strong { display: block; font-size: 18px; margin-bottom: 6px; }
+          .conditions { margin-top: 24px; border: 1px solid #dbe4f0; background: #f8fafc; padding: 14px; font-size: 12px; color: #475569; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 34px; }
+          .signature { border-top: 1px solid #94a3b8; padding-top: 8px; color: #334155; font-size: 12px; min-height: 52px; }
           footer { margin-top: 32px; color: #64748b; font-size: 12px; }
         </style>
       </head>
       <body>
         <header>
-          <h1>SMARTLAB</h1>
-          <p>${escapeHtml(title)} - ${new Date().toLocaleDateString('fr-FR')}</p>
+          <div>
+            <h1>SMARTLAB</h1>
+            <h2>Laboratoire - Devis et prestations d'essais</h2>
+            <p>References qualite: ISO/IEC 17025 - ISO 9001</p>
+          </div>
+          <div class="meta">
+            <strong>${escapeHtml(title)}</strong><br />
+            Date: ${new Date().toLocaleDateString('fr-FR')}<br />
+            Reference: ${escapeHtml(record.numero || record.reference || record.code || '')}
+          </div>
         </header>
         <table>${rows}</table>
+        <div class="conditions">
+          Conditions: ce document est soumis a validation interne SMARTLAB puis validation du client. La commande est creee automatiquement apres validation client.
+        </div>
+        <div class="signatures">
+          <div class="signature">Responsable technique / SMARTLAB</div>
+          <div class="signature">Client / Signature et cachet</div>
+        </div>
         <footer>Document genere depuis l'application SMARTLAB.</footer>
       </body>
     </html>
@@ -346,13 +415,14 @@ function ResourcePage({
 
   const openCreate = () => {
     setEditing(null);
-    const nextForm = emptyForm(fields);
+    const nextForm = { ...emptyForm(fields), attachments: [] };
     const config = AUTO_NUMBERING[resource];
     if (config && fields.some((field) => field.name === config.field)) {
       nextForm[config.field] = nextAutomaticNumber(resource, records);
     }
     if (resource === 'devis' && fields.some((field) => field.name === 'code_validation')) {
       nextForm.code_validation = buildValidationCode(nextForm.numero);
+      nextForm.validation_expires_at = buildValidationExpiry();
     }
     fields.forEach((field) => {
       if (field.type === 'date' && !nextForm[field.name]) {
@@ -365,7 +435,7 @@ function ResourcePage({
 
   const openEdit = (record) => {
     setEditing(record.id);
-    setForm(fields.reduce((acc, field) => {
+    setForm({ ...fields.reduce((acc, field) => {
       const value = record[field.name];
       return {
         ...acc,
@@ -373,7 +443,7 @@ function ResourcePage({
           ? value.map((item) => ({ ...item }))
           : value || fieldDefault(field)
       };
-    }, {}));
+    }, {}), attachments: Array.isArray(record.attachments) ? record.attachments : [] });
     setModalOpen(true);
   };
 
@@ -443,6 +513,28 @@ function ResourcePage({
     });
   };
 
+  const addAttachment = (files) => {
+    const nextFiles = Array.from(files || []).map((file) => ({
+      id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      added_at: new Date().toISOString(),
+      added_by: roleLabel(currentRole())
+    }));
+    setForm((current) => ({
+      ...current,
+      attachments: [...(Array.isArray(current.attachments) ? current.attachments : []), ...nextFiles]
+    }));
+  };
+
+  const removeAttachment = (id) => {
+    setForm((current) => ({
+      ...current,
+      attachments: (Array.isArray(current.attachments) ? current.attachments : []).filter((attachment) => attachment.id !== id)
+    }));
+  };
+
   const sendToClient = (record) => {
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
     const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
@@ -496,7 +588,17 @@ function ResourcePage({
     if (resource === 'devis' && !payload.code_validation) {
       payload = { ...payload, code_validation: buildValidationCode(payload.numero) };
     }
-    const savedRecord = await upsertRecord(resource, { ...payload, id: editing });
+    if (resource === 'devis' && !payload.validation_expires_at) {
+      payload = { ...payload, validation_expires_at: buildValidationExpiry() };
+    }
+    const previousRecord = editing ? records.find((item) => item.id === editing) : null;
+    const auditAction = editing ? 'Modification' : 'Creation';
+    const savedRecord = await upsertRecord(resource, {
+      ...payload,
+      id: editing,
+      attachments: Array.isArray(form.attachments) ? form.attachments : [],
+      historique_validations: appendHistory(previousRecord || payload, auditAction, title)
+    });
     setRecords(await listRecords(resource));
     setSaving(false);
     if (savedRecord.__syncError) {
@@ -521,7 +623,16 @@ function ResourcePage({
       ...record,
       statut: status,
       canal_validation: channel,
-      code_validation: record.code_validation || buildValidationCode(record.numero)
+      code_validation: record.code_validation || buildValidationCode(record.numero),
+      validation_expires_at: record.validation_expires_at || buildValidationExpiry(),
+      historique_validations: appendHistory(record, quoteStepLabel(status), `Canal: ${roleLabel(channel)}`)
+    });
+    await createSharedNotification({
+      title: 'Devis - nouvelle etape',
+      message: `${record.numero} : ${quoteStepLabel(status)}`,
+      path: '/devis',
+      tone: status === 'refuse' ? 'offline' : 'info',
+      targetRole: channel
     });
     setRecords(await listRecords(resource));
   };
@@ -558,7 +669,19 @@ function ResourcePage({
     };
 
     await upsertRecord('commandes', order);
-    await upsertRecord('devis', { ...record, statut: 'commande_creee', canal_validation: 'client' });
+    await upsertRecord('devis', {
+      ...record,
+      statut: 'commande_creee',
+      canal_validation: 'client',
+      historique_validations: appendHistory(record, 'Commande creee', order.numero)
+    });
+    await createSharedNotification({
+      title: 'Commande creee',
+      message: `${order.numero} creee depuis le devis ${record.numero}`,
+      path: '/commandes',
+      tone: 'online',
+      targetRole: 'responsable_labo'
+    });
     setRecords(await listRecords(resource));
     toast.success(`Commande ${order.numero} creee depuis le devis`);
   };
@@ -747,6 +870,30 @@ function ResourcePage({
                     )}
                   </label>
                 ))}
+              </div>
+              <div className="attachmentsPanel">
+                <div className="lineItemsHeader">
+                  <strong>Pieces jointes</strong>
+                  <label className="fileButton">
+                    Ajouter fichier
+                    <input type="file" multiple onChange={(event) => addAttachment(event.target.files)} />
+                  </label>
+                </div>
+                {(Array.isArray(form.attachments) && form.attachments.length > 0) ? (
+                  <div className="attachmentList">
+                    {form.attachments.map((attachment) => (
+                      <div className="attachmentItem" key={attachment.id}>
+                        <div>
+                          <strong>{attachment.name}</strong>
+                          <span>{Math.ceil(Number(attachment.size || 0) / 1024)} Ko - {attachment.added_by}</span>
+                        </div>
+                        <button type="button" className="modalClose" onClick={() => removeAttachment(attachment.id)}>x</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="notificationEmpty">Aucune piece jointe</div>
+                )}
               </div>
             </div>
             <div className="modalFooter">

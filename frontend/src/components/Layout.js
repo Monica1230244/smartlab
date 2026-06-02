@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { listRecords } from '../services/localStore';
+import { listRecords, upsertRecord } from '../services/localStore';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
@@ -37,6 +37,15 @@ const titles = {
 };
 
 const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
+const CURRENT_ROLE_KEY = 'smartlab_current_role';
+
+const roleOptions = [
+  { value: 'responsable_appel', label: 'Resp. appels' },
+  { value: 'responsable_technique', label: 'Resp. technique' },
+  { value: 'dg', label: 'DG' },
+  { value: 'responsable_labo', label: 'Resp. labo' },
+  { value: 'receptionniste', label: 'Reception' }
+];
 
 function loadDismissedNotifications() {
   try {
@@ -51,6 +60,7 @@ function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState(loadDismissedNotifications);
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -58,16 +68,29 @@ function Layout() {
     let cancelled = false;
 
     const refreshNotifications = async () => {
-      const [essais, devis, commandes, nonConformites] = await Promise.all([
+      const [essais, devis, commandes, nonConformites, sharedNotifications] = await Promise.all([
         listRecords('essais'),
         listRecords('devis'),
         listRecords('commandes'),
-        listRecords('nonConformites')
+        listRecords('nonConformites'),
+        listRecords('notifications')
       ]);
 
       if (cancelled) return;
 
       const nextNotifications = [];
+      sharedNotifications
+        .filter((item) => !item.read)
+        .forEach((item) => {
+          nextNotifications.push({
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            tone: item.tone,
+            path: item.path || '/',
+            sharedRecord: item
+          });
+        });
       const essaisEnCours = essais.filter((item) => item.statut === 'en_cours').length;
       const devisRefuses = devis.filter((item) => item.statut === 'refuse').length;
       const latestRejectedQuote = devis.filter((item) => item.statut === 'refuse').slice(-1)[0];
@@ -155,13 +178,23 @@ function Layout() {
     }
   };
 
-  const openNotification = (notification) => {
+  const openNotification = async (notification) => {
+    if (notification.sharedRecord) {
+      await upsertRecord('notifications', { ...notification.sharedRecord, read: true, read_at: new Date().toISOString() });
+    }
     const nextDismissedIds = Array.from(new Set([...dismissedNotificationIds, notification.id]));
     localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(nextDismissedIds));
     setDismissedNotificationIds(nextDismissedIds);
     setNotifications((current) => current.filter((item) => item.id !== notification.id));
     setNotificationsOpen(false);
     navigate(notification.path);
+  };
+
+  const changeRole = (event) => {
+    const role = event.target.value;
+    localStorage.setItem(CURRENT_ROLE_KEY, role);
+    setCurrentRole(role);
+    window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: role }));
   };
 
   return (
@@ -219,6 +252,9 @@ function Layout() {
             <input placeholder="Rechercher un essai, client, echantillon..." />
           </div>
           <div className="topbarActions">
+            <select className="roleSelect" value={currentRole} onChange={changeRole} aria-label="Role utilisateur">
+              {roleOptions.map((role) => <option value={role.value} key={role.value}>{role.label}</option>)}
+            </select>
             <button
               type="button"
               className="notificationButton"

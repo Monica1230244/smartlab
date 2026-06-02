@@ -296,6 +296,15 @@ button {
   padding: 7px 10px;
 }
 
+.roleSelect {
+  min-height: 34px;
+  width: auto;
+  max-width: 170px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .notificationButton:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -737,6 +746,60 @@ select option {
   text-transform: none;
 }
 
+.attachmentsPanel {
+  background: var(--surface2);
+  border: 1px solid rgba(99, 179, 237, 0.08);
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.fileButton {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 0;
+  letter-spacing: 0;
+  padding: 8px 11px;
+  text-transform: none;
+}
+
+.fileButton input {
+  display: none;
+}
+
+.attachmentList {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.attachmentItem {
+  align-items: center;
+  background: rgba(17, 24, 39, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.attachmentItem strong {
+  color: var(--text);
+  display: block;
+  font-size: 13px;
+}
+
+.attachmentItem span {
+  color: var(--text3);
+  font-size: 11px;
+}
+
 .lineItemsHeader,
 .lineItemsTotal {
   align-items: center;
@@ -995,6 +1058,32 @@ tbody tr:hover {
 
 .rejectionReason p {
   margin: 6px 0 0;
+}
+
+.updateBanner {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  bottom: 16px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: flex;
+  gap: 12px;
+  left: 50%;
+  padding: 12px 14px;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 2000;
+}
+
+.updateBanner button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 800;
+  padding: 8px 12px;
 }
 
 .processGrid {

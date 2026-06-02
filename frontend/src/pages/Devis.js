@@ -120,6 +120,32 @@ async function createOrderFromQuote(quote) {
   return upsertRecord('commandes', order);
 }
 
+function appendClientHistory(quote, action, detail = '') {
+  return [
+    ...(Array.isArray(quote.historique_validations) ? quote.historique_validations : []),
+    {
+      action,
+      detail,
+      role: 'client',
+      acteur: quote.client_nom || 'Client',
+      date: new Date().toISOString()
+    }
+  ];
+}
+
+async function createNotification({ title, message, tone = 'info', targetRole = 'responsable_technique' }) {
+  return upsertRecord('notifications', {
+    id: `not-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    message,
+    tone,
+    targetRole,
+    path: '/devis',
+    read: false,
+    created_at: new Date().toISOString()
+  });
+}
+
 function QuoteValidationPortal({ code }) {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -138,6 +164,10 @@ function QuoteValidationPortal({ code }) {
 
   const acceptQuote = async () => {
     if (!quote) return;
+    if (quote.validation_expires_at && new Date(quote.validation_expires_at) < new Date()) {
+      setResult('Le lien de validation est expire. Merci de demander un nouveau devis.');
+      return;
+    }
     const order = await createOrderFromQuote(quote);
     const validatedQuote = {
       ...quote,
@@ -145,9 +175,16 @@ function QuoteValidationPortal({ code }) {
       canal_validation: 'client',
       validation_client: 'valide',
       date_validation_client: new Date().toISOString(),
-      commande_numero: order.numero
+      commande_numero: order.numero,
+      historique_validations: appendClientHistory(quote, 'Validation client', `Commande ${order.numero}`)
     };
     await upsertRecord('devis', validatedQuote);
+    await createNotification({
+      title: 'Devis valide par le client',
+      message: `${quote.numero} valide. Commande ${order.numero} creee.`,
+      tone: 'online',
+      targetRole: 'responsable_labo'
+    });
     setQuote(validatedQuote);
     setResult(`Devis valide. Commande ${order.numero} creee automatiquement.`);
   };
@@ -166,10 +203,17 @@ function QuoteValidationPortal({ code }) {
       validation_client: 'rejete',
       motif_refus: reason.trim(),
       date_rejet_client: new Date().toISOString(),
-      responsable_notification: 'responsable_technique'
+      responsable_notification: 'responsable_technique',
+      historique_validations: appendClientHistory(quote, 'Rejet client', reason.trim())
     };
 
     await upsertRecord('devis', rejectedQuote);
+    await createNotification({
+      title: 'Devis rejete par le client',
+      message: `${quote.numero} rejete. Motif: ${reason.trim()}`,
+      tone: 'offline',
+      targetRole: 'responsable_technique'
+    });
     setQuote(rejectedQuote);
     setRejecting(false);
     setResult('Rejet enregistre et renvoye au responsable technique dans SMARTLAB.');

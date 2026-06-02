@@ -20,12 +20,9 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       if (!worker) return;
       worker.addEventListener('statechange', () => {
         if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-          worker.postMessage({ type: 'SKIP_WAITING' });
+          window.dispatchEvent(new CustomEvent('smartlab:update-ready', { detail: worker }));
         }
       });
-    });
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
     });
   });
 }
