@@ -3,17 +3,24 @@ import ResourcePage from '../components/ResourcePage';
 
 const statusOptions = [
   { value: 'brouillon', label: 'Brouillon' },
+  { value: 'en_validation_technique', label: 'Validation technique' },
+  { value: 'en_validation_dg', label: 'Validation DG' },
   { value: 'envoye', label: 'Envoye' },
   { value: 'signe', label: 'Signe' },
   { value: 'paye', label: 'Paye' }
 ];
 
-const projetOptions = [
-  { value: 'Pont de Cotonou', label: 'Pont de Cotonou' },
-  { value: 'Route Nationale 1', label: 'Route Nationale 1' },
-  { value: 'Voirie Akpakpa', label: 'Voirie Akpakpa' },
-  { value: 'Forage Abomey', label: 'Forage Abomey' },
-  { value: 'Nouveau projet', label: 'Nouveau projet' }
+const canalOptions = [
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'email', label: 'Email' },
+  { value: 'sms', label: 'SMS' }
+];
+
+const validationOptions = [
+  { value: 'responsable_appel', label: 'Responsable des appels' },
+  { value: 'responsable_technique', label: 'Responsable technique' },
+  { value: 'dg', label: 'DG' },
+  { value: 'client', label: 'Client' }
 ];
 
 const fields = [
@@ -25,10 +32,16 @@ const fields = [
     optionsResource: 'clients',
     optionValue: 'raison_sociale',
     optionLabel: 'raison_sociale',
-    fillFrom: { client_whatsapp: 'telephone' }
+    fillFrom: { client_whatsapp: 'telephone', client_email: 'email' }
   },
-  { name: 'projet', label: 'Projet', options: projetOptions },
+  { name: 'projet', label: 'Nom du projet', required: true, placeholder: 'Saisir le nom du projet' },
   { name: 'client_whatsapp', label: 'WhatsApp client', required: true, placeholder: '+229 97 12 34 56' },
+  { name: 'client_email', label: 'Email client', placeholder: 'client@exemple.com' },
+  { name: 'canal_envoi', label: 'Canal d’envoi', required: true, options: canalOptions, defaultValue: 'whatsapp' },
+  { name: 'canal_validation', label: 'Validation actuelle', options: validationOptions, defaultValue: 'responsable_appel' },
+  { name: 'responsable_appel', label: 'Responsable des appels', placeholder: 'Nom du responsable' },
+  { name: 'responsable_technique', label: 'Responsable technique', placeholder: 'Nom du responsable technique' },
+  { name: 'dg_validation', label: 'Validation DG', options: [{ value: 'en_attente', label: 'En attente' }, { value: 'valide', label: 'Valide' }], defaultValue: 'en_attente' },
   { name: 'objet', label: 'Objet du devis', required: true, placeholder: 'Ex: Essais beton - Pont de Cotonou', full: true },
   {
     name: 'prestations',
@@ -41,6 +54,7 @@ const fields = [
     ]
   },
   { name: 'montant_ht', label: 'Montant HT', type: 'money', required: true, hidden: true },
+  { name: 'code_validation', label: 'Code QR validation client', type: 'validationCode', readOnly: true, full: true },
   { name: 'date', label: 'Date', type: 'date', hidden: true },
   { name: 'statut', label: 'Statut', options: statusOptions, defaultValue: 'brouillon', hidden: true }
 ];
@@ -52,6 +66,9 @@ const columns = [
   { name: 'objet', label: 'Objet' },
   { name: 'prestations', label: 'Prestations', type: 'lineItems' },
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
+  { name: 'canal_envoi', label: 'Canal' },
+  { name: 'canal_validation', label: 'Validation' },
+  { name: 'code_validation', label: 'Code validation' },
   { name: 'statut', label: 'Statut', badge: true }
 ];
 

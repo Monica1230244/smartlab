@@ -96,6 +96,17 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString('fr-FR');
 }
 
+function buildValidationCode(numero) {
+  const cleanNumber = String(numero || 'DEV').replace(/[^a-z0-9]/gi, '').toUpperCase();
+  const suffix = Date.now().toString(36).toUpperCase().slice(-5);
+  return `QR-${cleanNumber}-${suffix}`;
+}
+
+function buildValidationUrl(code) {
+  const base = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, '');
+  return `${base}/devis?validation=${encodeURIComponent(code || '')}`;
+}
+
 function buildPdfHtml({ title, fields, record }) {
   const rows = fields.filter((field) => !field.hidden).map((field) => {
     if (field.type === 'lineItems') {
@@ -117,6 +128,23 @@ function buildPdfHtml({ title, fields, record }) {
               <tbody>${itemRows}</tbody>
               <tfoot><tr><th colspan="3">Total</th><th>${escapeHtml(formatMoney(lineItemsTotal(items)))} FCFA</th></tr></tfoot>
             </table>
+          </td>
+        </tr>
+      `;
+    }
+    if (field.type === 'validationCode') {
+      const validationUrl = buildValidationUrl(record[field.name]);
+      return `
+        <tr>
+          <th>${escapeHtml(field.label)}</th>
+          <td>
+            <div class="qrbox">
+              <img alt="QR validation devis" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(validationUrl)}" />
+              <div>
+                <strong>${escapeHtml(record[field.name])}</strong>
+                <p>Scanner ce QR code pour valider le devis et permettre la creation de la commande.</p>
+              </div>
+            </div>
           </td>
         </tr>
       `;
@@ -145,6 +173,9 @@ function buildPdfHtml({ title, fields, record }) {
           th { width: 34%; background: #f1f5f9; color: #334155; }
           table.inner { margin: 0; }
           table.inner th { width: auto; }
+          .qrbox { display: flex; gap: 16px; align-items: center; }
+          .qrbox img { width: 140px; height: 140px; border: 1px solid #dbe4f0; padding: 6px; }
+          .qrbox strong { display: block; font-size: 18px; margin-bottom: 6px; }
           footer { margin-top: 32px; color: #64748b; font-size: 12px; }
         </style>
       </head>
@@ -288,6 +319,9 @@ function ResourcePage({
     if (config && fields.some((field) => field.name === config.field)) {
       nextForm[config.field] = nextAutomaticNumber(resource, records);
     }
+    if (resource === 'devis' && fields.some((field) => field.name === 'code_validation')) {
+      nextForm.code_validation = buildValidationCode(nextForm.numero);
+    }
     fields.forEach((field) => {
       if (field.type === 'date' && !nextForm[field.name]) {
         nextForm[field.name] = new Date().toISOString().slice(0, 10);
@@ -372,24 +406,57 @@ function ResourcePage({
     });
   };
 
-  const sendWhatsApp = (record) => {
+  const sendToClient = (record) => {
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
+    const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
+    const validationCode = record.code_validation ? ` Code de validation: ${record.code_validation}.` : '';
+    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.${validationCode}`;
+    const channel = record.canal_envoi || 'whatsapp';
+
+    if (channel === 'email') {
+      if (!record.client_email) {
+        toast.error('Email client manquant');
+        return;
+      }
+      window.open(`mailto:${record.client_email}?subject=${encodeURIComponent(`Devis SMARTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (channel === 'sms') {
+      if (!phone) {
+        toast.error('Numero SMS client manquant');
+        return;
+      }
+      window.open(`sms:${phone}?body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     if (!phone) {
       toast.error('Numero WhatsApp client manquant');
       return;
     }
-    const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
-    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
+    if (resource === 'essais' && form.reference_devis) {
+      const commandes = await listRecords('commandes');
+      const hasCommande = commandes.some((commande) => commande.reference_devis === form.reference_devis);
+      if (!hasCommande) {
+        toast.error('Reception impossible: aucune commande liee a ce devis');
+        setSaving(false);
+        return;
+      }
+    }
     const lineItemsField = fields.find((field) => field.type === 'lineItems');
-    const payload = lineItemsField
+    let payload = lineItemsField
       ? { ...form, montant_ht: lineItemsTotal(form[lineItemsField.name]) }
       : form;
+    if (resource === 'devis' && !payload.code_validation) {
+      payload = { ...payload, code_validation: buildValidationCode(payload.numero) };
+    }
     const savedRecord = await upsertRecord(resource, { ...payload, id: editing });
     setRecords(await listRecords(resource));
     setSaving(false);
@@ -398,7 +465,7 @@ function ResourcePage({
     } else {
       toast.success(editing ? 'Modification enregistree dans Supabase' : 'Ajout enregistre dans Supabase');
     }
-    if (whatsappOnSubmit) sendWhatsApp(savedRecord);
+    if (whatsappOnSubmit) sendToClient(savedRecord);
     closeModal();
   };
 
@@ -408,6 +475,32 @@ function ResourcePage({
     await deleteRecord(resource, record.id);
     setRecords(await listRecords(resource));
     toast.success('Suppression effectuee');
+  };
+
+  const validateQuoteAsOrder = async (record) => {
+    const commandes = await listRecords('commandes');
+    const existingOrder = commandes.find((commande) => commande.reference_devis === record.numero);
+    if (existingOrder) {
+      toast.success(`Commande deja creee: ${existingOrder.numero}`);
+      return;
+    }
+
+    const order = {
+      numero: nextAutomaticNumber('commandes', commandes),
+      reference_devis: record.numero,
+      client_nom: record.client_nom,
+      client_whatsapp: record.client_whatsapp,
+      projet: record.projet,
+      prestations: Array.isArray(record.prestations) ? record.prestations : [],
+      montant_ht: Number(record.montant_ht || lineItemsTotal(record.prestations)),
+      date: new Date().toISOString().slice(0, 10),
+      statut: 'nouvelle'
+    };
+
+    await upsertRecord('commandes', order);
+    await upsertRecord('devis', { ...record, statut: 'signe', canal_validation: 'client' });
+    setRecords(await listRecords(resource));
+    toast.success(`Commande ${order.numero} creee depuis le devis`);
   };
 
   return (
@@ -465,6 +558,9 @@ function ResourcePage({
                   <td>
                     <div className="rowActions">
                       <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                      {resource === 'devis' && (
+                        <button type="button" className="ghostButton" onClick={() => validateQuoteAsOrder(record)}>Valider client</button>
+                      )}
                       <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
                     </div>
                   </td>

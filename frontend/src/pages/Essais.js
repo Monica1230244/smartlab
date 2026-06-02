@@ -1,18 +1,6 @@
 import React from 'react';
 import ResourcePage from '../components/ResourcePage';
 
-const statusOptions = [
-  { value: 'en_attente', label: 'En attente' },
-  { value: 'en_cours', label: 'En cours' },
-  { value: 'termine', label: 'Termine' }
-];
-
-const priorityOptions = [
-  { value: 'normale', label: 'Normale' },
-  { value: 'haute', label: 'Haute' },
-  { value: 'urgente', label: 'Urgente' }
-];
-
 const essaiOptions = [
   { value: 'OPM', label: 'OPM - Optimum Proctor Modifie' },
   { value: 'RC7', label: 'RC7 - Resistance compression 7 jours' },
@@ -25,28 +13,43 @@ const essaiOptions = [
 
 const fields = [
   { name: 'numero', label: 'Numero essai', required: true, placeholder: 'EA-2026-052' },
+  {
+    name: 'reference_devis',
+    label: 'Numero devis',
+    required: true,
+    optionsResource: 'devis',
+    optionValue: 'numero',
+    optionLabel: 'numero',
+    fillFrom: {
+      client_nom: 'client_nom',
+      provenance: 'projet'
+    }
+  },
   { name: 'nature', label: 'Nature', required: true, placeholder: 'Beton C25, sol lateritique, eau...' },
   { name: 'provenance', label: 'Provenance', required: true, placeholder: 'Chantier, carriere, forage...' },
   { name: 'date_prelevement', label: 'Date de prelevement', type: 'date' },
   { name: 'date', label: 'Date de reception', type: 'date' },
+  { name: 'delai_livraison', label: 'Delai de livraison', type: 'date' },
   { name: 'essai_a_realiser', label: 'Essai a realiser', required: true, options: essaiOptions },
   { name: 'client_nom', label: 'Client', required: true, placeholder: 'Sogea BTP Benin' },
+  { name: 'receptionniste', label: 'Receptionniste', required: true, placeholder: 'Nom du receptionniste' },
+  { name: 'responsable_labo', label: 'Responsable labo', required: true, placeholder: 'Nom du responsable labo' },
   { name: 'commentaire', label: 'Commentaire', placeholder: 'Observations, conditions de prelevement...', full: true },
-  { name: 'technicien', label: 'Technicien', placeholder: 'Nom technicien' },
-  { name: 'statut', label: 'Statut', required: true, options: statusOptions, defaultValue: 'en_cours' },
-  { name: 'priorite', label: 'Priorite', options: priorityOptions, defaultValue: 'normale' }
+  { name: 'statut', label: 'Statut', defaultValue: 'en_cours', hidden: true }
 ];
 
 const columns = [
   { name: 'numero', label: 'N essai' },
+  { name: 'reference_devis', label: 'Devis' },
   { name: 'nature', label: 'Nature' },
   { name: 'provenance', label: 'Provenance' },
   { name: 'date_prelevement', label: 'Prelevement' },
   { name: 'date', label: 'Reception' },
+  { name: 'delai_livraison', label: 'Livraison' },
   { name: 'essai_a_realiser', label: 'Essai' },
   { name: 'client_nom', label: 'Client' },
-  { name: 'statut', label: 'Statut', badge: true },
-  { name: 'priorite', label: 'Priorite', badge: true }
+  { name: 'receptionniste', label: 'Receptionniste' },
+  { name: 'responsable_labo', label: 'Resp. labo' }
 ];
 
 export default function Essais() {
