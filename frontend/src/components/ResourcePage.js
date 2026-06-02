@@ -80,6 +80,24 @@ function quoteStepLabel(status) {
   return labels[status] || labels.redaction;
 }
 
+function normalizeQuoteStatus(status) {
+  const legacy = {
+    brouillon: 'redaction',
+    envoye: 'envoye_client',
+    signe: 'valide_client',
+    paye: 'commande_creee',
+    accepte: 'valide_client'
+  };
+  return legacy[status] || status || 'redaction';
+}
+
+function fieldDefault(field) {
+  if (Array.isArray(field.defaultValue)) {
+    return field.defaultValue.map((item) => ({ ...item }));
+  }
+  return field.defaultValue || '';
+}
+
 function normalizeWhatsAppNumber(value) {
   const digits = String(value || '').replace(/\D/g, '');
   if (!digits) return '';
@@ -349,7 +367,12 @@ function ResourcePage({
     setEditing(record.id);
     setForm(fields.reduce((acc, field) => {
       const value = record[field.name];
-      return { ...acc, [field.name]: Array.isArray(value) ? value.map((item) => ({ ...item })) : value || '' };
+      return {
+        ...acc,
+        [field.name]: Array.isArray(value)
+          ? value.map((item) => ({ ...item }))
+          : value || fieldDefault(field)
+      };
     }, {}));
     setModalOpen(true);
   };
@@ -540,7 +563,7 @@ function ResourcePage({
   };
 
   const renderQuoteWorkflowActions = (record) => {
-    const status = record.statut || 'redaction';
+    const status = normalizeQuoteStatus(record.statut);
     return (
       <>
         <span className={`statusBadge ${statusTone(status)}`}>{quoteStepLabel(status)}</span>
