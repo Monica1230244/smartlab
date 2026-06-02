@@ -15,6 +15,7 @@ root.render(
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', async () => {
     const registration = await navigator.serviceWorker.register(`${process.env.PUBLIC_URL}/sw.js`);
+    registration.update();
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
       if (!worker) return;
@@ -23,6 +24,9 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
           window.dispatchEvent(new CustomEvent('smartlab:update-ready', { detail: worker }));
         }
       });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
     });
   });
 }

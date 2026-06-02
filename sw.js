@@ -1,5 +1,5 @@
-﻿const CACHE_NAME = 'smartlab-pwa-v20260513-2';
-const APP_SHELL = ['./', 'index.html', 'manifest.json'];
+const CACHE_NAME = 'smartlab-pwa-v20260602-1';
+const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -25,13 +25,13 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('index.html', copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
           return response;
         })
-        .catch(() => caches.match('index.html'))
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
