@@ -69,7 +69,9 @@ function Layout() {
 
       const nextNotifications = [];
       const essaisEnCours = essais.filter((item) => item.statut === 'en_cours').length;
-      const devisOuverts = devis.filter((item) => !['paye', 'accepte', 'annule'].includes(item.statut)).length;
+      const devisRefuses = devis.filter((item) => item.statut === 'refuse').length;
+      const latestRejectedQuote = devis.filter((item) => item.statut === 'refuse').slice(-1)[0];
+      const devisOuverts = devis.filter((item) => !['paye', 'accepte', 'annule', 'refuse', 'commande_creee'].includes(item.statut)).length;
       const commandesActives = commandes.filter((item) => item.statut !== 'livree').length;
       const nonConformitesOuvertes = nonConformites.filter((item) => item.statut !== 'cloturee').length;
 
@@ -87,6 +89,16 @@ function Layout() {
           id: `devis-ouverts-${devisOuverts}`,
           title: 'Devis',
           message: `${devisOuverts} devis a suivre ou a relancer.`,
+          path: '/devis'
+        });
+      }
+
+      if (devisRefuses > 0) {
+        nextNotifications.push({
+          id: `devis-refuses-${devisRefuses}-${latestRejectedQuote?.date_rejet_client || ''}`,
+          title: 'Devis rejete',
+          message: `${devisRefuses} devis rejete${devisRefuses > 1 ? 's' : ''}. Motif: ${latestRejectedQuote?.motif_refus || 'A consulter'}`,
+          tone: 'offline',
           path: '/devis'
         });
       }

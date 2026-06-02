@@ -140,7 +140,7 @@ function buildValidationUrl(code) {
 }
 
 function buildPdfHtml({ title, fields, record }) {
-  const rows = fields.filter((field) => !field.hidden).map((field) => {
+  const rows = fields.filter((field) => !field.hidden || field.type === 'validationCode').map((field) => {
     if (field.type === 'lineItems') {
       const items = Array.isArray(record[field.name]) ? record[field.name] : [];
       const itemRows = items.map((item) => `
@@ -447,7 +447,8 @@ function ResourcePage({
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
     const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
     const validationCode = record.code_validation ? ` Code de validation: ${record.code_validation}.` : '';
-    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.${validationCode}`;
+    const validationUrl = record.code_validation ? ` Lien de validation: ${buildValidationUrl(record.code_validation)}` : '';
+    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.${validationCode}${validationUrl}`;
     const channel = record.canal_envoi || 'whatsapp';
 
     if (channel === 'email') {

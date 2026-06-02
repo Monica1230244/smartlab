@@ -587,7 +587,8 @@ label.full {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 42px;
   background: var(--surface2);
@@ -599,8 +600,13 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--accent);
+}
+
+textarea {
+  resize: vertical;
 }
 
 input[readonly] {
@@ -951,6 +957,44 @@ tbody tr:hover {
 
 .scoreBox.ko strong {
   color: var(--accent4);
+}
+
+.validationPortal {
+  display: grid;
+  gap: 18px;
+}
+
+.validationPanel {
+  max-width: 860px;
+}
+
+.validationBody {
+  padding: 18px;
+}
+
+.validationBody h3 {
+  margin: 0 0 12px;
+}
+
+.validationActions {
+  gap: 10px;
+}
+
+.rejectionReason {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  color: var(--text2);
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.rejectionReason strong {
+  color: var(--accent4);
+}
+
+.rejectionReason p {
+  margin: 6px 0 0;
 }
 
 .processGrid {
