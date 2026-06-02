@@ -177,6 +177,22 @@ button {
   border-top: 1px solid var(--border);
 }
 
+.refreshVersionButton {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 6px;
+  padding: 0;
+  text-align: left;
+}
+
+.refreshVersionButton:hover {
+  color: var(--accent2);
+}
+
 .avatar {
   width: 34px;
   height: 34px;

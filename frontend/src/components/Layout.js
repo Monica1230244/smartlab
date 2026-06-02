@@ -42,6 +42,7 @@ const titles = {
 
 const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
+const APP_VERSION = window.SMARTLAB_VERSION || 'dev';
 
 const roleOptions = [
   { value: 'responsable_appel', label: 'Resp. appels' },
@@ -201,6 +202,18 @@ function Layout() {
     window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: role }));
   };
 
+  const forceRefreshApp = async () => {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.update()));
+    }
+    if ('caches' in window) {
+      const names = await caches.keys();
+      await Promise.all(names.filter((name) => name.startsWith('smartlab')).map((name) => caches.delete(name)));
+    }
+    window.location.reload();
+  };
+
   return (
     <div className="shell">
       <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -237,7 +250,8 @@ function Layout() {
           <div className="avatar">SL</div>
           <div>
             <strong>SMARTLAB</strong>
-            <span>Application mobile</span>
+            <span>Version {APP_VERSION}</span>
+            <button type="button" className="refreshVersionButton" onClick={forceRefreshApp}>Actualiser</button>
           </div>
         </div>
       </aside>

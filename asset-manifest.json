@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/smartlab/static/css/main.453b48b7.css",
-    "main.js": "/smartlab/static/js/main.a6e4f90d.js",
+    "main.css": "/smartlab/static/css/main.9fecb37e.css",
+    "main.js": "/smartlab/static/js/main.b3dd7270.js",
     "index.html": "/smartlab/index.html",
-    "main.453b48b7.css.map": "/smartlab/static/css/main.453b48b7.css.map",
-    "main.a6e4f90d.js.map": "/smartlab/static/js/main.a6e4f90d.js.map"
+    "main.9fecb37e.css.map": "/smartlab/static/css/main.9fecb37e.css.map",
+    "main.b3dd7270.js.map": "/smartlab/static/js/main.b3dd7270.js.map"
   },
   "entrypoints": [
-    "static/css/main.453b48b7.css",
-    "static/js/main.a6e4f90d.js"
+    "static/css/main.9fecb37e.css",
+    "static/js/main.b3dd7270.js"
   ]
 }
