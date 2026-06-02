@@ -28,6 +28,18 @@ const seedData = {
     { id: 'prj-1', reference: 'PRJ-2026-001', nom: 'Pont de Cotonou', client_nom: 'Sogea BTP Benin', localisation: 'Cotonou', date_debut: today, date_fin_prevue: today, budget: 4800000, responsable: 'Responsable Technique', statut: 'en_cours', description: 'Campagne essais beton et acier.' },
     { id: 'prj-2', reference: 'PRJ-2026-002', nom: 'Route Nationale 1', client_nom: 'AGETUR Benin', localisation: 'RN1', date_debut: today, date_fin_prevue: today, budget: 3200000, responsable: 'Responsable Laboratoire', statut: 'validation', description: 'Essais sols et granulometrie.' }
   ],
+  catalogueEssais: [
+    { id: 'cat-1', code: 'CAT-001', abreviation: 'RC7', designation: 'Resistance a la compression beton a 7 jours', famille: 'Beton', norme_reference: 'NF EN 12390-3', type_echantillon: 'Eprouvette beton', quantite_minimale: '3 eprouvettes', delai_jours: 7, prix_unitaire: 150000, equipements: 'Presse hydraulique, pied a coulisse', criteres_acceptation: 'Moyenne des ruptures et conformite selon classe beton.', statut: 'actif' },
+    { id: 'cat-2', code: 'CAT-002', abreviation: 'RC28', designation: 'Resistance a la compression beton a 28 jours', famille: 'Beton', norme_reference: 'NF EN 12390-3', type_echantillon: 'Eprouvette beton', quantite_minimale: '3 eprouvettes', delai_jours: 28, prix_unitaire: 150000, equipements: 'Presse hydraulique, pied a coulisse', criteres_acceptation: 'Conformite si la resistance moyenne atteint la resistance exigee.', statut: 'actif' },
+    { id: 'cat-3', code: 'CAT-003', abreviation: 'OPM', designation: 'Optimum Proctor modifie', famille: 'Sols', norme_reference: 'NF P 94-093', type_echantillon: 'Sol remanie', quantite_minimale: '25 kg', delai_jours: 3, prix_unitaire: 200000, equipements: 'Moule Proctor, dame, balance, etuve', criteres_acceptation: 'Determination teneur en eau optimale et densite seche maximale.', statut: 'actif' },
+    { id: 'cat-4', code: 'CAT-004', abreviation: 'CBR', designation: 'Indice CBR apres compactage', famille: 'Sols', norme_reference: 'ASTM D1883 / NF P 94-078', type_echantillon: 'Sol compactable', quantite_minimale: '30 kg', delai_jours: 5, prix_unitaire: 250000, equipements: 'Presse CBR, moule CBR, comparateur', criteres_acceptation: 'Indice CBR compare aux exigences du projet.', statut: 'actif' },
+    { id: 'cat-5', code: 'CAT-005', abreviation: 'GRAN', designation: 'Analyse granulometrique par tamisage', famille: 'Granulats', norme_reference: 'NF EN 933-1', type_echantillon: 'Granulat ou sol', quantite_minimale: '10 kg', delai_jours: 2, prix_unitaire: 120000, equipements: 'Serie de tamis, tamiseuse, balance', criteres_acceptation: 'Courbe granulometrique et fuseau de specification.', statut: 'actif' },
+    { id: 'cat-6', code: 'CAT-006', abreviation: 'LA', designation: "Limites d'Atterberg", famille: 'Sols', norme_reference: 'NF P 94-051', type_echantillon: 'Sol fin', quantite_minimale: '2 kg', delai_jours: 2, prix_unitaire: 90000, equipements: 'Coupelle Casagrande, plaque, balance, etuve', criteres_acceptation: 'Calcul IP = LL - LP et classification du sol.', statut: 'actif' },
+    { id: 'cat-7', code: 'CAT-007', abreviation: 'AE', designation: "Analyse d'eau", famille: 'Eau', norme_reference: 'Methodes laboratoire / ISO 17025', type_echantillon: 'Eau', quantite_minimale: '1 litre', delai_jours: 3, prix_unitaire: 100000, equipements: 'pH-metre, conductimetre, verrerie', criteres_acceptation: 'Comparaison aux seuils applicables au projet.', statut: 'actif' }
+  ],
+  resultatsEssais: [
+    { id: 'res-1', numero: 'RES-2026-001', objet_essai: 'EA-2026-051', essai_code: 'RC28', client_nom: 'Sogea BTP Benin', date_resultat: today, valeur_1: 27.4, valeur_2: 26.1, valeur_3: 25.8, moyenne: 26.43, unite: 'MPa', exigence: 25, decision: 'conforme', technicien: 'KASSIN Harrison', observations: 'Ruptures correctes, aucune anomalie visible.' }
+  ],
   echantillons: [
     { id: 'ech-1', code: 'ECH-051', client_nom: 'Sogea BTP Benin', nature: 'Beton C25', reception: today, statut: 'recu' },
     { id: 'ech-2', code: 'ECH-050', client_nom: 'AGETUR Benin', nature: 'Sol lateritique', reception: today, statut: 'en_essai' }
@@ -189,7 +201,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel', 'notifications'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

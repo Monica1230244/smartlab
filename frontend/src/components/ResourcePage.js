@@ -16,13 +16,15 @@ const AUTO_NUMBERING = {
   audits: { field: 'reference', prefix: 'AUD', withYear: true, pad: 3 },
   clients: { field: 'code', prefix: 'CLI', withYear: false, pad: 3 },
   commandes: { field: 'numero', prefix: 'CMD', withYear: true, pad: 3 },
+  catalogueEssais: { field: 'code', prefix: 'CAT', withYear: false, pad: 3 },
   devis: { field: 'numero', prefix: 'DEV', withYear: true, pad: 3 },
   echantillons: { field: 'code', prefix: 'ECH', withYear: false, pad: 3 },
   equipements: { field: 'code', prefix: 'EQ', withYear: false, pad: 3 },
   essais: { field: 'numero', prefix: 'EA', withYear: true, pad: 3 },
   nonConformites: { field: 'reference', prefix: 'NC', withYear: true, pad: 3 },
   projets: { field: 'reference', prefix: 'PRJ', withYear: true, pad: 3 },
-  rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 }
+  rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 },
+  resultatsEssais: { field: 'numero', prefix: 'RES', withYear: true, pad: 3 }
 };
 
 function nextAutomaticNumber(resource, records) {
@@ -858,6 +860,14 @@ function ResourcePage({
                         <option value="">Selectionner</option>
                         {(field.options || dynamicOptions[field.name] || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
+                    ) : field.type === 'textarea' ? (
+                      <textarea
+                        value={form[field.name]}
+                        required={field.required}
+                        placeholder={field.placeholder}
+                        rows={field.rows || 4}
+                        onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
+                      />
                     ) : (
                       <input
                         type={field.type === 'money' ? 'number' : field.type || 'text'}

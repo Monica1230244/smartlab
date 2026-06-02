@@ -8,6 +8,8 @@ const navItems = [
   { to: '/echantillons', label: 'Echantillons', icon: 'EC' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
+  { to: '/catalogue-essais', label: 'Catalogue des essais', icon: 'CE' },
+  { to: '/resultats-essais', label: 'Resultats & calculs', icon: 'RC' },
   { to: '/equipements', label: 'Equipements', icon: 'EQ' },
   { to: '/personnel', label: 'Personnel & Habilitations', icon: 'RH' },
   { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC' },
@@ -28,6 +30,8 @@ const titles = {
   '/projets': 'Projets',
   '/echantillons': 'Echantillons',
   '/rapports': 'Rapports',
+  '/catalogue-essais': 'Catalogue des essais',
+  '/resultats-essais': 'Resultats & calculs',
   '/equipements': 'Equipements',
   '/audits': 'Audits Qualite',
   '/non-conformites': 'Non-Conformites',
@@ -210,21 +214,21 @@ function Layout() {
 
         <div className="navSectionLabel">Principal</div>
         <nav className="navList">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.slice(0, 4).map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>
 
         <div className="navSectionLabel">Qualite ISO</div>
         <nav className="navList">
-          {navItems.slice(5, 10).map((item) => (
+          {navItems.slice(4, 11).map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>
 
         <div className="navSectionLabel">Administration</div>
         <nav className="navList">
-          {navItems.slice(10).map((item) => (
+          {navItems.slice(11).map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>
