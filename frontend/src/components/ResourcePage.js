@@ -59,11 +59,25 @@ function formatValue(value, field) {
 
 function statusTone(value) {
   const key = String(value || '').toLowerCase();
-  if (['termine', 'paye', 'livree', 'valide', 'envoye', 'signe', 'conforme', 'accepte', 'active', 'actif', 'realise', 'cloture', 'cloturee'].includes(key)) return 'success';
-  if (['en_cours', 'en_essai', 'controle', 'recu', 'en_traitement', 'planifie', 'en_preparation'].includes(key)) return 'info';
-  if (['haute', 'urgente', 'brouillon', 'nouvelle', 'en_attente', 'a_surveiller', 'en_suivi', 'a_renouveler', 'a_configurer', 'ouverte'].includes(key)) return 'warning';
-  if (['annulee', 'archive', 'hors_service', 'refuse', 'suspendue', 'inactif'].includes(key)) return 'danger';
+  if (['termine', 'paye', 'livree', 'valide', 'envoye', 'signe', 'conforme', 'accepte', 'active', 'actif', 'realise', 'cloture', 'cloturee', 'pret_envoi', 'envoye_client', 'valide_client', 'commande_creee'].includes(key)) return 'success';
+  if (['en_cours', 'en_essai', 'controle', 'recu', 'en_traitement', 'planifie', 'en_preparation', 'validation_technique', 'validation_dg'].includes(key)) return 'info';
+  if (['haute', 'urgente', 'brouillon', 'redaction', 'nouvelle', 'en_attente', 'a_surveiller', 'en_suivi', 'a_renouveler', 'a_configurer', 'ouverte'].includes(key)) return 'warning';
+  if (['annulee', 'archive', 'hors_service', 'refuse', 'refus', 'suspendue', 'inactif'].includes(key)) return 'danger';
   return 'neutral';
+}
+
+function quoteStepLabel(status) {
+  const labels = {
+    redaction: 'Redaction du devis',
+    validation_technique: 'Chez responsable technique',
+    validation_dg: 'Chez DG',
+    pret_envoi: 'Pret a envoyer au client',
+    envoye_client: 'En attente validation client',
+    valide_client: 'Valide par le client',
+    commande_creee: 'Commande creee',
+    refuse: 'Refuse'
+  };
+  return labels[status] || labels.redaction;
 }
 
 function normalizeWhatsAppNumber(value) {
@@ -416,26 +430,27 @@ function ResourcePage({
     if (channel === 'email') {
       if (!record.client_email) {
         toast.error('Email client manquant');
-        return;
+        return false;
       }
       window.open(`mailto:${record.client_email}?subject=${encodeURIComponent(`Devis SMARTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-      return;
+      return true;
     }
 
     if (channel === 'sms') {
       if (!phone) {
         toast.error('Numero SMS client manquant');
-        return;
+        return false;
       }
       window.open(`sms:${phone}?body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-      return;
+      return true;
     }
 
     if (!phone) {
       toast.error('Numero WhatsApp client manquant');
-      return;
+      return false;
     }
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    return true;
   };
 
   const submit = async (event) => {
@@ -477,6 +492,27 @@ function ResourcePage({
     toast.success('Suppression effectuee');
   };
 
+  const updateQuoteStage = async (record, status, channel) => {
+    await upsertRecord('devis', {
+      ...record,
+      statut: status,
+      canal_validation: channel,
+      code_validation: record.code_validation || buildValidationCode(record.numero)
+    });
+    setRecords(await listRecords(resource));
+  };
+
+  const sendQuoteAfterValidation = async (record) => {
+    const quote = {
+      ...record,
+      code_validation: record.code_validation || buildValidationCode(record.numero)
+    };
+    const sent = sendToClient(quote);
+    if (!sent) return;
+    await updateQuoteStage(quote, 'envoye_client', 'client');
+    toast.success('Devis envoye au client');
+  };
+
   const validateQuoteAsOrder = async (record) => {
     const commandes = await listRecords('commandes');
     const existingOrder = commandes.find((commande) => commande.reference_devis === record.numero);
@@ -498,9 +534,43 @@ function ResourcePage({
     };
 
     await upsertRecord('commandes', order);
-    await upsertRecord('devis', { ...record, statut: 'signe', canal_validation: 'client' });
+    await upsertRecord('devis', { ...record, statut: 'commande_creee', canal_validation: 'client' });
     setRecords(await listRecords(resource));
     toast.success(`Commande ${order.numero} creee depuis le devis`);
+  };
+
+  const renderQuoteWorkflowActions = (record) => {
+    const status = record.statut || 'redaction';
+    return (
+      <>
+        <span className={`statusBadge ${statusTone(status)}`}>{quoteStepLabel(status)}</span>
+        {status === 'redaction' && (
+          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'validation_technique', 'responsable_technique')}>
+            Soumettre technique
+          </button>
+        )}
+        {status === 'validation_technique' && (
+          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'validation_dg', 'dg')}>
+            Valider technique
+          </button>
+        )}
+        {status === 'validation_dg' && (
+          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'pret_envoi', 'dg')}>
+            Valider DG
+          </button>
+        )}
+        {status === 'pret_envoi' && (
+          <button type="button" className="ghostButton" onClick={() => sendQuoteAfterValidation(record)}>
+            Envoyer client
+          </button>
+        )}
+        {status === 'envoye_client' && (
+          <button type="button" className="ghostButton" onClick={() => validateQuoteAsOrder({ ...record, statut: 'valide_client' })}>
+            Client valide
+          </button>
+        )}
+      </>
+    );
   };
 
   return (
@@ -559,7 +629,7 @@ function ResourcePage({
                     <div className="rowActions">
                       <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
                       {resource === 'devis' && (
-                        <button type="button" className="ghostButton" onClick={() => validateQuoteAsOrder(record)}>Valider client</button>
+                        renderQuoteWorkflowActions(record)
                       )}
                       <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
                     </div>
