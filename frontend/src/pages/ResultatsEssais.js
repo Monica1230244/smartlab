@@ -142,7 +142,9 @@ export default function ResultatsEssais() {
     setForm((current) => ({
       ...current,
       objet_essai: value,
-      essai_code: essai?.essai_a_realiser || current.essai_code,
+      essai_code: Array.isArray(essai?.essai_a_realiser)
+        ? essai.essai_a_realiser[0] || current.essai_code
+        : essai?.essai_a_realiser || current.essai_code,
       client_nom: essai?.client_nom || current.client_nom
     }));
   };

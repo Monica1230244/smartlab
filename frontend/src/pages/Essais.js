@@ -30,7 +30,7 @@ const fields = [
   { name: 'date_prelevement', label: 'Date de prelevement', type: 'date' },
   { name: 'date', label: 'Date de reception', type: 'date' },
   { name: 'delai_livraison', label: 'Delai de livraison', type: 'date' },
-  { name: 'essai_a_realiser', label: 'Essai a realiser', required: true, options: essaiOptions },
+  { name: 'essai_a_realiser', label: 'Essais a realiser', required: true, type: 'multiSelect', options: essaiOptions, full: true },
   { name: 'client_nom', label: 'Client', required: true, placeholder: 'Sogea BTP Benin' },
   { name: 'receptionniste', label: 'Receptionniste', required: true, placeholder: 'Nom du receptionniste' },
   { name: 'responsable_labo', label: 'Responsable labo', required: true, placeholder: 'Nom du responsable labo' },
@@ -46,7 +46,7 @@ const columns = [
   { name: 'date_prelevement', label: 'Prelevement' },
   { name: 'date', label: 'Reception' },
   { name: 'delai_livraison', label: 'Livraison' },
-  { name: 'essai_a_realiser', label: 'Essai' },
+  { name: 'essai_a_realiser', label: 'Essais', type: 'multiSelect' },
   { name: 'client_nom', label: 'Client' },
   { name: 'receptionniste', label: 'Receptionniste' },
   { name: 'responsable_labo', label: 'Resp. labo' }

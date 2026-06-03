@@ -48,6 +48,9 @@ function formatValue(value, field) {
   if (field.type === 'money') {
     return `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
   }
+  if (field.type === 'multiSelect') {
+    return Array.isArray(value) && value.length > 0 ? value.join(', ') : '-';
+  }
   if (field.type === 'lineItems') {
     if (!Array.isArray(value) || value.length === 0) return '-';
     return value.map((item) => {
@@ -1029,6 +1032,31 @@ function ResourcePage({
                           ))}
                         </div>
                         <div className="lineItemsTotal">Total : <strong>{formatMoney(lineItemsTotal(form[field.name]))} FCFA</strong></div>
+                      </div>
+                    ) : field.type === 'multiSelect' ? (
+                      <div className="multiSelectPanel">
+                        {(field.options || dynamicOptions[field.name] || []).map((option) => {
+                          const selectedValues = Array.isArray(form[field.name]) ? form[field.name] : [];
+                          const checked = selectedValues.includes(option.value);
+                          return (
+                            <label className="multiSelectOption" key={option.value}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) => {
+                                  setForm((current) => {
+                                    const currentValues = Array.isArray(current[field.name]) ? current[field.name] : [];
+                                    const nextValues = event.target.checked
+                                      ? Array.from(new Set([...currentValues, option.value]))
+                                      : currentValues.filter((value) => value !== option.value);
+                                    return { ...current, [field.name]: nextValues };
+                                  });
+                                }}
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          );
+                        })}
                       </div>
                     ) : (field.options || dynamicOptions[field.name]) ? (
                       <select

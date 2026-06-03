@@ -947,6 +947,37 @@ select option {
   text-transform: none;
 }
 
+.multiSelectPanel {
+  background: var(--surface2);
+  border: 1px solid rgba(99, 179, 237, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 12px;
+  text-transform: none;
+}
+
+.multiSelectOption {
+  align-items: center;
+  background: rgba(17, 24, 39, 0.48);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  letter-spacing: 0;
+  min-height: 38px;
+  padding: 8px;
+  text-transform: none;
+}
+
+.multiSelectOption input {
+  min-height: auto;
+  width: auto;
+}
+
 .attachmentsPanel {
   background: var(--surface2);
   border: 1px solid rgba(99, 179, 237, 0.08);
@@ -1370,6 +1401,7 @@ tbody tr:hover {
   .formGrid,
   .infoGrid,
   .workflowSteps,
+  .multiSelectPanel,
   .lineItemsHead,
   .lineItemsRow {
     grid-template-columns: 1fr;
