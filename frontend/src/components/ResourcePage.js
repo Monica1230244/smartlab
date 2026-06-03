@@ -547,19 +547,31 @@ function ResourcePage({
 
     if (channel === 'email') {
       if (!record.client_email) {
+        if (targetWindow) targetWindow.close();
         toast.error('Email client manquant');
         return false;
       }
-      window.open(`mailto:${record.client_email}?subject=${encodeURIComponent(`Devis SMARTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      const emailUrl = `mailto:${record.client_email}?subject=${encodeURIComponent(`Devis SMARTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`;
+      if (targetWindow) {
+        targetWindow.location.href = emailUrl;
+      } else {
+        window.open(emailUrl, '_blank', 'noopener,noreferrer');
+      }
       return true;
     }
 
     if (channel === 'sms') {
       if (!phone) {
+        if (targetWindow) targetWindow.close();
         toast.error('Numero SMS client manquant');
         return false;
       }
-      window.open(`sms:${phone}?body=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      const smsUrl = `sms:${phone}?body=${encodeURIComponent(message)}`;
+      if (targetWindow) {
+        targetWindow.location.href = smsUrl;
+      } else {
+        window.open(smsUrl, '_blank', 'noopener,noreferrer');
+      }
       return true;
     }
 
@@ -580,7 +592,7 @@ function ResourcePage({
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    const pendingClientWindow = resource === 'devis' && form.canal_envoi === 'whatsapp'
+    const pendingClientWindow = resource === 'devis' && ['whatsapp', 'email', 'sms'].includes(form.canal_envoi)
       ? window.open('', '_blank')
       : null;
     if (resource === 'essais' && form.reference_devis) {
@@ -617,16 +629,16 @@ function ResourcePage({
     } else {
       toast.success(editing ? 'Modification enregistree dans Supabase' : 'Ajout enregistre dans Supabase');
     }
-    if (resource === 'devis' && payload.canal_envoi === 'whatsapp') {
+    if (resource === 'devis' && ['whatsapp', 'email', 'sms'].includes(payload.canal_envoi)) {
       const sent = sendToClient(savedRecord, pendingClientWindow);
       if (sent) {
         await upsertRecord('devis', {
           ...savedRecord,
           statut: 'envoye_client',
           date_envoi_client: new Date().toISOString(),
-          historique_validations: appendHistory(savedRecord, 'Envoi client', 'Canal: WhatsApp')
+          historique_validations: appendHistory(savedRecord, 'Envoi client', `Canal: ${payload.canal_envoi}`)
         });
-        toast.success('WhatsApp ouvert avec le lien de validation client');
+        toast.success('Canal client ouvert avec le lien de validation');
       }
     }
     if (whatsappOnSubmit) sendToClient(savedRecord);
