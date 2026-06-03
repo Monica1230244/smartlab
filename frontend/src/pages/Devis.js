@@ -69,6 +69,8 @@ const columns = [
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
   { name: 'canal_envoi', label: 'Canal' },
   { name: 'code_validation', label: 'Code client' },
+  { name: 'validation_client', label: 'Decision client', badge: true },
+  { name: 'commande_numero', label: 'Commande' },
   { name: 'valide_technique_par', label: 'Validation RT' },
   { name: 'valide_dg_par', label: 'Validation DG' },
   { name: 'envoye_par', label: 'Envoye par' },
@@ -188,6 +190,18 @@ function QuoteValidationPortal({ code }) {
       tone: 'online',
       targetRole: 'responsable_labo'
     });
+    await createNotification({
+      title: 'Commande creee depuis un devis',
+      message: `${quote.numero} valide par le client. ${order.numero} est disponible dans Commandes.`,
+      tone: 'online',
+      targetRole: 'responsable_appel'
+    });
+    await createNotification({
+      title: 'Validation client recue',
+      message: `${quote.client_nom} a valide ${quote.numero}. Commande ${order.numero}.`,
+      tone: 'online',
+      targetRole: quote.valide_dg_par ? 'dg' : 'responsable_technique'
+    });
     setQuote(validatedQuote);
     setResult(`Devis valide. Commande ${order.numero} creee automatiquement.`);
   };
@@ -216,6 +230,12 @@ function QuoteValidationPortal({ code }) {
       message: `${quote.numero} rejete. Motif: ${reason.trim()}`,
       tone: 'offline',
       targetRole: 'responsable_technique'
+    });
+    await createNotification({
+      title: 'Devis refuse par le client',
+      message: `${quote.client_nom} a refuse ${quote.numero}. Motif: ${reason.trim()}`,
+      tone: 'offline',
+      targetRole: 'responsable_appel'
     });
     setQuote(rejectedQuote);
     setRejecting(false);

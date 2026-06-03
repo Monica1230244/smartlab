@@ -769,6 +769,9 @@ function ResourcePage({
       ...record,
       statut: 'commande_creee',
       canal_validation: 'client',
+      validation_client: 'valide',
+      date_validation_client: new Date().toISOString(),
+      commande_numero: order.numero,
       historique_validations: appendHistory(record, 'Commande creee', order.numero)
     });
     await createSharedNotification({
@@ -777,6 +780,13 @@ function ResourcePage({
       path: '/commandes',
       tone: 'online',
       targetRole: 'responsable_labo'
+    });
+    await createSharedNotification({
+      title: 'Devis transforme en commande',
+      message: `${record.numero} valide. ${order.numero} creee automatiquement.`,
+      path: '/devis',
+      tone: 'online',
+      targetRole: 'responsable_appel'
     });
     setRecords(await listRecords(resource));
     toast.success(`Commande ${order.numero} creee depuis le devis`);
@@ -862,7 +872,8 @@ function ResourcePage({
       validation_technique: records.filter((record) => normalizeQuoteStatus(record.statut) === 'validation_technique').length,
       validation_dg: records.filter((record) => normalizeQuoteStatus(record.statut) === 'validation_dg').length,
       pret_envoi: records.filter((record) => normalizeQuoteStatus(record.statut) === 'pret_envoi').length,
-      envoye_client: records.filter((record) => normalizeQuoteStatus(record.statut) === 'envoye_client').length
+      envoye_client: records.filter((record) => normalizeQuoteStatus(record.statut) === 'envoye_client').length,
+      commande_creee: records.filter((record) => normalizeQuoteStatus(record.statut) === 'commande_creee').length
     };
     const roleHints = {
       responsable_appel: 'Vous redigez et soumettez. Apres soumission, le suivi reste visible mais les actions passent au RT/DG.',
@@ -882,6 +893,7 @@ function ResourcePage({
           <div><span>Chez DG</span><strong>{counters.validation_dg}</strong></div>
           <div><span>Pret envoi</span><strong>{counters.pret_envoi}</strong></div>
           <div><span>Envoyes client</span><strong>{counters.envoye_client}</strong></div>
+          <div><span>Commandes creees</span><strong>{counters.commande_creee}</strong></div>
         </div>
       </div>
     );
