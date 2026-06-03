@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { listRecords, upsertRecord } from '../services/localStore';
 
 const navItems = [
@@ -44,14 +45,6 @@ const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
 const APP_VERSION = window.SMARTLAB_VERSION || 'dev';
 
-const roleOptions = [
-  { value: 'responsable_appel', label: 'Resp. offres' },
-  { value: 'responsable_technique', label: 'Resp. technique' },
-  { value: 'dg', label: 'DG' },
-  { value: 'responsable_labo', label: 'Resp. labo' },
-  { value: 'receptionniste', label: 'Reception' }
-];
-
 function loadDismissedNotifications() {
   try {
     return JSON.parse(localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY) || '[]');
@@ -60,16 +53,26 @@ function loadDismissedNotifications() {
   }
 }
 
-function Layout() {
+function Layout({ publicMode = false }) {
+  const { user, logout, roleLabels } = useAuth();
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState(loadDismissedNotifications);
-  const [currentRole, setCurrentRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
+  const [currentRole, setCurrentRole] = useState(user?.role || localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (user?.role) {
+      localStorage.setItem(CURRENT_ROLE_KEY, user.role);
+      setCurrentRole(user.role);
+      window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: user.role }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (publicMode) return undefined;
     let cancelled = false;
 
     const refreshNotifications = async () => {
@@ -86,6 +89,7 @@ function Layout() {
       const nextNotifications = [];
       sharedNotifications
         .filter((item) => !item.read)
+        .filter((item) => !item.targetRole || item.targetRole === currentRole || item.targetRole === 'all')
         .forEach((item) => {
           nextNotifications.push({
             id: item.id,
@@ -160,7 +164,7 @@ function Layout() {
       cancelled = true;
       window.removeEventListener('smartlab:data-changed', refreshNotifications);
     };
-  }, [dismissedNotificationIds]);
+  }, [dismissedNotificationIds, currentRole, publicMode]);
 
   const toggleNotifications = async () => {
     setNotificationsOpen((value) => !value);
@@ -195,13 +199,6 @@ function Layout() {
     navigate(notification.path);
   };
 
-  const changeRole = (event) => {
-    const role = event.target.value;
-    localStorage.setItem(CURRENT_ROLE_KEY, role);
-    setCurrentRole(role);
-    window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: role }));
-  };
-
   const forceRefreshApp = async () => {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -216,7 +213,7 @@ function Layout() {
 
   return (
     <div className="shell">
-      <aside className={`sidebar ${open ? 'open' : ''}`}>
+      {!publicMode && <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
           <div className="brandMark">SL</div>
           <div>
@@ -247,32 +244,31 @@ function Layout() {
         </nav>
 
         <div className="userCard">
-          <div className="avatar">SL</div>
+          <div className="avatar">{user?.initials || 'SL'}</div>
           <div>
-            <strong>SMARTLAB</strong>
-            <span>Version {APP_VERSION}</span>
+            <strong>{user?.name || 'SMARTLAB'}</strong>
+            <span>{roleLabels?.[currentRole] || 'Utilisateur'} - Version {APP_VERSION}</span>
             <button type="button" className="refreshVersionButton" onClick={forceRefreshApp}>Actualiser</button>
+            <button type="button" className="refreshVersionButton" onClick={() => { logout(); navigate('/login', { replace: true }); }}>Deconnexion</button>
           </div>
         </div>
-      </aside>
+      </aside>}
 
-      <main className="main">
+      <main className={publicMode ? 'main publicMain' : 'main'}>
         <header className="topbar">
-          <button className="menuButton" onClick={() => setOpen((value) => !value)} aria-label="Menu">
+          {!publicMode && <button className="menuButton" onClick={() => setOpen((value) => !value)} aria-label="Menu">
             Menu
-          </button>
+          </button>}
           <div className="topbarTitle">
             <p className="eyebrow">SMARTLAB mobile</p>
             <h1>{titles[location.pathname] || 'SMARTLAB'}</h1>
           </div>
-          <div className="topbarSearch">
+          {!publicMode && <div className="topbarSearch">
             <span>RE</span>
             <input placeholder="Rechercher un essai, client, echantillon..." />
-          </div>
-          <div className="topbarActions">
-            <select className="roleSelect" value={currentRole} onChange={changeRole} aria-label="Role utilisateur">
-              {roleOptions.map((role) => <option value={role.value} key={role.value}>{role.label}</option>)}
-            </select>
+          </div>}
+          {!publicMode && <div className="topbarActions">
+            <span className="authRolePill">{roleLabels?.[currentRole] || currentRole}</span>
             <button
               type="button"
               className="notificationButton"
@@ -309,7 +305,7 @@ function Layout() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </header>
         <section className="content">
           <Outlet />

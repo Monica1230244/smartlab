@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 import Layout from './components/Layout';
+import { useAuth } from './contexts/AuthContext';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Essais from './pages/Essais';
@@ -19,6 +21,16 @@ import Parametres from './pages/Parametres';
 import Projets from './pages/Projets';
 import CatalogueEssais from './pages/CatalogueEssais';
 import ResultatsEssais from './pages/ResultatsEssais';
+
+function ProtectedLayout() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const isClientValidation = location.pathname === '/devis' && new URLSearchParams(location.search).has('validation');
+
+  if (loading) return <div className="loadingScreen">Chargement SMARTLAB...</div>;
+  if (!user && !isClientValidation) return <Navigate to="/login" replace />;
+  return <Layout publicMode={isClientValidation} />;
+}
 
 function App() {
   const [waitingWorker, setWaitingWorker] = useState(null);
@@ -38,7 +50,8 @@ function App() {
   return (
     <>
       <Routes>
-        <Route element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        <Route element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/essais" element={<Essais />} />

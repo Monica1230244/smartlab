@@ -1,50 +1,83 @@
-﻿import React, { createContext, useState, useContext, useEffect } from 'react';
-import api from '../services/api';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
+const TOKEN_KEY = 'smartlab_token';
+const USER_KEY = 'smartlab_user';
+const CURRENT_ROLE_KEY = 'smartlab_current_role';
+
+const roleLabels = {
+  responsable_appel: 'Responsable des offres',
+  responsable_technique: 'Responsable technique',
+  dg: 'Direction generale',
+  responsable_labo: 'Responsable laboratoire',
+  receptionniste: 'Reception'
+};
+
+export const authProfiles = [
+  { role: 'responsable_appel', label: roleLabels.responsable_appel, email: 'offres@smartlab.com', initials: 'RO' },
+  { role: 'responsable_technique', label: roleLabels.responsable_technique, email: 'rt@smartlab.com', initials: 'RT' },
+  { role: 'dg', label: roleLabels.dg, email: 'dg@smartlab.com', initials: 'DG' },
+  { role: 'responsable_labo', label: roleLabels.responsable_labo, email: 'labo@smartlab.com', initials: 'RL' },
+  { role: 'receptionniste', label: roleLabels.receptionniste, email: 'reception@smartlab.com', initials: 'RC' }
+];
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('smartlab_token'));
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY));
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (token) {
-            api.get('/auth/me')
-                .then(res => setUser(res.data))
-                .catch(() => logout())
-                .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
-    }, [token]);
+  useEffect(() => {
+    const savedUser = localStorage.getItem(USER_KEY);
+    if (token && savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      localStorage.setItem(CURRENT_ROLE_KEY, parsedUser.role);
+      window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: parsedUser.role }));
+    }
+    setLoading(false);
+  }, [token]);
 
-    const login = async (email, password) => {
-        try {
-            const res = await api.post('/auth/login', { email, password });
-            localStorage.setItem('smartlab_token', res.data.token);
-            setToken(res.data.token);
-            setUser(res.data.user);
-            toast.success('Connexion réussie');
-            return true;
-        } catch (err) {
-            toast.error(err.response?.data?.error || 'Erreur de connexion');
-            return false;
-        }
+  const login = async ({ email, password, role }) => {
+    const profile = authProfiles.find((item) => item.role === role);
+    if (!profile) {
+      toast.error('Selectionnez un role valide');
+      return false;
+    }
+    if (!password || password.length < 4) {
+      toast.error('Mot de passe requis');
+      return false;
+    }
+
+    const nextUser = {
+      ...profile,
+      email: email || profile.email,
+      name: profile.label
     };
+    const nextToken = `smartlab-${role}-${Date.now()}`;
+    localStorage.setItem(TOKEN_KEY, nextToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    localStorage.setItem(CURRENT_ROLE_KEY, role);
+    setToken(nextToken);
+    setUser(nextUser);
+    window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: role }));
+    toast.success(`Connecte: ${profile.label}`);
+    return true;
+  };
 
-    const logout = () => {
-        localStorage.removeItem('smartlab_token');
-        setToken(null);
-        setUser(null);
-        toast.success('Déconnexion réussie');
-    };
+  const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setToken(null);
+    setUser(null);
+    toast.success('Deconnexion reussie');
+  };
 
-    return (
-        <AuthContext.Provider value={{ user, token, loading, login, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  return (
+    <AuthContext.Provider value={{ user, token, loading, login, logout, roleLabels }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
