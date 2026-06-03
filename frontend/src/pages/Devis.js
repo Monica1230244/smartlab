@@ -69,6 +69,9 @@ const columns = [
   { name: 'montant_ht', label: 'Montant HT', type: 'money' },
   { name: 'canal_envoi', label: 'Canal' },
   { name: 'code_validation', label: 'Code client' },
+  { name: 'valide_technique_par', label: 'Validation RT' },
+  { name: 'valide_dg_par', label: 'Validation DG' },
+  { name: 'envoye_par', label: 'Envoye par' },
   { name: 'statut', label: 'Statut', badge: true }
 ];
 

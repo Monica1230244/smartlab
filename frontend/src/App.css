@@ -530,6 +530,63 @@ button {
   gap: 16px;
 }
 
+.workflowBoard {
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.workflowIntro {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.workflowIntro strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.workflowIntro span {
+  color: var(--text3);
+  font-size: 12px;
+  text-align: right;
+}
+
+.workflowSteps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflowSteps div {
+  background: var(--surface2);
+  border: 1px solid rgba(99, 179, 237, 0.08);
+  border-radius: 8px;
+  min-height: 74px;
+  padding: 12px;
+}
+
+.workflowSteps span {
+  color: var(--text3);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.workflowSteps strong {
+  color: var(--accent2);
+  display: block;
+  font-size: 26px;
+  margin-top: 8px;
+}
+
 .statCard {
   min-height: 124px;
   padding: 20px;
@@ -1184,6 +1241,7 @@ tbody tr:hover {
   .statsGrid,
   .formGrid,
   .infoGrid,
+  .workflowSteps,
   .lineItemsHead,
   .lineItemsRow {
     grid-template-columns: 1fr;
@@ -1191,9 +1249,14 @@ tbody tr:hover {
 
   .welcomeBand,
   .pageHeader,
-  .tableTools {
+  .tableTools,
+  .workflowIntro {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .workflowIntro span {
+    text-align: left;
   }
 
   .headerActions {

@@ -45,7 +45,7 @@ const CURRENT_ROLE_KEY = 'smartlab_current_role';
 const APP_VERSION = window.SMARTLAB_VERSION || 'dev';
 
 const roleOptions = [
-  { value: 'responsable_appel', label: 'Resp. appels' },
+  { value: 'responsable_appel', label: 'Resp. offres' },
   { value: 'responsable_technique', label: 'Resp. technique' },
   { value: 'dg', label: 'DG' },
   { value: 'responsable_labo', label: 'Resp. labo' },

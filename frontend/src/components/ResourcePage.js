@@ -154,7 +154,7 @@ function currentRole() {
 
 function roleLabel(role) {
   const labels = {
-    responsable_appel: 'Responsable des appels',
+    responsable_appel: 'Responsable des offres',
     responsable_technique: 'Responsable technique',
     dg: 'DG',
     responsable_labo: 'Responsable labo',
@@ -354,6 +354,7 @@ function ResourcePage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dynamicOptions, setDynamicOptions] = useState({});
+  const [activeRole, setActiveRole] = useState(currentRole());
 
   const refresh = async () => {
     setLoading(true);
@@ -379,6 +380,12 @@ function ResourcePage({
       window.removeEventListener('smartlab:data-changed', handler);
     };
   }, [resource]);
+
+  useEffect(() => {
+    const handler = (event) => setActiveRole(event.detail || currentRole());
+    window.addEventListener('smartlab:role-changed', handler);
+    return () => window.removeEventListener('smartlab:role-changed', handler);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -654,9 +661,10 @@ function ResourcePage({
     toast.success('Suppression effectuee');
   };
 
-  const updateQuoteStage = async (record, status, channel) => {
+  const updateQuoteStage = async (record, status, channel, extra = {}) => {
     await upsertRecord('devis', {
       ...record,
+      ...extra,
       statut: status,
       canal_validation: channel,
       code_validation: record.code_validation || buildValidationCode(record.numero),
@@ -673,6 +681,20 @@ function ResourcePage({
     setRecords(await listRecords(resource));
   };
 
+  const markQuoteSeen = async (record, role) => {
+    const now = new Date().toISOString();
+    const extra = role === 'dg'
+      ? { date_vue_dg: now, vu_par_dg: roleLabel(role) }
+      : { date_vue_technique: now, vu_par_technique: roleLabel(role) };
+    await upsertRecord('devis', {
+      ...record,
+      ...extra,
+      historique_validations: appendHistory(record, 'Devis consulte', roleLabel(role))
+    });
+    setRecords(await listRecords(resource));
+    toast.success('Consultation enregistree');
+  };
+
   const sendQuoteAfterValidation = async (record) => {
     const quote = {
       ...record,
@@ -680,8 +702,46 @@ function ResourcePage({
     };
     const sent = sendToClient(quote);
     if (!sent) return;
-    await updateQuoteStage(quote, 'envoye_client', 'client');
+    await updateQuoteStage(quote, 'envoye_client', 'client', {
+      date_envoi_client: new Date().toISOString(),
+      envoye_par: roleLabel(activeRole)
+    });
     toast.success('Devis envoye au client');
+  };
+
+  const validateQuoteAndSend = async (record) => {
+    const role = activeRole;
+    const quote = {
+      ...record,
+      code_validation: record.code_validation || buildValidationCode(record.numero),
+      date_vue_technique: record.date_vue_technique || new Date().toISOString(),
+      date_validation_technique: record.date_validation_technique || new Date().toISOString(),
+      valide_technique_par: record.valide_technique_par || roleLabel(role),
+      ...(role === 'dg' ? {
+        date_vue_dg: record.date_vue_dg || new Date().toISOString(),
+        date_validation_dg: record.date_validation_dg || new Date().toISOString(),
+        valide_dg_par: roleLabel(role)
+      } : {})
+    };
+    const sent = sendToClient(quote);
+    if (!sent) return;
+    await upsertRecord('devis', {
+      ...quote,
+      statut: 'envoye_client',
+      canal_validation: 'client',
+      date_envoi_client: new Date().toISOString(),
+      envoye_par: roleLabel(role),
+      historique_validations: appendHistory(quote, 'Validation et envoi client', roleLabel(role))
+    });
+    await createSharedNotification({
+      title: 'Devis envoye au client',
+      message: `${quote.numero} envoye par ${roleLabel(role)}`,
+      path: '/devis',
+      tone: 'online',
+      targetRole: 'responsable_appel'
+    });
+    setRecords(await listRecords(resource));
+    toast.success('Devis valide et canal client ouvert');
   };
 
   const validateQuoteAsOrder = async (record) => {
@@ -724,25 +784,51 @@ function ResourcePage({
 
   const renderQuoteWorkflowActions = (record) => {
     const status = normalizeQuoteStatus(record.statut);
+    const role = activeRole;
+    const canSubmit = role === 'responsable_appel';
+    const canValidateTechnique = ['responsable_technique', 'dg'].includes(role);
+    const canValidateDg = role === 'dg';
+    const canSendClient = ['responsable_technique', 'dg'].includes(role);
     return (
       <>
         <span className={`statusBadge ${statusTone(status)}`}>{quoteStepLabel(status)}</span>
-        {status === 'redaction' && (
+        {status === 'redaction' && canSubmit && (
           <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'validation_technique', 'responsable_technique')}>
-            Soumettre technique
+            Soumettre au RT
           </button>
         )}
-        {status === 'validation_technique' && (
-          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'validation_dg', 'dg')}>
+        {status === 'validation_technique' && canValidateTechnique && !record.date_vue_technique && (
+          <button type="button" className="ghostButton" onClick={() => markQuoteSeen(record, role)}>
+            Marquer vu
+          </button>
+        )}
+        {status === 'validation_technique' && canValidateTechnique && (
+          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'validation_dg', 'dg', {
+            date_validation_technique: new Date().toISOString(),
+            valide_technique_par: roleLabel(role)
+          })}>
             Valider technique
           </button>
         )}
-        {status === 'validation_dg' && (
-          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'pret_envoi', 'dg')}>
+        {status === 'validation_technique' && canValidateTechnique && (
+          <button type="button" className="ghostButton" onClick={() => validateQuoteAndSend(record)}>
+            Valider et envoyer
+          </button>
+        )}
+        {status === 'validation_dg' && canValidateDg && !record.date_vue_dg && (
+          <button type="button" className="ghostButton" onClick={() => markQuoteSeen(record, role)}>
+            Marquer vu DG
+          </button>
+        )}
+        {status === 'validation_dg' && canValidateDg && (
+          <button type="button" className="ghostButton" onClick={() => updateQuoteStage(record, 'pret_envoi', 'dg', {
+            date_validation_dg: new Date().toISOString(),
+            valide_dg_par: roleLabel(role)
+          })}>
             Valider DG
           </button>
         )}
-        {status === 'pret_envoi' && (
+        {status === 'pret_envoi' && canSendClient && (
           <button type="button" className="ghostButton" onClick={() => sendQuoteAfterValidation(record)}>
             Envoyer client
           </button>
@@ -753,6 +839,51 @@ function ResourcePage({
           </button>
         )}
       </>
+    );
+  };
+
+  const canEditRecord = (record) => {
+    if (resource !== 'devis') return true;
+    const status = normalizeQuoteStatus(record.statut);
+    if (activeRole === 'responsable_appel') return status === 'redaction';
+    return ['responsable_technique', 'dg'].includes(activeRole);
+  };
+
+  const canDeleteRecord = (record) => {
+    if (resource !== 'devis') return true;
+    const status = normalizeQuoteStatus(record.statut);
+    return activeRole === 'responsable_appel' && status === 'redaction';
+  };
+
+  const renderQuoteValidationBoard = () => {
+    if (resource !== 'devis') return null;
+    const counters = {
+      redaction: records.filter((record) => normalizeQuoteStatus(record.statut) === 'redaction').length,
+      validation_technique: records.filter((record) => normalizeQuoteStatus(record.statut) === 'validation_technique').length,
+      validation_dg: records.filter((record) => normalizeQuoteStatus(record.statut) === 'validation_dg').length,
+      pret_envoi: records.filter((record) => normalizeQuoteStatus(record.statut) === 'pret_envoi').length,
+      envoye_client: records.filter((record) => normalizeQuoteStatus(record.statut) === 'envoye_client').length
+    };
+    const roleHints = {
+      responsable_appel: 'Vous redigez et soumettez. Apres soumission, le suivi reste visible mais les actions passent au RT/DG.',
+      responsable_technique: 'Vous voyez les devis soumis, marquez la consultation, validez et pouvez envoyer au client.',
+      dg: 'Vous pouvez valider les devis, remplacer le RT si besoin et envoyer au client.'
+    };
+
+    return (
+      <div className="workflowBoard">
+        <div className="workflowIntro">
+          <strong>Espace validation devis</strong>
+          <span>{roleHints[activeRole] || 'Suivi du circuit devis.'}</span>
+        </div>
+        <div className="workflowSteps">
+          <div><span>Redaction offres</span><strong>{counters.redaction}</strong></div>
+          <div><span>Chez RT</span><strong>{counters.validation_technique}</strong></div>
+          <div><span>Chez DG</span><strong>{counters.validation_dg}</strong></div>
+          <div><span>Pret envoi</span><strong>{counters.pret_envoi}</strong></div>
+          <div><span>Envoyes client</span><strong>{counters.envoye_client}</strong></div>
+        </div>
+      </div>
     );
   };
 
@@ -780,6 +911,8 @@ function ResourcePage({
           ))}
         </div>
       )}
+
+      {renderQuoteValidationBoard()}
 
       <div className="tablePanel">
         <div className="tableTools">
@@ -810,11 +943,15 @@ function ResourcePage({
                   ))}
                   <td>
                     <div className="rowActions">
-                      <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                      {canEditRecord(record) && (
+                        <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                      )}
                       {resource === 'devis' && (
                         renderQuoteWorkflowActions(record)
                       )}
-                      <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+                      {canDeleteRecord(record) && (
+                        <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+                      )}
                     </div>
                   </td>
                 </tr>
