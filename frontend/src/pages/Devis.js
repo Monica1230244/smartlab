@@ -324,7 +324,7 @@ export default function Devis() {
       columns={columns}
       primaryLabel="Nouveau Devis"
       summaryCards={summaryCards}
-      submitLabel="Enregistrer le devis"
+      submitLabel="Enregistrer / envoyer"
     />
   );
 }

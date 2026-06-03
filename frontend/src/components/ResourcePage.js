@@ -537,7 +537,7 @@ function ResourcePage({
     }));
   };
 
-  const sendToClient = (record) => {
+  const sendToClient = (record, targetWindow = null) => {
     const phone = normalizeWhatsAppNumber(record.client_whatsapp || record.client_telephone || record.telephone || record.whatsapp);
     const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
     const validationCode = record.code_validation ? ` Code de validation: ${record.code_validation}.` : '';
@@ -564,16 +564,25 @@ function ResourcePage({
     }
 
     if (!phone) {
+      if (targetWindow) targetWindow.close();
       toast.error('Numero WhatsApp client manquant');
       return false;
     }
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    if (targetWindow) {
+      targetWindow.location.href = whatsappUrl;
+    } else {
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
     return true;
   };
 
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
+    const pendingClientWindow = resource === 'devis' && form.canal_envoi === 'whatsapp'
+      ? window.open('', '_blank')
+      : null;
     if (resource === 'essais' && form.reference_devis) {
       const commandes = await listRecords('commandes');
       const hasCommande = commandes.some((commande) => commande.reference_devis === form.reference_devis);
@@ -607,6 +616,18 @@ function ResourcePage({
       toast.error(`Enregistre localement, mais pas dans Supabase: ${savedRecord.__syncError}`);
     } else {
       toast.success(editing ? 'Modification enregistree dans Supabase' : 'Ajout enregistre dans Supabase');
+    }
+    if (resource === 'devis' && payload.canal_envoi === 'whatsapp') {
+      const sent = sendToClient(savedRecord, pendingClientWindow);
+      if (sent) {
+        await upsertRecord('devis', {
+          ...savedRecord,
+          statut: 'envoye_client',
+          date_envoi_client: new Date().toISOString(),
+          historique_validations: appendHistory(savedRecord, 'Envoi client', 'Canal: WhatsApp')
+        });
+        toast.success('WhatsApp ouvert avec le lien de validation client');
+      }
     }
     if (whatsappOnSubmit) sendToClient(savedRecord);
     closeModal();
