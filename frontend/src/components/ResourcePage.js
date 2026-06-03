@@ -143,8 +143,9 @@ function buildValidationExpiry() {
 }
 
 function buildValidationUrl(code) {
-  const base = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, '');
-  return `${base}/devis?validation=${encodeURIComponent(code || '')}`;
+  const publicBase = process.env.PUBLIC_URL || '';
+  const base = `${window.location.origin}${publicBase}`.replace(/\/$/, '');
+  return `${base}/#/devis?validation=${encodeURIComponent(code || '')}`;
 }
 
 function currentRole() {
