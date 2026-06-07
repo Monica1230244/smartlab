@@ -606,9 +606,6 @@ function ResourcePage({
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    const pendingClientWindow = resource === 'devis' && ['whatsapp', 'email', 'sms'].includes(form.canal_envoi)
-      ? window.open('', '_blank')
-      : null;
     if (resource === 'essais' && form.reference_devis) {
       const commandes = await listRecords('commandes');
       const hasCommande = commandes.some((commande) => commande.reference_devis === form.reference_devis);
@@ -642,18 +639,6 @@ function ResourcePage({
       toast.error(`Enregistre localement, mais pas dans Supabase: ${savedRecord.__syncError}`);
     } else {
       toast.success(editing ? 'Modification enregistree dans Supabase' : 'Ajout enregistre dans Supabase');
-    }
-    if (resource === 'devis' && ['whatsapp', 'email', 'sms'].includes(payload.canal_envoi)) {
-      const sent = sendToClient(savedRecord, pendingClientWindow);
-      if (sent) {
-        await upsertRecord('devis', {
-          ...savedRecord,
-          statut: 'envoye_client',
-          date_envoi_client: new Date().toISOString(),
-          historique_validations: appendHistory(savedRecord, 'Envoi client', `Canal: ${payload.canal_envoi}`)
-        });
-        toast.success('Canal client ouvert avec le lien de validation');
-      }
     }
     if (whatsappOnSubmit) sendToClient(savedRecord);
     closeModal();
@@ -704,14 +689,22 @@ function ResourcePage({
   const sendQuoteAfterValidation = async (record) => {
     const quote = {
       ...record,
-      code_validation: record.code_validation || buildValidationCode(record.numero)
+      statut: 'envoye_client',
+      canal_validation: 'client',
+      code_validation: record.code_validation || buildValidationCode(record.numero),
+      validation_expires_at: record.validation_expires_at || buildValidationExpiry(),
+      date_envoi_client: new Date().toISOString(),
+      envoye_par: roleLabel(activeRole),
+      historique_validations: appendHistory(record, 'Envoi client', roleLabel(activeRole))
     };
+    const savedQuote = await upsertRecord('devis', quote);
+    if (savedQuote.__syncError) {
+      toast.error('Devis enregistre localement, mais le lien client ne marchera pas sur un autre telephone tant que Supabase ne synchronise pas.');
+      return;
+    }
     const sent = sendToClient(quote);
     if (!sent) return;
-    await updateQuoteStage(quote, 'envoye_client', 'client', {
-      date_envoi_client: new Date().toISOString(),
-      envoye_par: roleLabel(activeRole)
-    });
+    setRecords(await listRecords(resource));
     toast.success('Devis envoye au client');
   };
 
@@ -729,16 +722,21 @@ function ResourcePage({
         valide_dg_par: roleLabel(role)
       } : {})
     };
-    const sent = sendToClient(quote);
-    if (!sent) return;
-    await upsertRecord('devis', {
+    const savedQuote = await upsertRecord('devis', {
       ...quote,
       statut: 'envoye_client',
       canal_validation: 'client',
+      validation_expires_at: quote.validation_expires_at || buildValidationExpiry(),
       date_envoi_client: new Date().toISOString(),
       envoye_par: roleLabel(role),
       historique_validations: appendHistory(quote, 'Validation et envoi client', roleLabel(role))
     });
+    if (savedQuote.__syncError) {
+      toast.error('Devis valide localement, mais le lien client ne marchera pas sur un autre telephone tant que Supabase ne synchronise pas.');
+      return;
+    }
+    const sent = sendToClient(savedQuote);
+    if (!sent) return;
     await createSharedNotification({
       title: 'Devis envoye au client',
       message: `${quote.numero} envoye par ${roleLabel(role)}`,

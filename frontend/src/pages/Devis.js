@@ -249,7 +249,15 @@ function QuoteValidationPortal({ code }) {
   }
 
   if (!quote) {
-    return <div className="validationPortal"><div className="tablePanel"><div className="emptyCell">Code de validation introuvable.</div></div></div>;
+    return (
+      <div className="validationPortal">
+        <div className="tablePanel">
+          <div className="emptyCell">
+            Code de validation introuvable. Le devis n'a peut-etre pas encore ete synchronise dans Supabase ou le lien a ete genere avant l'enregistrement.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const alreadyAnswered = ['commande_creee', 'refuse'].includes(quote.statut);
@@ -347,7 +355,7 @@ export default function Devis() {
       columns={columns}
       primaryLabel="Nouveau Devis"
       summaryCards={summaryCards}
-      submitLabel="Enregistrer / envoyer"
+      submitLabel="Enregistrer"
     />
   );
 }
