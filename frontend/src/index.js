@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const SMARTLAB_VERSION = '2026.06.07-6';
+const SMARTLAB_VERSION = '2026.06.07-7';
 window.SMARTLAB_VERSION = SMARTLAB_VERSION;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

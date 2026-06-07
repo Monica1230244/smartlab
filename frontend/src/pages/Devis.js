@@ -72,7 +72,6 @@ const columns = [
   { name: 'validation_client', label: 'Decision client', badge: true },
   { name: 'commande_numero', label: 'Commande' },
   { name: 'valide_technique_par', label: 'Validation RT' },
-  { name: 'valide_dg_par', label: 'Validation DG' },
   { name: 'envoye_par', label: 'Envoye par' },
   { name: 'statut', label: 'Statut', badge: true }
 ];
@@ -200,7 +199,7 @@ function QuoteValidationPortal({ code }) {
       title: 'Validation client recue',
       message: `${quote.client_nom} a valide ${quote.numero}. Commande ${order.numero}.`,
       tone: 'online',
-      targetRole: quote.valide_dg_par ? 'dg' : 'responsable_technique'
+      targetRole: 'responsable_technique'
     });
     setQuote(validatedQuote);
     setResult(`Devis valide. Commande ${order.numero} creee automatiquement.`);
