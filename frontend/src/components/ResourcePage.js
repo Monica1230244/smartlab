@@ -95,6 +95,10 @@ function normalizeQuoteStatus(status) {
   return legacy[status] || status || 'redaction';
 }
 
+function isQuoteStillInternal(status) {
+  return ['redaction', 'validation_technique', 'validation_dg', 'pret_envoi', 'refuse'].includes(normalizeQuoteStatus(status));
+}
+
 function fieldDefault(field) {
   if (Array.isArray(field.defaultValue)) {
     return field.defaultValue.map((item) => ({ ...item }));
@@ -857,14 +861,13 @@ function ResourcePage({
   const canEditRecord = (record) => {
     if (resource !== 'devis') return true;
     const status = normalizeQuoteStatus(record.statut);
-    if (activeRole === 'responsable_appel') return status === 'redaction';
+    if (activeRole === 'responsable_appel') return isQuoteStillInternal(status);
     return ['responsable_technique', 'dg'].includes(activeRole);
   };
 
   const canDeleteRecord = (record) => {
     if (resource !== 'devis') return true;
-    const status = normalizeQuoteStatus(record.statut);
-    return activeRole === 'responsable_appel' && status === 'redaction';
+    return activeRole === 'responsable_appel' && isQuoteStillInternal(record.statut);
   };
 
   const renderQuoteValidationBoard = () => {
@@ -878,7 +881,7 @@ function ResourcePage({
       commande_creee: records.filter((record) => normalizeQuoteStatus(record.statut) === 'commande_creee').length
     };
     const roleHints = {
-      responsable_appel: 'Vous redigez et soumettez. Apres soumission, le suivi reste visible mais les actions passent au RT/DG.',
+      responsable_appel: 'Vous redigez, corrigez ou supprimez les devis tant qu ils ne sont pas envoyes au client. Les validations restent chez RT/DG.',
       responsable_technique: 'Vous voyez les devis soumis, marquez la consultation, validez et pouvez envoyer au client.',
       dg: 'Vous pouvez valider les devis, remplacer le RT si besoin et envoyer au client.'
     };
