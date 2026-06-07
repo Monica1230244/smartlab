@@ -106,7 +106,6 @@ function buildDashboard(role, data) {
   const equipements = data.equipements || [];
   const personnel = data.personnel || [];
   const resultats = data.resultatsEssais || [];
-  const echantillons = data.echantillons || [];
 
   const quotesByStatus = (status) => devis.filter((item) => normalizeQuoteStatus(item.statut) === status);
   const quotesAmount = devis.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
@@ -235,7 +234,7 @@ function buildDashboard(role, data) {
       cards: [
         { label: 'Programmes essais', value: activeOrders.length, tone: 'blue', to: '/commandes' },
         { label: 'Essais en cours', value: essais.filter((item) => item.statut === 'en_cours').length, tone: 'amber', to: '/essais' },
-        { label: 'Objets transmis RL', value: echantillons.filter((item) => item.statut === 'recu').length, tone: 'green', to: '/echantillons' },
+        { label: 'Objets transmis RL', value: essais.filter((item) => item.responsable_labo).length, tone: 'green', to: '/essais' },
         { label: 'Resultats a traiter', value: resultats.length, tone: 'green', to: '/resultats-essais' },
         { label: 'Materiel a surveiller', value: equipmentWatch.length, tone: 'red', to: '/equipements' },
         { label: 'Rapports a monter', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' }
@@ -277,7 +276,7 @@ function buildDashboard(role, data) {
         { label: 'Objets a codifier', value: essais.filter((item) => !item.receptionniste).length, tone: 'amber', to: '/essais' },
         { label: 'Objets transmis RL', value: essais.filter((item) => item.responsable_labo).length, tone: 'green', to: '/essais' },
         { label: 'Commandes a receptionner', value: activeOrders.length, tone: 'blue', to: '/commandes' },
-        { label: 'Echantillons recus', value: echantillons.filter((item) => item.statut === 'recu').length, tone: 'green', to: '/echantillons' },
+        { label: "Objets d'essais recus", value: essais.filter((item) => item.date || item.date_prelevement).length, tone: 'green', to: '/essais' },
         { label: 'NC reception', value: openNc.filter((item) => String(item.origine || '').toLowerCase().includes('reception')).length, tone: 'red', to: '/non-conformites' },
         { label: 'Clients identifies', value: clients.length, tone: 'blue', to: '/clients' }
       ],
@@ -343,7 +342,6 @@ function Dashboard() {
     devis: [],
     commandes: [],
     essais: [],
-    echantillons: [],
     rapports: [],
     equipements: [],
     audits: [],

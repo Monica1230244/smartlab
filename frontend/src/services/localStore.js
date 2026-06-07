@@ -40,10 +40,6 @@ const seedData = {
   resultatsEssais: [
     { id: 'res-1', numero: 'RES-2026-001', objet_essai: 'EA-2026-051', essai_code: 'RC28', client_nom: 'Sogea BTP Benin', date_resultat: today, valeur_1: 27.4, valeur_2: 26.1, valeur_3: 25.8, moyenne: 26.43, unite: 'MPa', exigence: 25, decision: 'conforme', technicien: 'KASSIN Harrison', observations: 'Ruptures correctes, aucune anomalie visible.' }
   ],
-  echantillons: [
-    { id: 'ech-1', code: 'ECH-051', client_nom: 'Sogea BTP Benin', nature: 'Beton C25', reception: today, statut: 'recu' },
-    { id: 'ech-2', code: 'ECH-050', client_nom: 'AGETUR Benin', nature: 'Sol lateritique', reception: today, statut: 'en_essai' }
-  ],
   rapports: [
     { id: 'rap-1', numero: 'RAP-2026-046', essai: 'EA-2026-050', client_nom: 'AGETUR Benin', date: today, statut: 'valide' },
     { id: 'rap-2', numero: 'RAP-2026-045', essai: 'EA-2026-049', client_nom: 'MAEP', date: today, statut: 'brouillon' }
@@ -57,7 +53,7 @@ const seedData = {
     { id: 'aud-2', reference: 'REV-2026-001', type: 'Revue de direction', pilote: 'Directeur General', date: today, statut: 'en_preparation' }
   ],
   nonConformites: [
-    { id: 'nc-1', reference: 'NC-2026-002', origine: 'Reception echantillon', description: 'Echantillon recu sans identification complete', responsable: 'Responsable Laboratoire', echeance: today, statut: 'ouverte' },
+    { id: 'nc-1', reference: 'NC-2026-002', origine: "Reception objet d'essai", description: "Objet d'essai recu sans identification complete", responsable: 'Responsable Laboratoire', echeance: today, statut: 'ouverte' },
     { id: 'nc-2', reference: 'NC-2026-001', origine: 'Reclamation client', description: 'Demande de verification sur rapport transmis', responsable: 'Responsable Technique', echeance: today, statut: 'en_traitement' }
   ],
   notifications: [],

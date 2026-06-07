@@ -10,7 +10,6 @@ import Clients from './pages/Clients';
 import Essais from './pages/Essais';
 import Devis from './pages/Devis';
 import Commandes from './pages/Commandes';
-import Echantillons from './pages/Echantillons';
 import Rapports from './pages/Rapports';
 import Equipements from './pages/Equipements';
 import Audits from './pages/Audits';
@@ -57,7 +56,6 @@ function App() {
           <Route path="/essais" element={<Essais />} />
           <Route path="/devis" element={<Devis />} />
           <Route path="/commandes" element={<Commandes />} />
-          <Route path="/echantillons" element={<Echantillons />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/equipements" element={<Equipements />} />
           <Route path="/audits" element={<Audits />} />

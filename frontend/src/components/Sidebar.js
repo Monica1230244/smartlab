@@ -16,7 +16,6 @@ const Sidebar = () => {
         { path: '/commandes', icon: '🧾', label: 'Commandes' },
         { path: '/projets', icon: '📁', label: 'Projets' },
         { path: '/equipements', icon: '⚙️', label: 'Équipements' },
-        { path: '/echantillons', icon: '📦', label: 'Échantillons' },
         { path: '/rapports', icon: '📄', label: 'Rapports' },
         { path: '/personnel', icon: '👥', label: 'Personnel' },
         { path: '/audits', icon: '✅', label: 'Audits' },

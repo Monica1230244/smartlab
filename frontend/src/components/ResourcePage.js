@@ -18,7 +18,6 @@ const AUTO_NUMBERING = {
   commandes: { field: 'numero', prefix: 'CMD', withYear: true, pad: 3 },
   catalogueEssais: { field: 'code', prefix: 'CAT', withYear: false, pad: 3 },
   devis: { field: 'numero', prefix: 'DEV', withYear: true, pad: 3 },
-  echantillons: { field: 'code', prefix: 'ECH', withYear: false, pad: 3 },
   equipements: { field: 'code', prefix: 'EQ', withYear: false, pad: 3 },
   essais: { field: 'numero', prefix: 'EA', withYear: true, pad: 3 },
   nonConformites: { field: 'reference', prefix: 'NC', withYear: true, pad: 3 },

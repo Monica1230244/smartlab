@@ -5,7 +5,7 @@ const phases = [
   ['2', 'Revue technique et faisabilite', 'Analyse des equipements, competences, methodes et contraintes avant validation.'],
   ['3', 'Devis et contractualisation', 'Generation du devis, signature du contrat et archivage dans le dossier projet.'],
   ['4', 'Planification des essais', 'Affectation du personnel, verification des equipements et validation du planning.'],
-  ['5', 'Reception des echantillons', 'Identification, codification, QR code et declaration des non-conformites a reception.'],
+  ['5', "Reception des objets d'essais", 'Identification, codification, QR code et declaration des non-conformites a reception.'],
   ['6', 'Realisation des essais', 'Execution selon methode normalisee, calculs automatiques et incertitude de mesure.'],
   ['7', 'Verification des resultats', 'Controle technique, validation et signalement des anomalies.'],
   ['8', 'Rapport d essai', 'Generation PDF/Word, verification qualite et signature electronique.'],

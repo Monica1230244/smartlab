@@ -6,7 +6,6 @@ import { listRecords, upsertRecord } from '../services/localStore';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
   { to: '/essais', label: "Objets d'essais", icon: 'OE' },
-  { to: '/echantillons', label: 'Echantillons', icon: 'EC' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/catalogue-essais', label: 'Catalogue des essais', icon: 'CE' },
@@ -26,8 +25,8 @@ const menuByRole = {
   responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus'],
   responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/personnel', '/processus', '/catalogue-essais'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/echantillons', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/processus'],
-  receptionniste: ['/', '/commandes', '/essais', '/echantillons', '/clients', '/non-conformites', '/processus']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/processus'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/processus']
 };
 
 const titles = {
@@ -37,7 +36,6 @@ const titles = {
   '/devis': 'Devis',
   '/commandes': 'Commandes',
   '/projets': 'Projets',
-  '/echantillons': 'Echantillons',
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
@@ -71,7 +69,7 @@ function Layout({ publicMode = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
-  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/echantillons', '/rapports', '/processus', '/catalogue-essais', '/resultats-essais'].includes(item.to));
+  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/processus', '/catalogue-essais', '/resultats-essais'].includes(item.to));
   const qualityItems = allowedMenuItems.filter((item) => ['/equipements', '/personnel', '/non-conformites', '/audits'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
 
