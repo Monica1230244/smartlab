@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'smartlab_mobile_records_v2';
+const BUSINESS_FLOW_RESET_VERSION = '2026-06-07-empty-devis-commandes';
+const BUSINESS_FLOW_RESET_KEY = 'smartlab_reset_devis_commandes';
+const REMOTE_RESET_RESOURCES = ['devis', 'commandes'];
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
@@ -16,14 +19,8 @@ const seedData = {
     { id: 'ess-2', numero: 'EA-2026-050', nature: 'Sol lateritique', provenance: 'Route Nationale 1', date_prelevement: today, essai_a_realiser: 'OPM', client_nom: 'AGETUR Benin', commentaire: 'Materiau de couche de forme.', technicien: 'R. Dossou', statut: 'termine', priorite: 'normale', date: today },
     { id: 'ess-3', numero: 'EA-2026-049', nature: 'Eau de forage', provenance: 'Forage MAEP', date_prelevement: today, essai_a_realiser: 'AE', client_nom: 'MAEP', commentaire: 'Prelevement conserve en flacon sterile.', technicien: 'C. Adoho', statut: 'en_attente', priorite: 'normale', date: today }
   ],
-  devis: [
-    { id: 'dev-1', numero: 'DEV-2026-031', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', projet: 'Pont de Cotonou', objet: 'Pont Cotonou - 24 essais beton', prestations: [{ designation: 'Compression beton Rc28 (lot 3)', quantite: 8, prix_unitaire: 150000 }, { designation: 'Proctor modifie', quantite: 4, prix_unitaire: 200000 }], montant_ht: 2000000, date: today, statut: 'envoye' },
-    { id: 'dev-2', numero: 'FAC-2026-028', client_nom: 'AGETUR Benin', client_whatsapp: '+229 95 67 89 01', projet: 'Route Nationale 1', objet: 'Route nationale - essais sols', prestations: [{ designation: 'Essais sols', quantite: 4, prix_unitaire: 310000 }], montant_ht: 1240000, date: today, statut: 'paye' }
-  ],
-  commandes: [
-    { id: 'cmd-1', numero: 'CMD-2026-014', client_nom: 'Sogea BTP Benin', client_whatsapp: '+229 97 12 34 56', projet: 'Pont de Cotonou', reference_devis: 'DEV-2026-031', prestations: [{ designation: 'Compression beton Rc28 (lot 3)', quantite: 8, prix_unitaire: 150000 }], montant_ht: 1200000, date: today, statut: 'en_cours' },
-    { id: 'cmd-2', numero: 'CMD-2026-013', client_nom: 'Colas Benin', client_whatsapp: '+229 91 44 20 10', projet: 'Voirie Akpakpa', reference_devis: 'FAC-2026-025', prestations: [{ designation: 'Controle voirie', quantite: 1, prix_unitaire: 900000 }], montant_ht: 900000, date: today, statut: 'livree' }
-  ],
+  devis: [],
+  commandes: [],
   projets: [
     { id: 'prj-1', reference: 'PRJ-2026-001', nom: 'Pont de Cotonou', client_nom: 'Sogea BTP Benin', localisation: 'Cotonou', date_debut: today, date_fin_prevue: today, budget: 4800000, responsable: 'Responsable Technique', statut: 'en_cours', description: 'Campagne essais beton et acier.' },
     { id: 'prj-2', reference: 'PRJ-2026-002', nom: 'Route Nationale 1', client_nom: 'AGETUR Benin', localisation: 'RN1', date_debut: today, date_fin_prevue: today, budget: 3200000, responsable: 'Responsable Laboratoire', statut: 'validation', description: 'Essais sols et granulometrie.' }
@@ -89,13 +86,29 @@ function rowUrl(id) {
   return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?id=eq.${encodeURIComponent(id)}`;
 }
 
+function applyBusinessFlowReset(data) {
+  if (localStorage.getItem(BUSINESS_FLOW_RESET_KEY) === BUSINESS_FLOW_RESET_VERSION) {
+    return data;
+  }
+
+  const resetData = {
+    ...data,
+    devis: [],
+    commandes: []
+  };
+  localStorage.setItem(BUSINESS_FLOW_RESET_KEY, BUSINESS_FLOW_RESET_VERSION);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
+  return resetData;
+}
+
 function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) {
+    localStorage.setItem(BUSINESS_FLOW_RESET_KEY, BUSINESS_FLOW_RESET_VERSION);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seedData));
     return clone(seedData);
   }
-  return { ...clone(seedData), ...JSON.parse(saved) };
+  return applyBusinessFlowReset({ ...clone(seedData), ...JSON.parse(saved) });
 }
 
 function saveData(data, notify = true) {
@@ -134,11 +147,26 @@ async function seedRemoteResource(resource) {
   await Promise.all(records.map((record) => upsertRemote(resource, record)));
 }
 
+async function resetRemoteResourceIfNeeded(resource, rows) {
+  if (!REMOTE_RESET_RESOURCES.includes(resource)) return false;
+  const key = `smartlab_remote_reset_${resource}`;
+  if (localStorage.getItem(key) === BUSINESS_FLOW_RESET_VERSION) return false;
+
+  await Promise.all(rows.map((row) => fetch(rowUrl(row.id), { method: 'DELETE', headers: headers() })));
+  localStorage.setItem(key, BUSINESS_FLOW_RESET_VERSION);
+  saveLocalResource(resource, []);
+  return true;
+}
+
 export async function listRecords(resource) {
   try {
     const response = await fetch(resourceUrl(resource), { headers: headers() });
     if (!response.ok) throw new Error(await response.text());
     const rows = await response.json();
+    if (await resetRemoteResourceIfNeeded(resource, rows)) {
+      emitStatus('online', `${resource} vide pour reprendre le processus`);
+      return [];
+    }
     if (rows.length === 0 && (seedData[resource] || []).length > 0) {
       await seedRemoteResource(resource);
       return listRecords(resource);
