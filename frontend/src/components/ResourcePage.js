@@ -96,7 +96,7 @@ function normalizeQuoteStatus(status) {
 }
 
 function isQuoteStillInternal(status) {
-  return ['redaction', 'validation_technique', 'validation_dg', 'pret_envoi', 'refuse'].includes(normalizeQuoteStatus(status));
+  return !['commande_creee'].includes(normalizeQuoteStatus(status));
 }
 
 function fieldDefault(field) {
@@ -881,7 +881,7 @@ function ResourcePage({
       commande_creee: records.filter((record) => normalizeQuoteStatus(record.statut) === 'commande_creee').length
     };
     const roleHints = {
-      responsable_appel: 'Vous redigez, corrigez ou supprimez les devis tant qu ils ne sont pas envoyes au client. Les validations restent chez RT/DG.',
+      responsable_appel: 'Vous redigez, corrigez ou supprimez les devis tant qu aucune commande n est creee. Les validations restent chez RT/DG.',
       responsable_technique: 'Vous voyez les devis soumis, marquez la consultation, validez et pouvez envoyer au client.',
       dg: 'Vous pouvez valider les devis, remplacer le RT si besoin et envoyer au client.'
     };

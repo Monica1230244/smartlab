@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'smartlab_mobile_records_v2';
-const BUSINESS_FLOW_RESET_VERSION = '2026-06-07-empty-devis-commandes';
+const BUSINESS_FLOW_RESET_VERSION = '2026-06-07-remove-test-devis';
 const BUSINESS_FLOW_RESET_KEY = 'smartlab_reset_devis_commandes';
 const REMOTE_RESET_RESOURCES = ['devis', 'commandes'];
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
