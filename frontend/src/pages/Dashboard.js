@@ -118,20 +118,20 @@ function buildDashboard(role, data) {
   if (role === 'responsable_appel') {
     return {
       eyebrow: 'Tableau de bord offres',
-      title: 'Suivi commercial et validation client',
-      subtitle: 'Vous redigez les devis, suivez les validations internes, puis controlez la decision client et la commande creee.',
+      title: 'Cotations, offres et transformation en prestations',
+      subtitle: 'Vous receptionnez les demandes de prestation, etablissez les cotations, redigez les contrats/devis et suivez leur transformation en commandes.',
       highlight: `${compactMoney(quotesAmount)} FCFA`,
       cards: [
-        { label: 'Devis en redaction', value: quotesByStatus('redaction').length, tone: 'amber', to: '/devis' },
-        { label: 'Chez RT', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
-        { label: 'Chez DG', value: quotesByStatus('validation_dg').length, tone: 'blue', to: '/devis' },
-        { label: 'Envoyes client', value: quotesByStatus('envoye_client').length, tone: 'green', to: '/devis' },
-        { label: 'Commandes creees', value: quotesByStatus('commande_creee').length, tone: 'green', to: '/commandes' },
-        { label: 'Devis refuses', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' }
+        { label: 'Cotations a rediger', value: quotesByStatus('redaction').length, tone: 'amber', to: '/devis' },
+        { label: 'Offres chez RT', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
+        { label: 'Offres chez DG', value: quotesByStatus('validation_dg').length, tone: 'blue', to: '/devis' },
+        { label: 'Envoyees client', value: quotesByStatus('envoye_client').length, tone: 'green', to: '/devis' },
+        { label: 'Prestations gagnees', value: quotesByStatus('commande_creee').length, tone: 'green', to: '/commandes' },
+        { label: 'Offres refusees', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' }
       ],
       tables: [
         {
-          title: 'Devis a suivre',
+          title: 'Suivi des offres soumises et transformees',
           rows: byRecentDate(devis.filter((item) => ['validation_technique', 'validation_dg', 'envoye_client', 'refuse', 'commande_creee'].includes(normalizeQuoteStatus(item.statut))), 'date').slice(0, 8),
           columns: [
             { key: 'numero', label: 'Devis' },
@@ -148,20 +148,20 @@ function buildDashboard(role, data) {
   if (role === 'responsable_technique') {
     return {
       eyebrow: 'Tableau de bord technique',
-      title: 'Validation technique et conformite des essais',
-      subtitle: 'Vous traitez les devis soumis, surveillez les objets d essais, les resultats et les non-conformites techniques.',
+      title: 'Revue des demandes, validation technique et risques',
+      subtitle: 'Vous orientez les demandes clients, validez les offres et rapports, surveillez les resultats, les non-conformites et les competences techniques.',
       highlight: `${quotesByStatus('validation_technique').length} devis RT`,
       cards: [
-        { label: 'Devis a valider', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
-        { label: 'Prets a envoyer', value: quotesByStatus('pret_envoi').length, tone: 'green', to: '/devis' },
-        { label: 'Objets en cours', value: essais.filter((item) => item.statut === 'en_cours').length, tone: 'amber', to: '/essais' },
+        { label: 'Demandes a revoir', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
+        { label: 'Documents a transmettre', value: quotesByStatus('pret_envoi').length, tone: 'green', to: '/devis' },
+        { label: 'Rapports a valider', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' },
         { label: 'Resultats non conformes', value: nonConformingResults.length, tone: 'red', to: '/resultats-essais' },
         { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
-        { label: 'Essais catalogues', value: (data.catalogueEssais || []).length, tone: 'blue', to: '/catalogue-essais' }
+        { label: 'Personnel technique', value: personnel.length, tone: 'blue', to: '/personnel' }
       ],
       tables: [
         {
-          title: 'File validation technique',
+          title: 'Revue des demandes et offres a valider',
           rows: quotesByStatus('validation_technique').slice(0, 8),
           columns: [
             { key: 'numero', label: 'Devis' },
@@ -172,7 +172,7 @@ function buildDashboard(role, data) {
           ]
         },
         {
-          title: 'Resultats a surveiller',
+          title: 'Resultats / conformites a surveiller',
           rows: nonConformingResults.slice(0, 6),
           columns: [
             { key: 'numero', label: 'Resultat' },
@@ -229,20 +229,20 @@ function buildDashboard(role, data) {
   if (role === 'responsable_labo') {
     return {
       eyebrow: 'Tableau de bord laboratoire',
-      title: 'Reception, execution et livraisons',
-      subtitle: 'Vous pilotez les commandes, la reception des echantillons, les essais en cours et les delais de livraison.',
+      title: 'Programmation, realisation des essais et rapports',
+      subtitle: 'Vous programmez les essais, encadrez les operateurs, suivez les cahiers d essais, traitez les resultats et montez les rapports a soumettre au RT.',
       highlight: `${activeOrders.length} commandes`,
       cards: [
-        { label: 'Commandes actives', value: activeOrders.length, tone: 'blue', to: '/commandes' },
-        { label: 'Objets en cours', value: essais.filter((item) => item.statut === 'en_cours').length, tone: 'amber', to: '/essais' },
-        { label: 'Echantillons recus', value: echantillons.filter((item) => item.statut === 'recu').length, tone: 'green', to: '/echantillons' },
-        { label: 'Resultats saisis', value: resultats.length, tone: 'green', to: '/resultats-essais' },
-        { label: 'Equipements a surveiller', value: equipmentWatch.length, tone: 'red', to: '/equipements' },
-        { label: 'Rapports brouillons', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' }
+        { label: 'Programmes essais', value: activeOrders.length, tone: 'blue', to: '/commandes' },
+        { label: 'Essais en cours', value: essais.filter((item) => item.statut === 'en_cours').length, tone: 'amber', to: '/essais' },
+        { label: 'Objets transmis RL', value: echantillons.filter((item) => item.statut === 'recu').length, tone: 'green', to: '/echantillons' },
+        { label: 'Resultats a traiter', value: resultats.length, tone: 'green', to: '/resultats-essais' },
+        { label: 'Materiel a surveiller', value: equipmentWatch.length, tone: 'red', to: '/equipements' },
+        { label: 'Rapports a monter', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' }
       ],
       tables: [
         {
-          title: 'Commandes a traiter',
+          title: 'Programme des essais a realiser',
           rows: activeOrders.slice(0, 8),
           columns: [
             { key: 'numero', label: 'Commande' },
@@ -253,12 +253,12 @@ function buildDashboard(role, data) {
           ]
         },
         {
-          title: 'Objets d essais en laboratoire',
+          title: 'Objets d essais transmis au laboratoire',
           rows: essais.filter((item) => item.statut === 'en_cours').slice(0, 8),
           columns: [
             { key: 'numero', label: 'Objet' },
             { key: 'nature', label: 'Nature' },
-            { key: 'essai_a_realiser', label: 'Essai' },
+            { key: 'essai_a_realiser', label: 'Essais', render: (row) => Array.isArray(row.essai_a_realiser) ? row.essai_a_realiser.join(', ') : row.essai_a_realiser },
             { key: 'delai_livraison', label: 'Livraison' },
             { key: 'responsable_labo', label: 'Resp. labo' }
           ]
@@ -270,20 +270,20 @@ function buildDashboard(role, data) {
   if (role === 'receptionniste') {
     return {
       eyebrow: 'Tableau de bord reception',
-      title: 'Accueil, commandes et objets recus',
-      subtitle: 'Vous voyez les commandes a receptionner, les objets d essais du jour et les clients a renseigner.',
+      title: 'Codification, transmission RL et confidentialite client',
+      subtitle: 'Vous receptionnez les objets d essais, verifiez les criteres d acceptation, codifiez, transmettez au RL et decodifiez les rapports avant transmission au RT.',
       highlight: `${clients.length} clients`,
       cards: [
-        { label: 'Commandes non livrees', value: activeOrders.length, tone: 'blue', to: '/commandes' },
-        { label: 'Objets a receptionner', value: essais.filter((item) => !item.receptionniste).length, tone: 'amber', to: '/essais' },
+        { label: 'Objets a codifier', value: essais.filter((item) => !item.receptionniste).length, tone: 'amber', to: '/essais' },
+        { label: 'Objets transmis RL', value: essais.filter((item) => item.responsable_labo).length, tone: 'green', to: '/essais' },
+        { label: 'Commandes a receptionner', value: activeOrders.length, tone: 'blue', to: '/commandes' },
         { label: 'Echantillons recus', value: echantillons.filter((item) => item.statut === 'recu').length, tone: 'green', to: '/echantillons' },
-        { label: 'Clients', value: clients.length, tone: 'blue', to: '/clients' },
         { label: 'NC reception', value: openNc.filter((item) => String(item.origine || '').toLowerCase().includes('reception')).length, tone: 'red', to: '/non-conformites' },
-        { label: 'Devis commandes', value: quotesByStatus('commande_creee').length, tone: 'green', to: '/devis' }
+        { label: 'Clients identifies', value: clients.length, tone: 'blue', to: '/clients' }
       ],
       tables: [
         {
-          title: 'Commandes a receptionner',
+          title: 'Commandes / objets a receptionner',
           rows: activeOrders.slice(0, 8),
           columns: [
             { key: 'numero', label: 'Commande' },
@@ -294,7 +294,7 @@ function buildDashboard(role, data) {
           ]
         },
         {
-          title: 'Objets recents',
+          title: 'Codification et transmission des objets',
           rows: byRecentDate(essais, 'date').slice(0, 8),
           columns: [
             { key: 'numero', label: 'Objet' },

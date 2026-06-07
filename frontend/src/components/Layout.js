@@ -22,6 +22,14 @@ const navItems = [
   { to: '/parametres', label: 'Parametrage', icon: 'PR' }
 ];
 
+const menuByRole = {
+  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/personnel', '/processus', '/catalogue-essais'],
+  dg: navItems.map((item) => item.to),
+  responsable_labo: ['/', '/commandes', '/essais', '/echantillons', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/processus'],
+  receptionniste: ['/', '/commandes', '/essais', '/echantillons', '/clients', '/non-conformites', '/processus']
+};
+
 const titles = {
   '/': 'Dashboard',
   '/clients': 'Clients',
@@ -62,6 +70,10 @@ function Layout({ publicMode = false }) {
   const [currentRole, setCurrentRole] = useState(user?.role || localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
   const location = useLocation();
   const navigate = useNavigate();
+  const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
+  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/echantillons', '/rapports', '/processus', '/catalogue-essais', '/resultats-essais'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/equipements', '/personnel', '/non-conformites', '/audits'].includes(item.to));
+  const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
     if (user?.role) {
@@ -224,24 +236,32 @@ function Layout({ publicMode = false }) {
 
         <div className="navSectionLabel">Principal</div>
         <nav className="navList">
-          {navItems.slice(0, 4).map((item) => (
+          {principalItems.map((item) => (
             <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
           ))}
         </nav>
 
-        <div className="navSectionLabel">Qualite ISO</div>
-        <nav className="navList">
-          {navItems.slice(4, 11).map((item) => (
-            <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
-          ))}
-        </nav>
+        {qualityItems.length > 0 && (
+          <>
+            <div className="navSectionLabel">Qualite ISO</div>
+            <nav className="navList">
+              {qualityItems.map((item) => (
+                <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
+              ))}
+            </nav>
+          </>
+        )}
 
-        <div className="navSectionLabel">Administration</div>
-        <nav className="navList">
-          {navItems.slice(11).map((item) => (
-            <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
-          ))}
-        </nav>
+        {administrationItems.length > 0 && (
+          <>
+            <div className="navSectionLabel">Administration</div>
+            <nav className="navList">
+              {administrationItems.map((item) => (
+                <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
+              ))}
+            </nav>
+          </>
+        )}
 
         <div className="userCard">
           <div className="avatar">{user?.initials || 'SL'}</div>
