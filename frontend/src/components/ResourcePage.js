@@ -209,6 +209,9 @@ async function createSharedNotification({ title, message, path = '/', tone = 'in
 }
 
 function buildPdfHtml({ title, fields, record }) {
+  const validationField = fields.find((field) => field.type === 'validationCode');
+  const validationCode = validationField ? record[validationField.name] : record.code_validation;
+  const validationUrl = validationCode ? buildValidationUrl(validationCode) : '';
   const rows = fields.filter((field) => !field.hidden || field.type === 'validationCode').map((field) => {
     if (field.type === 'lineItems') {
       const items = Array.isArray(record[field.name]) ? record[field.name] : [];
@@ -299,6 +302,13 @@ function buildPdfHtml({ title, fields, record }) {
           </div>
         </header>
         <table>${rows}</table>
+        ${validationUrl ? `
+          <div class="conditions">
+            <strong>Validation client en ligne</strong><br />
+            Scanner le QR code ou ouvrir le lien suivant pour valider ou rejeter le devis :<br />
+            ${escapeHtml(validationUrl)}
+          </div>
+        ` : ''}
         <div class="conditions">
           Conditions: ce document est soumis a validation interne SMARTLAB puis validation du client. La commande est creee automatiquement apres validation client.
         </div>
@@ -310,6 +320,21 @@ function buildPdfHtml({ title, fields, record }) {
       </body>
     </html>
   `;
+}
+
+function openQuotePdfDocument({ title, fields, record, autoPrint = false }) {
+  const doc = window.open('', '_blank');
+  if (!doc) {
+    toast.error('Fenetre PDF bloquee par le navigateur');
+    return false;
+  }
+  doc.document.write(buildPdfHtml({ title, fields, record }));
+  doc.document.close();
+  doc.focus();
+  if (autoPrint) {
+    setTimeout(() => doc.print(), 450);
+  }
+  return true;
 }
 
 function buildListPdfHtml({ title, columns, records }) {
@@ -483,15 +508,7 @@ function ResourcePage({
   };
 
   const generatePdf = (record = form) => {
-    const doc = window.open('', '_blank');
-    if (!doc) {
-      toast.error('Fenetre PDF bloquee par le navigateur');
-      return;
-    }
-    doc.document.write(buildPdfHtml({ title, fields, record }));
-    doc.document.close();
-    doc.focus();
-    setTimeout(() => doc.print(), 250);
+    openQuotePdfDocument({ title, fields, record, autoPrint: true });
   };
 
   const generateListPdf = () => {
@@ -569,7 +586,7 @@ function ResourcePage({
     const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
     const validationCode = record.code_validation ? ` Code de validation: ${record.code_validation}.` : '';
     const validationUrl = record.code_validation ? ` Lien de validation: ${buildValidationUrl(record.code_validation)}` : '';
-    const message = `Bonjour ${record.client_nom || ''}, votre devis ${record.numero || ''} SMARTLAB concernant "${record.objet || 'votre demande'}" a ete cree. Montant: ${amount}.${validationCode}${validationUrl}`;
+    const message = `Bonjour ${record.client_nom || ''}, veuillez trouver le devis PDF SMARTLAB ${record.numero || ''} concernant "${record.objet || 'votre demande'}". Le devis contient un QR code pour valider ou rejeter. Montant: ${amount}.${validationCode}${validationUrl}`;
     const channel = record.canal_envoi || 'whatsapp';
 
     if (channel === 'email') {
@@ -715,10 +732,11 @@ function ResourcePage({
       toast.error('Devis enregistre localement, mais le lien client ne marchera pas sur un autre telephone tant que Supabase ne synchronise pas.');
       return;
     }
-    const sent = sendToClient(quote);
+    openQuotePdfDocument({ title, fields, record: savedQuote, autoPrint: true });
+    const sent = sendToClient(savedQuote);
     if (!sent) return;
     setRecords(await listRecords(resource));
-    toast.success('Devis envoye au client');
+    toast.success('PDF avec QR code genere et canal client ouvert');
   };
 
   const validateQuoteAndSend = async (record) => {
@@ -748,6 +766,7 @@ function ResourcePage({
       toast.error('Devis valide localement, mais le lien client ne marchera pas sur un autre telephone tant que Supabase ne synchronise pas.');
       return;
     }
+    openQuotePdfDocument({ title, fields, record: savedQuote, autoPrint: true });
     const sent = sendToClient(savedQuote);
     if (!sent) return;
     await createSharedNotification({
@@ -758,7 +777,7 @@ function ResourcePage({
       targetRole: 'responsable_appel'
     });
     setRecords(await listRecords(resource));
-    toast.success('Devis valide et canal client ouvert');
+    toast.success('PDF avec QR code genere et canal client ouvert');
   };
 
   const validateQuoteAsOrder = async (record) => {
