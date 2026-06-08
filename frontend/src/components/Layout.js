@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listRecords, upsertRecord } from '../services/localStore';
@@ -59,6 +59,29 @@ function loadDismissedNotifications() {
   }
 }
 
+function playNotificationSound() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  const audioContext = new AudioContext();
+  const gain = audioContext.createGain();
+  gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.42);
+  gain.connect(audioContext.destination);
+
+  [880, 1175].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime + index * 0.14);
+    oscillator.connect(gain);
+    oscillator.start(audioContext.currentTime + index * 0.14);
+    oscillator.stop(audioContext.currentTime + index * 0.14 + 0.16);
+  });
+
+  window.setTimeout(() => audioContext.close().catch(() => {}), 700);
+}
+
 function Layout({ publicMode = false }) {
   const { user, logout, roleLabels } = useAuth();
   const [open, setOpen] = useState(false);
@@ -66,6 +89,9 @@ function Layout({ publicMode = false }) {
   const [notifications, setNotifications] = useState([]);
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState(loadDismissedNotifications);
   const [currentRole, setCurrentRole] = useState(user?.role || localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
+  const notificationIdsRef = useRef([]);
+  const notificationsReadyRef = useRef(false);
+  const soundUnlockedRef = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
@@ -80,6 +106,23 @@ function Layout({ publicMode = false }) {
       window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: user.role }));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (publicMode) return undefined;
+
+    const unlockSound = () => {
+      soundUnlockedRef.current = true;
+      window.removeEventListener('pointerdown', unlockSound);
+      window.removeEventListener('keydown', unlockSound);
+    };
+
+    window.addEventListener('pointerdown', unlockSound, { once: true });
+    window.addEventListener('keydown', unlockSound, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockSound);
+      window.removeEventListener('keydown', unlockSound);
+    };
+  }, [publicMode]);
 
   useEffect(() => {
     if (publicMode) return undefined;
@@ -164,7 +207,18 @@ function Layout({ publicMode = false }) {
         });
       }
 
-      setNotifications(nextNotifications.filter((notification) => !dismissedNotificationIds.includes(notification.id)));
+      const visibleNotifications = nextNotifications.filter((notification) => !dismissedNotificationIds.includes(notification.id));
+      const previousIds = notificationIdsRef.current;
+      const nextIds = visibleNotifications.map((notification) => notification.id);
+      const hasNewNotification = nextIds.some((id) => !previousIds.includes(id));
+
+      if (notificationsReadyRef.current && hasNewNotification && soundUnlockedRef.current) {
+        playNotificationSound();
+      }
+
+      notificationsReadyRef.current = true;
+      notificationIdsRef.current = nextIds;
+      setNotifications(visibleNotifications);
     };
 
     refreshNotifications();
@@ -204,7 +258,11 @@ function Layout({ publicMode = false }) {
     const nextDismissedIds = Array.from(new Set([...dismissedNotificationIds, notification.id]));
     localStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(nextDismissedIds));
     setDismissedNotificationIds(nextDismissedIds);
-    setNotifications((current) => current.filter((item) => item.id !== notification.id));
+    setNotifications((current) => {
+      const nextNotifications = current.filter((item) => item.id !== notification.id);
+      notificationIdsRef.current = nextNotifications.map((item) => item.id);
+      return nextNotifications;
+    });
     setNotificationsOpen(false);
     navigate(notification.path);
   };
