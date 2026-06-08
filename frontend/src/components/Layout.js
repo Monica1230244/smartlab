@@ -50,6 +50,8 @@ const titles = {
 const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
 const APP_VERSION = window.SMARTLAB_VERSION || 'dev';
+const NOTIFICATIONS_POLL_INTERVAL = 15000;
+let notificationAudioContext = null;
 
 function loadDismissedNotifications() {
   try {
@@ -59,11 +61,44 @@ function loadDismissedNotifications() {
   }
 }
 
-function playNotificationSound() {
+function getNotificationAudioContext() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
+  if (!AudioContext) return null;
+  if (!notificationAudioContext) {
+    notificationAudioContext = new AudioContext();
+  }
+  return notificationAudioContext;
+}
 
-  const audioContext = new AudioContext();
+async function unlockNotificationSound() {
+  const audioContext = getNotificationAudioContext();
+  if (!audioContext) return false;
+
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+
+  const gain = audioContext.createGain();
+  gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+  gain.connect(audioContext.destination);
+
+  const oscillator = audioContext.createOscillator();
+  oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+  oscillator.connect(gain);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.02);
+
+  return audioContext.state === 'running';
+}
+
+async function playNotificationSound() {
+  const audioContext = getNotificationAudioContext();
+  if (!audioContext) return;
+
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+
   const gain = audioContext.createGain();
   gain.gain.setValueAtTime(0.001, audioContext.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.02);
@@ -79,7 +114,9 @@ function playNotificationSound() {
     oscillator.stop(audioContext.currentTime + index * 0.14 + 0.16);
   });
 
-  window.setTimeout(() => audioContext.close().catch(() => {}), 700);
+  if ('vibrate' in navigator) {
+    navigator.vibrate([120, 60, 120]);
+  }
 }
 
 function Layout({ publicMode = false }) {
@@ -110,17 +147,20 @@ function Layout({ publicMode = false }) {
   useEffect(() => {
     if (publicMode) return undefined;
 
-    const unlockSound = () => {
-      soundUnlockedRef.current = true;
+    const unlockSound = async () => {
+      soundUnlockedRef.current = await unlockNotificationSound();
       window.removeEventListener('pointerdown', unlockSound);
       window.removeEventListener('keydown', unlockSound);
+      window.removeEventListener('touchstart', unlockSound);
     };
 
     window.addEventListener('pointerdown', unlockSound, { once: true });
     window.addEventListener('keydown', unlockSound, { once: true });
+    window.addEventListener('touchstart', unlockSound, { once: true });
     return () => {
       window.removeEventListener('pointerdown', unlockSound);
       window.removeEventListener('keydown', unlockSound);
+      window.removeEventListener('touchstart', unlockSound);
     };
   }, [publicMode]);
 
@@ -213,7 +253,7 @@ function Layout({ publicMode = false }) {
       const hasNewNotification = nextIds.some((id) => !previousIds.includes(id));
 
       if (notificationsReadyRef.current && hasNewNotification && soundUnlockedRef.current) {
-        playNotificationSound();
+        playNotificationSound().catch(() => {});
       }
 
       notificationsReadyRef.current = true;
@@ -222,11 +262,22 @@ function Layout({ publicMode = false }) {
     };
 
     refreshNotifications();
+    const refreshTimer = window.setInterval(refreshNotifications, NOTIFICATIONS_POLL_INTERVAL);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState !== 'hidden') refreshNotifications();
+    };
     window.addEventListener('smartlab:data-changed', refreshNotifications);
+    window.addEventListener('focus', refreshNotifications);
+    window.addEventListener('online', refreshNotifications);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
 
     return () => {
       cancelled = true;
+      window.clearInterval(refreshTimer);
       window.removeEventListener('smartlab:data-changed', refreshNotifications);
+      window.removeEventListener('focus', refreshNotifications);
+      window.removeEventListener('online', refreshNotifications);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [dismissedNotificationIds, currentRole, publicMode]);
 
