@@ -2,7 +2,7 @@ import React from 'react';
 import ResourcePage from '../components/ResourcePage';
 
 const fields = [
-  { name: 'code', label: 'Code client', required: true, placeholder: 'CLI-004' },
+  { name: 'code', label: 'Code client', required: true, readOnly: true, placeholder: 'CLI-004' },
   { name: 'raison_sociale', label: 'Raison sociale', required: true, placeholder: 'Nom du client' },
   { name: 'contact_nom', label: 'Contact', placeholder: 'Nom du contact' },
   { name: 'telephone', label: 'Telephone', placeholder: '+229 ...' },

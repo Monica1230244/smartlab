@@ -43,6 +43,17 @@ function nextAutomaticNumber(resource, records) {
   return config.withYear ? `${config.prefix}-${year}-${next}` : `${config.prefix}-${next}`;
 }
 
+function naturalRecordValue(record) {
+  return String(record.code || record.numero || record.reference || record.id || '');
+}
+
+function compareNaturalRecords(a, b) {
+  return naturalRecordValue(a).localeCompare(naturalRecordValue(b), 'fr', {
+    numeric: true,
+    sensitivity: 'base'
+  });
+}
+
 function formatValue(value, field) {
   if (field.type === 'money') {
     return `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
@@ -421,8 +432,10 @@ function ResourcePage({
 
   const filteredRecords = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return records;
-    return records.filter((record) => Object.values(record).join(' ').toLowerCase().includes(needle));
+    const visibleRecords = needle
+      ? records.filter((record) => Object.values(record).join(' ').toLowerCase().includes(needle))
+      : records;
+    return [...visibleRecords].sort(compareNaturalRecords);
   }, [records, query]);
 
   const renderedSummaryCards = useMemo(() => (
