@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -32,20 +32,6 @@ function ProtectedLayout() {
 }
 
 function App() {
-  const [waitingWorker, setWaitingWorker] = useState(null);
-
-  useEffect(() => {
-    const handler = (event) => setWaitingWorker(event.detail);
-    window.addEventListener('smartlab:update-ready', handler);
-    return () => window.removeEventListener('smartlab:update-ready', handler);
-  }, []);
-
-  const applyUpdate = () => {
-    if (!waitingWorker) return;
-    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    window.location.reload();
-  };
-
   return (
     <>
       <Routes>
@@ -69,12 +55,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-      {waitingWorker && (
-        <div className="updateBanner">
-          <span>Nouvelle version SMARTLAB disponible.</span>
-          <button type="button" onClick={applyUpdate}>Mettre a jour</button>
-        </div>
-      )}
       <Toaster position="top-right" toastOptions={{ duration: 2200 }} />
     </>
   );
