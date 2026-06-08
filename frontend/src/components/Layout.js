@@ -267,18 +267,6 @@ function Layout({ publicMode = false }) {
     navigate(notification.path);
   };
 
-  const forceRefreshApp = async () => {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.update()));
-    }
-    if ('caches' in window) {
-      const names = await caches.keys();
-      await Promise.all(names.filter((name) => name.startsWith('smartlab')).map((name) => caches.delete(name)));
-    }
-    window.location.reload();
-  };
-
   return (
     <div className="shell">
       {!publicMode && <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -324,7 +312,6 @@ function Layout({ publicMode = false }) {
           <div>
             <strong>{user?.name || 'SMARTLAB'}</strong>
             <span>{roleLabels?.[currentRole] || 'Utilisateur'} - Version {APP_VERSION}</span>
-            <button type="button" className="refreshVersionButton" onClick={forceRefreshApp}>Actualiser</button>
             <button type="button" className="refreshVersionButton" onClick={() => { logout(); navigate('/login', { replace: true }); }}>Deconnexion</button>
           </div>
         </div>
