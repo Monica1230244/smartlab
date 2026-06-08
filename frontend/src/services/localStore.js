@@ -76,7 +76,7 @@ function headers(extra = {}) {
 }
 
 function resourceUrl(resource) {
-  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=updated_at.asc`;
+  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=id.asc`;
 }
 
 function rowUrl(id) {
