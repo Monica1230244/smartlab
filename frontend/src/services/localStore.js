@@ -202,6 +202,6 @@ export async function getStats() {
     nonConformites: data.nonConformites.filter((item) => item.statut !== 'cloturee').length,
     equipements: data.equipements.length,
     habilitations: data.personnel.filter((item) => item.habilitation === 'active').length,
-    chiffreAffaires: data.devis.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
+    chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }

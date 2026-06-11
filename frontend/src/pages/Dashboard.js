@@ -108,8 +108,8 @@ function buildDashboard(role, data) {
   const resultats = data.resultatsEssais || [];
 
   const quotesByStatus = (status) => devis.filter((item) => normalizeQuoteStatus(item.statut) === status);
-  const quotesAmount = devis.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
   const activeOrders = commandes.filter((item) => item.statut !== 'livree');
+  const ordersAmount = commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
   const openNc = nonConformites.filter((item) => item.statut !== 'cloturee');
   const nonConformingResults = resultats.filter((item) => item.decision === 'non_conforme');
   const equipmentWatch = equipements.filter((item) => ['a_surveiller', 'hors_service'].includes(item.statut));
@@ -119,7 +119,7 @@ function buildDashboard(role, data) {
       eyebrow: 'Tableau de bord offres',
       title: 'Cotations, offres et transformation en prestations',
       subtitle: 'Vous receptionnez les demandes de prestation, etablissez les cotations, redigez les contrats/devis et suivez leur transformation en commandes.',
-      highlight: `${compactMoney(quotesAmount)} FCFA`,
+      highlight: `${compactMoney(ordersAmount)} FCFA gagnes`,
       cards: [
         { label: 'Cotations a rediger', value: quotesByStatus('redaction').length, tone: 'amber', to: '/devis' },
         { label: 'Offres chez RT', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
@@ -190,11 +190,11 @@ function buildDashboard(role, data) {
       eyebrow: 'Tableau de bord direction',
       title: 'Validation finale, activite et risques',
       subtitle: 'Vous gardez la vision de decision : devis importants, commandes creees, chiffre d affaires et alertes qualite.',
-      highlight: `${compactMoney(quotesAmount)} FCFA`,
+      highlight: `${compactMoney(ordersAmount)} FCFA gagnes`,
       cards: [
         { label: 'Devis chez DG', value: quotesByStatus('validation_dg').length, tone: 'blue', to: '/devis' },
         { label: 'Commandes actives', value: activeOrders.length, tone: 'green', to: '/commandes' },
-        { label: 'CA devis total', value: compactMoney(quotesAmount), note: 'FCFA', tone: 'green', to: '/devis' },
+        { label: 'CA commandes', value: compactMoney(ordersAmount), note: 'FCFA', tone: 'green', to: '/commandes' },
         { label: 'Devis refuses', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' },
         { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
         { label: 'Projets suivis', value: (data.projets || []).length, tone: 'blue', to: '/projets' }
@@ -311,7 +311,7 @@ function buildDashboard(role, data) {
     eyebrow: 'Vue generale',
     title: 'Gestion operationnelle du laboratoire',
     subtitle: 'Selectionnez un role dans la barre du haut pour afficher le tableau de bord correspondant.',
-    highlight: `${compactMoney(quotesAmount)} FCFA`,
+    highlight: `${compactMoney(ordersAmount)} FCFA gagnes`,
     cards: [
       { label: 'Clients', value: clients.length, tone: 'blue', to: '/clients' },
       { label: 'Devis', value: devis.length, tone: 'green', to: '/devis' },

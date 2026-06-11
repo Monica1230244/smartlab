@@ -329,15 +329,16 @@ export default function Devis() {
   const validationCode = searchParams.get('validation');
 
   const summaryCards = (records) => {
-    const totalAmount = records.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
+    const wonQuotes = records.filter((item) => item.statut === 'commande_creee');
+    const wonAmount = wonQuotes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
     const sent = records.filter((item) => item.statut === 'envoye_client').length;
     const signed = records.filter((item) => ['valide_client', 'commande_creee'].includes(item.statut)).length;
     const drafts = records.filter((item) => item.statut === 'redaction').length;
     return [
       { label: 'Total devis', value: records.length, tone: 'blue' },
-      { label: 'Montant total', value: formatCompactMoney(totalAmount), tone: 'green', note: 'FCFA' },
+      { label: 'Montant gagne', value: formatCompactMoney(wonAmount), tone: 'green', note: 'FCFA' },
       { label: 'Devis envoyes', value: sent, tone: 'amber' },
-      { label: 'Devis signes', value: signed, tone: 'green', note: `${drafts} brouillon(s)` }
+      { label: 'Devis signes', value: signed, tone: 'green', note: `${wonQuotes.length} commande(s)` }
     ];
   };
 
