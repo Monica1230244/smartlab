@@ -76,13 +76,6 @@ const columns = [
   { name: 'statut', label: 'Statut', badge: true }
 ];
 
-function formatCompactMoney(value) {
-  const amount = Number(value || 0);
-  if (amount >= 1000000) return `${(amount / 1000000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}M`;
-  if (amount >= 1000) return `${Math.round(amount / 1000).toLocaleString('fr-FR')}k`;
-  return amount.toLocaleString('fr-FR');
-}
-
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('fr-FR');
 }
@@ -336,7 +329,7 @@ export default function Devis() {
     const drafts = records.filter((item) => item.statut === 'redaction').length;
     return [
       { label: 'Total devis', value: records.length, tone: 'blue' },
-      { label: 'Montant gagne', value: formatCompactMoney(wonAmount), tone: 'green', note: 'FCFA' },
+      { label: 'Montant gagne', value: formatMoney(wonAmount), tone: 'green', note: 'FCFA' },
       { label: 'Devis envoyes', value: sent, tone: 'amber' },
       { label: 'Devis signes', value: signed, tone: 'green', note: `${wonQuotes.length} commande(s)` }
     ];
