@@ -132,8 +132,8 @@ function Layout({ publicMode = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
-  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/processus', '/catalogue-essais', '/resultats-essais'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/equipements', '/personnel', '/non-conformites', '/audits'].includes(item.to));
+  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/equipements', '/personnel', '/non-conformites', '/audits'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
