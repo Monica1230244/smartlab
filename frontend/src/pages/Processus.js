@@ -22,7 +22,7 @@ export default function Processus() {
         <div>
           <p className="eyebrow">ISO/IEC 17025</p>
           <h2>Processus complet d'une demande d'essai</h2>
-          <p>Sequence issue du document Processus_SMARTLAB_ISO17025 : de la demande client jusqu'a l'archivage, aux reclamations et a l'amelioration continue.</p>
+          <p>Sequence issue du document Processus_TESTLAB_ISO17025 : de la demande client jusqu'a l'archivage, aux reclamations et a l'amelioration continue.</p>
         </div>
         <strong>12 phases</strong>
       </div>

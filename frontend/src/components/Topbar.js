@@ -17,7 +17,7 @@ const Topbar = () => {
         if (path === '/projets') return 'Projets';
         if (path === '/equipements') return 'Équipements';
         if (path === '/rapports') return 'Rapports';
-        return 'SMARTLAB';
+        return 'TESTLAB';
     };
 
     const handleSearch = (e) => {

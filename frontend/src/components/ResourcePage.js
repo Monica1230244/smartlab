@@ -291,7 +291,7 @@ function buildPdfHtml({ title, fields, record }) {
       <body>
         <header>
           <div>
-            <h1>SMARTLAB</h1>
+            <h1>TESTLAB</h1>
             <h2>Laboratoire - Devis et prestations d'essais</h2>
             <p>References qualite: ISO/IEC 17025 - ISO 9001</p>
           </div>
@@ -310,13 +310,13 @@ function buildPdfHtml({ title, fields, record }) {
           </div>
         ` : ''}
         <div class="conditions">
-          Conditions: ce document est soumis a validation interne SMARTLAB puis validation du client. La commande est creee automatiquement apres validation client.
+          Conditions: ce document est soumis a validation interne TESTLAB puis validation du client. La commande est creee automatiquement apres validation client.
         </div>
         <div class="signatures">
-          <div class="signature">Responsable technique / SMARTLAB</div>
+          <div class="signature">Responsable technique / TESTLAB</div>
           <div class="signature">Client / Signature et cachet</div>
         </div>
-        <footer>Document genere depuis l'application SMARTLAB.</footer>
+        <footer>Document genere depuis l'application TESTLAB.</footer>
       </body>
     </html>
   `;
@@ -364,14 +364,14 @@ function buildListPdfHtml({ title, columns, records }) {
       </head>
       <body>
         <header>
-          <h1>SMARTLAB - ${escapeHtml(title)}</h1>
+          <h1>TESTLAB - ${escapeHtml(title)}</h1>
           <p>Liste complete - ${records.length} element(s) - ${new Date().toLocaleDateString('fr-FR')}</p>
         </header>
         <table>
           <thead><tr>${headers}</tr></thead>
           <tbody>${rows || `<tr><td colspan="${columns.length}">Aucune donnee</td></tr>`}</tbody>
         </table>
-        <footer>Document genere depuis l'application SMARTLAB.</footer>
+        <footer>Document genere depuis l'application TESTLAB.</footer>
       </body>
     </html>
   `;
@@ -586,7 +586,7 @@ function ResourcePage({
     const amount = record.montant_ht ? `${Number(record.montant_ht).toLocaleString('fr-FR')} FCFA HT` : 'montant a confirmer';
     const validationCode = record.code_validation ? ` Code de validation: ${record.code_validation}.` : '';
     const validationUrl = record.code_validation ? ` Lien de validation: ${buildValidationUrl(record.code_validation)}` : '';
-    const message = `Bonjour ${record.client_nom || ''}, veuillez trouver le devis PDF SMARTLAB ${record.numero || ''} concernant "${record.objet || 'votre demande'}". Le devis contient un QR code pour valider ou rejeter. Montant: ${amount}.${validationCode}${validationUrl}`;
+    const message = `Bonjour ${record.client_nom || ''}, veuillez trouver le devis PDF TESTLAB ${record.numero || ''} concernant "${record.objet || 'votre demande'}". Le devis contient un QR code pour valider ou rejeter. Montant: ${amount}.${validationCode}${validationUrl}`;
     const channel = record.canal_envoi || 'whatsapp';
 
     if (channel === 'email') {
@@ -595,7 +595,7 @@ function ResourcePage({
         toast.error('Email client manquant');
         return false;
       }
-      const emailUrl = `mailto:${record.client_email}?subject=${encodeURIComponent(`Devis SMARTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`;
+      const emailUrl = `mailto:${record.client_email}?subject=${encodeURIComponent(`Devis TESTLAB ${record.numero || ''}`)}&body=${encodeURIComponent(message)}`;
       if (targetWindow) {
         targetWindow.location.href = emailUrl;
       } else {

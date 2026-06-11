@@ -15,11 +15,11 @@ const roleLabels = {
 };
 
 export const authProfiles = [
-  { role: 'responsable_appel', label: roleLabels.responsable_appel, email: 'offres@smartlab.com', initials: 'RO' },
-  { role: 'responsable_technique', label: roleLabels.responsable_technique, email: 'rt@smartlab.com', initials: 'RT' },
-  { role: 'dg', label: roleLabels.dg, email: 'dg@smartlab.com', initials: 'DG' },
-  { role: 'responsable_labo', label: roleLabels.responsable_labo, email: 'labo@smartlab.com', initials: 'RL' },
-  { role: 'receptionniste', label: roleLabels.receptionniste, email: 'reception@smartlab.com', initials: 'RC' }
+  { role: 'responsable_appel', label: roleLabels.responsable_appel, email: 'offres@testlab.com', initials: 'RO' },
+  { role: 'responsable_technique', label: roleLabels.responsable_technique, email: 'rt@testlab.com', initials: 'RT' },
+  { role: 'dg', label: roleLabels.dg, email: 'dg@testlab.com', initials: 'DG' },
+  { role: 'responsable_labo', label: roleLabels.responsable_labo, email: 'labo@testlab.com', initials: 'RL' },
+  { role: 'receptionniste', label: roleLabels.receptionniste, email: 'reception@testlab.com', initials: 'RC' }
 ];
 
 export const useAuth = () => useContext(AuthContext);

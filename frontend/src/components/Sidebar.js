@@ -47,7 +47,7 @@ const Sidebar = () => {
                     justifyContent: 'center',
                     fontWeight: 'bold',
                     fontSize: '18px'
-                }}>SL</div>
+                }}>TL</div>
                 {!collapsed && <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '18px', fontWeight: 'bold' }}><span style={{ color: 'var(--accent)' }}>SMART</span>LAB</span>}
             </div>
 

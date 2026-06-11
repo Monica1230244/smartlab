@@ -238,7 +238,7 @@ function QuoteValidationPortal({ code }) {
     });
     setQuote(rejectedQuote);
     setRejecting(false);
-    setResult('Rejet enregistre et renvoye au responsable technique dans SMARTLAB.');
+    setResult('Rejet enregistre et renvoye au responsable technique dans TESTLAB.');
   };
 
   const total = useMemo(() => lineItemsTotal(quote?.prestations), [quote]);

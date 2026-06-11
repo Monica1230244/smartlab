@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const SMARTLAB_VERSION = '2026.06.08-6';
+const SMARTLAB_VERSION = '2026.06.11-1';
 window.SMARTLAB_VERSION = SMARTLAB_VERSION;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -90,7 +90,7 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       window.addEventListener('online', () => checkPublishedVersion().catch(() => {}));
       document.addEventListener('visibilitychange', () => checkPublishedVersion().catch(() => {}));
     } catch (error) {
-      console.warn('SMARTLAB update check failed', error);
+      console.warn('TESTLAB update check failed', error);
     }
   });
 }

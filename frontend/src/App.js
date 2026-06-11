@@ -26,7 +26,7 @@ function ProtectedLayout() {
   const location = useLocation();
   const isClientValidation = location.pathname === '/devis' && new URLSearchParams(location.search).has('validation');
 
-  if (loading) return <div className="loadingScreen">Chargement SMARTLAB...</div>;
+  if (loading) return <div className="loadingScreen">Chargement TESTLAB...</div>;
   if (!user && !isClientValidation) return <Navigate to="/login" replace />;
   return <Layout publicMode={isClientValidation} />;
 }

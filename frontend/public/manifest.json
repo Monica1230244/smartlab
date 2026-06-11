@@ -1,6 +1,6 @@
 ﻿{
-  "name": "SMARTLAB - Gestion de Laboratoire",
-  "short_name": "SMARTLAB",
+  "name": "TESTLAB - Gestion de Laboratoire",
+  "short_name": "TESTLAB",
   "description": "Gestion complète de laboratoire ISO 17025",
   "start_url": ".",
   "scope": ".",

@@ -26,7 +26,7 @@ function Login() {
     <div className="loginPage">
       <form className="loginPanel" onSubmit={handleSubmit}>
         <div className="loginBrand">
-          <div className="brandMark">SL</div>
+          <div className="brandMark">TL</div>
           <h1>SMART<span>LAB</span></h1>
           <p>Connexion par profil metier</p>
         </div>
@@ -51,7 +51,7 @@ function Login() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder={selectedProfile?.email || 'utilisateur@smartlab.com'}
+            placeholder={selectedProfile?.email || 'utilisateur@testlab.com'}
           />
         </label>
 

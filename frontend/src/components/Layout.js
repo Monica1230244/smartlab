@@ -296,8 +296,8 @@ function Layout({ publicMode = false }) {
     }
 
     if (Notification.permission === 'granted') {
-      new Notification('SMARTLAB', {
-        body: 'Les notifications SMARTLAB sont activees.'
+      new Notification('TESTLAB', {
+        body: 'Les notifications TESTLAB sont activees.'
       });
     }
   };
@@ -322,9 +322,9 @@ function Layout({ publicMode = false }) {
     <div className="shell">
       {!publicMode && <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
-          <div className="brandMark">SL</div>
+          <div className="brandMark">TL</div>
           <div>
-            <strong><span>SMART</span>LAB</strong>
+            <strong><span>TEST</span>LAB</strong>
             <small>Gestion ISO 17025</small>
           </div>
         </div>
@@ -359,9 +359,9 @@ function Layout({ publicMode = false }) {
         )}
 
         <div className="userCard">
-          <div className="avatar">{user?.initials || 'SL'}</div>
+          <div className="avatar">{user?.initials || 'TL'}</div>
           <div>
-            <strong>{user?.name || 'SMARTLAB'}</strong>
+            <strong>{user?.name || 'TESTLAB'}</strong>
             <span>{roleLabels?.[currentRole] || 'Utilisateur'} - Version {APP_VERSION}</span>
             <button type="button" className="refreshVersionButton" onClick={() => { logout(); navigate('/login', { replace: true }); }}>Deconnexion</button>
           </div>
@@ -374,8 +374,8 @@ function Layout({ publicMode = false }) {
             Menu
           </button>}
           <div className="topbarTitle">
-            <p className="eyebrow">SMARTLAB mobile</p>
-            <h1>{titles[location.pathname] || 'SMARTLAB'}</h1>
+            <p className="eyebrow">TESTLAB mobile</p>
+            <h1>{titles[location.pathname] || 'TESTLAB'}</h1>
           </div>
           {!publicMode && <div className="topbarSearch">
             <span>RE</span>
