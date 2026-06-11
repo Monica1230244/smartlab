@@ -4,7 +4,7 @@ import { authProfiles, useAuth } from '../contexts/AuthContext';
 
 function Login() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('smartlab123');
+  const [password, setPassword] = useState('testlab123');
   const [role, setRole] = useState('responsable_appel');
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
@@ -27,7 +27,7 @@ function Login() {
       <form className="loginPanel" onSubmit={handleSubmit}>
         <div className="loginBrand">
           <div className="brandMark">TL</div>
-          <h1>SMART<span>LAB</span></h1>
+          <h1>TEST<span>LAB</span></h1>
           <p>Connexion par profil metier</p>
         </div>
 

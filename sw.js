@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartlab-pwa-v20260611-2';
+const CACHE_NAME = 'smartlab-pwa-v20260611-3';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
