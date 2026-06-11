@@ -80,6 +80,12 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString('fr-FR');
 }
 
+function formatCompactAmount(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;
+  return amount.toLocaleString('fr-FR');
+}
+
 function lineItemTotal(item) {
   return Number(item.quantite || 0) * Number(item.prix_unitaire || 0);
 }
@@ -329,7 +335,7 @@ export default function Devis() {
     const drafts = records.filter((item) => item.statut === 'redaction').length;
     return [
       { label: 'Total devis', value: records.length, tone: 'blue' },
-      { label: 'Montant gagne', value: formatMoney(wonAmount), tone: 'green', note: 'FCFA' },
+      { label: 'Montant gagne', value: formatCompactAmount(wonAmount), tone: 'green', note: 'FCFA' },
       { label: 'Devis envoyes', value: sent, tone: 'amber' },
       { label: 'Devis signes', value: signed, tone: 'green', note: `${wonQuotes.length} commande(s)` }
     ];

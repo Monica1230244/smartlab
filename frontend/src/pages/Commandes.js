@@ -51,8 +51,10 @@ const columns = [
   { name: 'montant_ht', label: 'Montant', type: 'money' }
 ];
 
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('fr-FR');
+function formatCompactAmount(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;
+  return amount.toLocaleString('fr-FR');
 }
 
 export default function Commandes() {
@@ -62,7 +64,7 @@ export default function Commandes() {
     const deliveredOrders = records.filter((item) => item.statut === 'livree').length;
     return [
       { label: 'Commandes creees', value: records.length, tone: 'blue' },
-      { label: 'Montant total commandes', value: formatMoney(totalAmount), tone: 'green', note: 'FCFA' },
+      { label: 'Montant total commandes', value: formatCompactAmount(totalAmount), tone: 'green', note: 'FCFA' },
       { label: 'Commandes actives', value: activeOrders, tone: 'amber' },
       { label: 'Commandes livrees', value: deliveredOrders, tone: 'green' }
     ];
