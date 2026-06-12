@@ -27,7 +27,7 @@ const columns = [
 export default function Audits() {
   return (
     <ResourcePage
-      title="Audits qualite"
+      title="Gestion des audits qualité"
       subtitle="Planification des audits, revues de direction et actions d'amelioration."
       resource="audits"
       fields={fields}

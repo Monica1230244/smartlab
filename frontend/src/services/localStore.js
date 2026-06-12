@@ -48,7 +48,10 @@ const seedData = {
   ],
   nonConformites: [
     { id: 'nc-1', reference: 'NC-2026-002', origine: "Reception objet d'essai", description: "Objet d'essai recu sans identification complete", responsable: 'Responsable Laboratoire', echeance: today, statut: 'ouverte' },
-    { id: 'nc-2', reference: 'NC-2026-001', origine: 'Reclamation client', description: 'Demande de verification sur rapport transmis', responsable: 'Responsable Technique', echeance: today, statut: 'en_traitement' }
+    { id: 'nc-2', reference: 'NC-2026-001', origine: 'Controle rapport', description: 'Ecart releve avant transmission du rapport client', responsable: 'Responsable Technique', echeance: today, statut: 'en_traitement' }
+  ],
+  reclamations: [
+    { id: 'rec-1', reference: 'REC-2026-001', client_nom: 'AGETUR Benin', canal: 'email', objet: 'Demande de verification rapport', description: 'Le client demande une verification des valeurs reprises dans le rapport transmis.', responsable: 'Responsable Technique', action_prevue: 'Revue du dossier et reponse client documentee.', date_reception: today, echeance: today, statut: 'en_traitement' }
   ],
   notifications: [],
   activityLogs: [],
@@ -191,7 +194,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {
@@ -200,6 +203,7 @@ export async function getStats() {
     devisOuverts: data.devis.filter((item) => item.statut !== 'paye').length,
     commandesActives: data.commandes.filter((item) => item.statut !== 'livree').length,
     nonConformites: data.nonConformites.filter((item) => item.statut !== 'cloturee').length,
+    reclamations: data.reclamations.filter((item) => item.statut !== 'cloturee').length,
     equipements: data.equipements.length,
     habilitations: data.personnel.filter((item) => item.habilitation === 'active').length,
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)

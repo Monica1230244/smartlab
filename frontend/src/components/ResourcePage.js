@@ -22,6 +22,7 @@ const AUTO_NUMBERING = {
   essais: { field: 'numero', prefix: 'EA', withYear: true, pad: 3 },
   nonConformites: { field: 'reference', prefix: 'NC', withYear: true, pad: 3 },
   projets: { field: 'reference', prefix: 'PRJ', withYear: true, pad: 3 },
+  reclamations: { field: 'reference', prefix: 'REC', withYear: true, pad: 3 },
   rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 },
   resultatsEssais: { field: 'numero', prefix: 'RES', withYear: true, pad: 3 }
 };

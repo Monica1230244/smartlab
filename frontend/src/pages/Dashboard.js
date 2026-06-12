@@ -102,6 +102,7 @@ function buildDashboard(role, data) {
   const essais = data.essais || [];
   const clients = data.clients || [];
   const nonConformites = data.nonConformites || [];
+  const reclamations = data.reclamations || [];
   const equipements = data.equipements || [];
   const personnel = data.personnel || [];
   const resultats = data.resultatsEssais || [];
@@ -110,6 +111,7 @@ function buildDashboard(role, data) {
   const activeOrders = commandes.filter((item) => item.statut !== 'livree');
   const ordersAmount = commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
   const openNc = nonConformites.filter((item) => item.statut !== 'cloturee');
+  const openReclamations = reclamations.filter((item) => item.statut !== 'cloturee');
   const nonConformingResults = resultats.filter((item) => item.decision === 'non_conforme');
   const equipmentWatch = equipements.filter((item) => ['a_surveiller', 'hors_service'].includes(item.statut));
 
@@ -155,6 +157,7 @@ function buildDashboard(role, data) {
         { label: 'Rapports a valider', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' },
         { label: 'Resultats non conformes', value: nonConformingResults.length, tone: 'red', to: '/resultats-essais' },
         { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
+        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
         { label: 'Personnel technique', value: personnel.length, tone: 'blue', to: '/personnel' }
       ],
       tables: [
@@ -196,6 +199,7 @@ function buildDashboard(role, data) {
         { label: 'CA commandes', value: compactAmount(ordersAmount), note: 'FCFA', tone: 'green', to: '/commandes' },
         { label: 'Devis refuses', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' },
         { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
+        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
         { label: 'Projets suivis', value: (data.projets || []).length, tone: 'blue', to: '/projets' }
       ],
       tables: [
@@ -277,6 +281,7 @@ function buildDashboard(role, data) {
         { label: 'Commandes a receptionner', value: activeOrders.length, tone: 'blue', to: '/commandes' },
         { label: "Objets d'essais recus", value: essais.filter((item) => item.date || item.date_prelevement).length, tone: 'green', to: '/essais' },
         { label: 'NC reception', value: openNc.filter((item) => String(item.origine || '').toLowerCase().includes('reception')).length, tone: 'red', to: '/non-conformites' },
+        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
         { label: 'Clients identifies', value: clients.length, tone: 'blue', to: '/clients' }
       ],
       tables: [
@@ -317,6 +322,7 @@ function buildDashboard(role, data) {
       { label: 'Commandes', value: commandes.length, tone: 'blue', to: '/commandes' },
       { label: 'Objets essais', value: essais.length, tone: 'amber', to: '/essais' },
       { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
+      { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
       { label: 'Personnel actif', value: personnel.filter((item) => item.habilitation === 'active').length, tone: 'green', to: '/personnel' }
     ],
     tables: [
@@ -345,6 +351,7 @@ function Dashboard() {
     equipements: [],
     audits: [],
     nonConformites: [],
+    reclamations: [],
     personnel: [],
     projets: [],
     catalogueEssais: [],

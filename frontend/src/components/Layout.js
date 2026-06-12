@@ -10,10 +10,11 @@ const navItems = [
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/catalogue-essais', label: 'Catalogue des essais', icon: 'CE' },
   { to: '/resultats-essais', label: 'Resultats & calculs', icon: 'RC' },
-  { to: '/equipements', label: 'Equipements', icon: 'EQ' },
-  { to: '/personnel', label: 'Personnel & Habilitations', icon: 'RH' },
-  { to: '/non-conformites', label: 'Non-Conformites', icon: 'NC' },
-  { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
+  { to: '/equipements', label: 'Gestion des équipements', icon: 'EQ' },
+  { to: '/personnel', label: 'Gestion du personnel', icon: 'RH' },
+  { to: '/non-conformites', label: 'Gestion des non-conformités', icon: 'NC' },
+  { to: '/reclamations', label: 'Gestion des réclamations', icon: 'GR' },
+  { to: '/audits', label: 'Gestion des audits qualité', icon: 'AQ' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
   { to: '/devis', label: 'Devis', icon: 'DV' },
   { to: '/commandes', label: 'Commandes', icon: 'CM' },
@@ -23,10 +24,10 @@ const navItems = [
 
 const menuByRole = {
   responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/personnel', '/processus', '/catalogue-essais'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/catalogue-essais'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/processus'],
-  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/processus']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus']
 };
 
 const titles = {
@@ -39,16 +40,18 @@ const titles = {
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
-  '/equipements': 'Equipements',
-  '/audits': 'Audits Qualite',
-  '/non-conformites': 'Non-Conformites',
-  '/personnel': 'Personnel & Habilitations',
+  '/equipements': 'Gestion des équipements',
+  '/audits': 'Gestion des audits qualité',
+  '/non-conformites': 'Gestion des non-conformités',
+  '/reclamations': 'Gestion des réclamations',
+  '/personnel': 'Gestion du personnel',
   '/processus': 'Processus ISO 17025',
   '/parametres': 'Parametrage'
 };
 
 const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
+const THEME_KEY = 'smartlab_theme';
 const APP_VERSION = window.SMARTLAB_VERSION || 'dev';
 const NOTIFICATIONS_POLL_INTERVAL = 15000;
 let notificationAudioContext = null;
@@ -129,12 +132,18 @@ function Layout({ publicMode = false }) {
   const notificationIdsRef = useRef([]);
   const notificationsReadyRef = useRef(false);
   const soundUnlockedRef = useRef(false);
+  const [theme, setTheme] = useState(localStorage.getItem(THEME_KEY) || 'dark');
   const location = useLocation();
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
   const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/equipements', '/personnel', '/non-conformites', '/audits'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     if (user?.role) {
@@ -169,11 +178,12 @@ function Layout({ publicMode = false }) {
     let cancelled = false;
 
     const refreshNotifications = async () => {
-      const [essais, devis, commandes, nonConformites, sharedNotifications] = await Promise.all([
+      const [essais, devis, commandes, nonConformites, reclamations, sharedNotifications] = await Promise.all([
         listRecords('essais'),
         listRecords('devis'),
         listRecords('commandes'),
         listRecords('nonConformites'),
+        listRecords('reclamations'),
         listRecords('notifications')
       ]);
 
@@ -199,6 +209,7 @@ function Layout({ publicMode = false }) {
       const devisOuverts = devis.filter((item) => !['paye', 'accepte', 'annule', 'refuse', 'commande_creee'].includes(item.statut)).length;
       const commandesActives = commandes.filter((item) => item.statut !== 'livree').length;
       const nonConformitesOuvertes = nonConformites.filter((item) => item.statut !== 'cloturee').length;
+      const reclamationsOuvertes = reclamations.filter((item) => item.statut !== 'cloturee').length;
 
       if (essaisEnCours > 0) {
         nextNotifications.push({
@@ -240,10 +251,20 @@ function Layout({ publicMode = false }) {
       if (nonConformitesOuvertes > 0) {
         nextNotifications.push({
           id: `non-conformites-ouvertes-${nonConformitesOuvertes}`,
-          title: 'Non-Conformites',
+          title: 'Gestion des non-conformités',
           message: `${nonConformitesOuvertes} non-conformite${nonConformitesOuvertes > 1 ? 's' : ''} non cloturee${nonConformitesOuvertes > 1 ? 's' : ''}.`,
           tone: 'offline',
           path: '/non-conformites'
+        });
+      }
+
+      if (reclamationsOuvertes > 0) {
+        nextNotifications.push({
+          id: `reclamations-ouvertes-${reclamationsOuvertes}`,
+          title: 'Gestion des réclamations',
+          message: `${reclamationsOuvertes} reclamation${reclamationsOuvertes > 1 ? 's' : ''} non cloturee${reclamationsOuvertes > 1 ? 's' : ''}.`,
+          tone: 'offline',
+          path: '/reclamations'
         });
       }
 
@@ -318,6 +339,10 @@ function Layout({ publicMode = false }) {
     navigate(notification.path);
   };
 
+  const toggleTheme = () => {
+    setTheme((value) => (value === 'dark' ? 'light' : 'dark'));
+  };
+
   return (
     <div className="shell">
       {!publicMode && <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -383,6 +408,14 @@ function Layout({ publicMode = false }) {
           </div>}
           {!publicMode && <div className="topbarActions">
             <span className="authRolePill">{roleLabels?.[currentRole] || currentRole}</span>
+            <button
+              type="button"
+              className="themeToggleButton"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            >
+              {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+            </button>
             <button
               type="button"
               className="notificationButton"

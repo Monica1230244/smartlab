@@ -14,6 +14,7 @@ import Rapports from './pages/Rapports';
 import Equipements from './pages/Equipements';
 import Audits from './pages/Audits';
 import NonConformites from './pages/NonConformites';
+import Reclamations from './pages/Reclamations';
 import Personnel from './pages/Personnel';
 import Processus from './pages/Processus';
 import Parametres from './pages/Parametres';
@@ -46,6 +47,7 @@ function App() {
           <Route path="/equipements" element={<Equipements />} />
           <Route path="/audits" element={<Audits />} />
           <Route path="/non-conformites" element={<NonConformites />} />
+          <Route path="/reclamations" element={<Reclamations />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/processus" element={<Processus />} />
           <Route path="/catalogue-essais" element={<CatalogueEssais />} />

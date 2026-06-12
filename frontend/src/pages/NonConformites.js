@@ -27,7 +27,7 @@ const columns = [
 export default function NonConformites() {
   return (
     <ResourcePage
-      title="Reclamations et non-conformites"
+      title="Gestion des non-conformités"
       subtitle="Suivi des ecarts, actions correctives et clotures selon le processus ISO."
       resource="nonConformites"
       fields={fields}

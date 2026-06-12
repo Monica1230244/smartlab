@@ -27,7 +27,7 @@ const columns = [
 export default function Equipements() {
   return (
     <ResourcePage
-      title="Equipements et calibrations"
+      title="Gestion des équipements"
       subtitle="Gestion des equipements critiques, certificats et echeances d'etalonnage."
       resource="equipements"
       fields={fields}

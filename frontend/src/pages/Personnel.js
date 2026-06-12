@@ -80,7 +80,7 @@ export default function Personnel() {
       </div>
 
       <ResourcePage
-        title="Personnel et habilitations"
+        title="Gestion du personnel"
         subtitle="Qualification des operateurs, responsables pilotes et maintien des competences."
         resource="personnel"
         fields={fields}
