@@ -22,6 +22,7 @@ const columns = [
 
 export default function Parametres() {
   const { user, updateProfile, roleLabels } = useAuth();
+  const [savingProfile, setSavingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: '',
@@ -47,13 +48,28 @@ export default function Parametres() {
   const updatePhoto = (file) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => updateField('photo', reader.result);
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxSize = 420;
+        const ratio = Math.min(maxSize / image.width, maxSize / image.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.width * ratio);
+        canvas.height = Math.round(image.height * ratio);
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        updateField('photo', canvas.toDataURL('image/jpeg', 0.78));
+      };
+      image.src = reader.result;
+    };
     reader.readAsDataURL(file);
   };
 
-  const saveProfile = (event) => {
+  const saveProfile = async (event) => {
     event.preventDefault();
-    updateProfile(profileForm);
+    setSavingProfile(true);
+    await updateProfile(profileForm);
+    setSavingProfile(false);
   };
 
   return (
@@ -99,7 +115,9 @@ export default function Parametres() {
             </label>
           </div>
           <div className="formActions">
-            <button type="submit" className="primaryButton">Enregistrer mon profil</button>
+            <button type="submit" className="primaryButton" disabled={savingProfile}>
+              {savingProfile ? 'Synchronisation...' : 'Enregistrer mon profil'}
+            </button>
           </div>
         </div>
       </form>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { listRecords, upsertRecord } from '../services/localStore';
 
 const AuthContext = createContext();
 const TOKEN_KEY = 'smartlab_token';
@@ -24,20 +25,54 @@ export const authProfiles = [
 
 export const useAuth = () => useContext(AuthContext);
 
+function profileId(role) {
+  return `profile-${role}`;
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem(USER_KEY);
-    if (token && savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      localStorage.setItem(CURRENT_ROLE_KEY, parsedUser.role);
-      window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: parsedUser.role }));
+  const applyUser = (nextUser) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    localStorage.setItem(CURRENT_ROLE_KEY, nextUser.role);
+    setUser(nextUser);
+    window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: nextUser.role }));
+    window.dispatchEvent(new CustomEvent('smartlab:profile-changed', { detail: nextUser }));
+  };
+
+  const loadProfile = async (baseUser) => {
+    if (!baseUser?.role) return baseUser;
+    try {
+      const profiles = await listRecords('profiles');
+      const remoteProfile = profiles.find((profile) => (
+        profile.id === profileId(baseUser.role) || profile.role === baseUser.role || profile.email === baseUser.email
+      ));
+      return remoteProfile ? { ...baseUser, ...remoteProfile } : baseUser;
+    } catch (error) {
+      console.warn('Profil Supabase indisponible:', error);
+      return baseUser;
     }
-    setLoading(false);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateUser = async () => {
+      const savedUser = localStorage.getItem(USER_KEY);
+      if (token && savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        const syncedUser = await loadProfile(parsedUser);
+        if (!cancelled) applyUser(syncedUser);
+      }
+      if (!cancelled) setLoading(false);
+    };
+
+    hydrateUser();
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   const login = async ({ email, password, role }) => {
@@ -51,18 +86,16 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    const nextUser = {
+    const baseUser = {
       ...profile,
       email: email || profile.email,
       name: profile.label
     };
+    const nextUser = await loadProfile(baseUser);
     const nextToken = `smartlab-${role}-${Date.now()}`;
     localStorage.setItem(TOKEN_KEY, nextToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    localStorage.setItem(CURRENT_ROLE_KEY, role);
     setToken(nextToken);
-    setUser(nextUser);
-    window.dispatchEvent(new CustomEvent('smartlab:role-changed', { detail: role }));
+    applyUser(nextUser);
     toast.success(`Connecte: ${profile.label}`);
     return true;
   };
@@ -75,12 +108,30 @@ export const AuthProvider = ({ children }) => {
     toast.success('Deconnexion reussie');
   };
 
-  const updateProfile = (profile) => {
-    const nextUser = { ...(user || {}), ...profile };
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    setUser(nextUser);
-    window.dispatchEvent(new CustomEvent('smartlab:profile-changed', { detail: nextUser }));
-    toast.success('Profil mis a jour');
+  const updateProfile = async (profile) => {
+    if (!user?.role) {
+      toast.error('Reconnectez-vous avant de modifier le profil');
+      return false;
+    }
+
+    const nextUser = {
+      ...(user || {}),
+      ...profile,
+      id: profileId(user.role),
+      role: user.role,
+      initials: user.initials,
+      label: user.label
+    };
+    applyUser(nextUser);
+
+    const saved = await upsertRecord('profiles', nextUser);
+    if (saved.__syncError) {
+      toast.error(`Profil enregistre localement, mais pas dans Supabase: ${saved.__syncError}`);
+      return false;
+    }
+
+    toast.success('Profil synchronise avec Supabase');
+    return true;
   };
 
   return (
