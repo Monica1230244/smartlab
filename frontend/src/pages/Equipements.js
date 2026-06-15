@@ -36,14 +36,36 @@ const emptySignaletique = {
   date_mise_service: '',
   date_reforme: '',
   equipements_associes: '',
+  associe_1_designation: '',
+  associe_1_marque: '',
+  associe_1_modele: '',
+  associe_1_numero_serie: '',
+  associe_1_caracteristiques: '',
+  associe_2_designation: '',
+  associe_2_marque: '',
+  associe_2_modele: '',
+  associe_2_numero_serie: '',
+  associe_2_caracteristiques: '',
   etalonnage_reference: '',
   etalonnage_operation: '',
   etalonnage_periodicite: '',
   maintenance_reference: '',
   maintenance_operation: '',
   maintenance_periodicite: '',
-  prestataire_etalonnage: '',
-  prestataire_maintenance: '',
+  externe_etalonnage_ref_contrat: '',
+  externe_etalonnage_societe: '',
+  externe_etalonnage_adresse: '',
+  externe_etalonnage_tel: '',
+  externe_etalonnage_fax: '',
+  externe_etalonnage_correspondant: '',
+  externe_etalonnage_periodicite: '',
+  externe_maintenance_ref_contrat: '',
+  externe_maintenance_societe: '',
+  externe_maintenance_adresse: '',
+  externe_maintenance_tel: '',
+  externe_maintenance_fax: '',
+  externe_maintenance_correspondant: '',
+  externe_maintenance_periodicite: '',
   matieres_consommables: '',
   pieces_detachees: '',
   produits_maintenance: ''
@@ -63,7 +85,52 @@ const emptyLifeSheet = {
   intervalle_verification: '',
   intervalle_maintenance: '',
   accessoires: '',
-  interventions: ''
+  accessoire_1_designation: '',
+  accessoire_1_numero_identification: '',
+  accessoire_1_incertitudes_etalonnage: '',
+  accessoire_1_points_etalonnage: '',
+  accessoire_2_designation: '',
+  accessoire_2_numero_identification: '',
+  accessoire_2_incertitudes_etalonnage: '',
+  accessoire_2_points_etalonnage: '',
+  accessoire_3_designation: '',
+  accessoire_3_numero_identification: '',
+  accessoire_3_incertitudes_etalonnage: '',
+  accessoire_3_points_etalonnage: '',
+  interventions: '',
+  intervention_1_numero: '',
+  intervention_1_nature: '',
+  intervention_1_references_moyens: '',
+  intervention_1_reference_document: '',
+  intervention_1_date: '',
+  intervention_1_prochaine_date: '',
+  intervention_1_affectation: '',
+  intervention_1_intervenant: '',
+  intervention_1_reference_rapport: '',
+  intervention_1_resultats_observations: '',
+  intervention_1_visa_responsable_metrologie: '',
+  intervention_2_numero: '',
+  intervention_2_nature: '',
+  intervention_2_references_moyens: '',
+  intervention_2_reference_document: '',
+  intervention_2_date: '',
+  intervention_2_prochaine_date: '',
+  intervention_2_affectation: '',
+  intervention_2_intervenant: '',
+  intervention_2_reference_rapport: '',
+  intervention_2_resultats_observations: '',
+  intervention_2_visa_responsable_metrologie: '',
+  intervention_3_numero: '',
+  intervention_3_nature: '',
+  intervention_3_references_moyens: '',
+  intervention_3_reference_document: '',
+  intervention_3_date: '',
+  intervention_3_prochaine_date: '',
+  intervention_3_affectation: '',
+  intervention_3_intervenant: '',
+  intervention_3_reference_rapport: '',
+  intervention_3_resultats_observations: '',
+  intervention_3_visa_responsable_metrologie: ''
 };
 
 const emptyDocument = {
@@ -115,6 +182,47 @@ function compareEquipments(a, b) {
 
 function statusLabel(value) {
   return statusOptions.find((option) => option.value === value)?.label || value || '-';
+}
+
+function signaletiqueAssociatedRows(data) {
+  return [1, 2].map((index) => `
+    <tr>
+      <td>${escapeHtml(data[`associe_${index}_designation`])}</td>
+      <td>${escapeHtml(data[`associe_${index}_marque`])}</td>
+      <td>${escapeHtml(data[`associe_${index}_modele`])}</td>
+      <td>${escapeHtml(data[`associe_${index}_numero_serie`])}</td>
+      <td>${escapeHtml(data[`associe_${index}_caracteristiques`])}</td>
+    </tr>
+  `).join('');
+}
+
+function lifeAccessoryRows(data) {
+  return [1, 2, 3].map((index) => `
+    <tr>
+      <td>${escapeHtml(data[`accessoire_${index}_designation`])}</td>
+      <td>${escapeHtml(data[`accessoire_${index}_numero_identification`])}</td>
+      <td>${escapeHtml(data[`accessoire_${index}_incertitudes_etalonnage`])}</td>
+      <td>${escapeHtml(data[`accessoire_${index}_points_etalonnage`])}</td>
+    </tr>
+  `).join('');
+}
+
+function lifeInterventionRows(data) {
+  return [1, 2, 3].map((index) => `
+    <tr>
+      <td>${escapeHtml(data[`intervention_${index}_numero`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_nature`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_references_moyens`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_reference_document`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_date`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_prochaine_date`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_affectation`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_intervenant`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_reference_rapport`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_resultats_observations`])}</td>
+      <td>${escapeHtml(data[`intervention_${index}_visa_responsable_metrologie`])}</td>
+    </tr>
+  `).join('');
 }
 
 export default function Equipements() {
@@ -351,12 +459,34 @@ export default function Equipements() {
               <tr><td>Marque</td><td>${escapeHtml(data.marque || record.marque)}</td><td>Date de mise en service</td><td>${escapeHtml(data.date_mise_service || record.date_mise_service)}</td></tr>
               <tr><td>Modele</td><td>${escapeHtml(data.modele || record.modele)}</td><td>Date de reforme</td><td>${escapeHtml(data.date_reforme || record.date_reforme)}</td></tr>
               <tr><td>N de serie</td><td>${escapeHtml(data.numero_serie || record.numero_serie)}</td><td>Caracteristiques</td><td>${escapeHtml(data.caracteristiques || record.caracteristiques)}</td></tr>
-              <tr><th colspan="4">Autres equipements associes</th></tr>
-              <tr><td colspan="4">${escapeHtml(data.equipements_associes)}</td></tr>
+              <tr><th colspan="4">Divers</th></tr>
+              <tr><td colspan="4">${escapeHtml(data.divers)}</td></tr>
+            </tbody>
+          </table>
+          <table class="grid">
+            <tbody>
+              <tr><th colspan="5">Autres equipements associes</th></tr>
+              <tr><td>Designation</td><td>Marque</td><td>Modele</td><td>N de serie</td><td>Caracteristiques</td></tr>
+              ${signaletiqueAssociatedRows(data)}
+              ${data.equipements_associes ? `<tr><td colspan="5">${escapeHtml(data.equipements_associes)}</td></tr>` : ''}
+            </tbody>
+          </table>
+          <table class="grid">
+            <tbody>
+              <tr><th colspan="4">Interventions internes</th></tr>
               <tr><th colspan="2">Etalonnage / Verification</th><th colspan="2">Maintenance preventive</th></tr>
               <tr><td>Reference procedure</td><td>${escapeHtml(data.etalonnage_reference)}</td><td>N fiche maintenance</td><td>${escapeHtml(data.maintenance_reference)}</td></tr>
               <tr><td>Operation a effectuer</td><td>${escapeHtml(data.etalonnage_operation)}</td><td>Operation a effectuer</td><td>${escapeHtml(data.maintenance_operation)}</td></tr>
               <tr><td>Periodicite</td><td>${escapeHtml(data.etalonnage_periodicite)}</td><td>Periodicite</td><td>${escapeHtml(data.maintenance_periodicite)}</td></tr>
+              <tr><th colspan="4">Interventions externes</th></tr>
+              <tr><th colspan="2">Etalonnage / Verification</th><th colspan="2">Maintenance preventive</th></tr>
+              <tr><td>Ref contrat</td><td>${escapeHtml(data.externe_etalonnage_ref_contrat)}</td><td>Ref contrat</td><td>${escapeHtml(data.externe_maintenance_ref_contrat)}</td></tr>
+              <tr><td>Societe</td><td>${escapeHtml(data.externe_etalonnage_societe)}</td><td>Societe</td><td>${escapeHtml(data.externe_maintenance_societe)}</td></tr>
+              <tr><td>Adresse</td><td>${escapeHtml(data.externe_etalonnage_adresse)}</td><td>Adresse</td><td>${escapeHtml(data.externe_maintenance_adresse)}</td></tr>
+              <tr><td>Tel</td><td>${escapeHtml(data.externe_etalonnage_tel)}</td><td>Tel</td><td>${escapeHtml(data.externe_maintenance_tel)}</td></tr>
+              <tr><td>Fax</td><td>${escapeHtml(data.externe_etalonnage_fax)}</td><td>Fax</td><td>${escapeHtml(data.externe_maintenance_fax)}</td></tr>
+              <tr><td>Correspondant</td><td>${escapeHtml(data.externe_etalonnage_correspondant)}</td><td>Correspondant</td><td>${escapeHtml(data.externe_maintenance_correspondant)}</td></tr>
+              <tr><td>Periodicite</td><td>${escapeHtml(data.externe_etalonnage_periodicite)}</td><td>Periodicite</td><td>${escapeHtml(data.externe_maintenance_periodicite)}</td></tr>
               <tr><th colspan="4">Matieres consommables / pieces detachees / produits de maintenance</th></tr>
               <tr><td>Matieres consommables</td><td>${escapeHtml(data.matieres_consommables)}</td><td>Pieces detachees</td><td>${escapeHtml(data.pieces_detachees)}</td></tr>
               <tr><td>Produits de maintenance</td><td colspan="3">${escapeHtml(data.produits_maintenance)}</td></tr>
@@ -403,9 +533,29 @@ export default function Equipements() {
               <tr><td>N identification interne</td><td>${escapeHtml(data.numero_interne || record.code)}</td><td>Intervalle entre deux verifications metrologiques</td><td>${escapeHtml(data.intervalle_verification)}</td></tr>
               <tr><td>Etat a la reception</td><td>${escapeHtml(data.etat_reception)}</td><td>Intervalle entre deux maintenances</td><td>${escapeHtml(data.intervalle_maintenance)}</td></tr>
               <tr><th colspan="4">Equipements ou accessoires associes</th></tr>
-              <tr><td colspan="4">${escapeHtml(data.accessoires)}</td></tr>
-              <tr><th colspan="4">Interventions</th></tr>
-              <tr><td colspan="4">${escapeHtml(data.interventions).replace(/\n/g, '<br />')}</td></tr>
+              <tr><td>Designation</td><td>N d'identification</td><td>Incertitudes d'etalonnage demandees</td><td>Points d'etalonnage demandes</td></tr>
+              ${lifeAccessoryRows(data)}
+              ${data.accessoires ? `<tr><td colspan="4">${escapeHtml(data.accessoires)}</td></tr>` : ''}
+            </tbody>
+          </table>
+          <table>
+            <tbody>
+              <tr><th colspan="11">Interventions</th></tr>
+              <tr>
+                <td>N</td>
+                <td>Nature de l'intervention</td>
+                <td>References des moyens utilises</td>
+                <td>Reference du document utilise</td>
+                <td>Date</td>
+                <td>Prochaine date</td>
+                <td>Affectation de l'equipement de mesure</td>
+                <td>Intervenant</td>
+                <td>Reference du rapport</td>
+                <td>Resultats ou observations du rapport</td>
+                <td>Visa du Responsable Metrologie</td>
+              </tr>
+              ${lifeInterventionRows(data)}
+              ${data.interventions ? `<tr><td colspan="11">${escapeHtml(data.interventions).replace(/\n/g, '<br />')}</td></tr>` : ''}
             </tbody>
           </table>
           <footer>Le laboratoire TESTLAB exerce exclusivement son droit de propriete sur le present document.</footer>
