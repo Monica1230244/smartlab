@@ -57,6 +57,10 @@ const procedureDefaults = () => procedureSections.reduce((values, section) => ({
   [section.key]: ''
 }), {});
 
+function defaultProcedureText() {
+  return procedureSections.map((section) => `${section.title}\n${section.helper}\n`).join('\n');
+}
+
 function emptyForm(status, type, records) {
   return {
     reference: nextDocumentReference(records, type),
@@ -70,6 +74,7 @@ function emptyForm(status, type, records) {
     date_revision: '',
     objet: '',
     contenu: '',
+    document_text: type === 'procedure' ? defaultProcedureText() : '',
     lien_document: '',
     observation: '',
     ...procedureDefaults()
@@ -112,6 +117,40 @@ function sectionValue(record, sectionKey) {
   if (sectionKey === 'objectif') return record.objet || '';
   if (sectionKey === 'deroulement') return record.contenu || '';
   return '';
+}
+
+function procedureText(record) {
+  if (record.document_text) return record.document_text;
+  const sections = procedureSections
+    .map((section) => {
+      const value = sectionValue(record, section.key);
+      return value ? `${section.title}\n${value}` : '';
+    })
+    .filter(Boolean);
+  return sections.join('\n\n');
+}
+
+function procedureTextHtml(record) {
+  const text = procedureText(record);
+  if (!text) return '<section><p>Aucun contenu redige.</p></section>';
+  return escapeHtml(text)
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block.split('\n');
+      const firstLine = lines[0] || '';
+      const rest = lines.slice(1).join('\n');
+      const isHeading = /^\d+\.\s/.test(firstLine);
+      if (isHeading) {
+        return `
+          <section>
+            <h3>${firstLine}</h3>
+            ${rest ? `<p>${rest.replace(/\n/g, '<br />')}</p>` : ''}
+          </section>
+        `;
+      }
+      return `<section><p>${block.replace(/\n/g, '<br />')}</p></section>`;
+    })
+    .join('');
 }
 
 function escapeHtml(value) {
@@ -193,7 +232,7 @@ export default function DocumentsQualite() {
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    setForm({ ...procedureDefaults(), ...record });
+    setForm({ ...procedureDefaults(), ...record, document_text: procedureText(record) });
     setFormOpen(true);
   };
 
@@ -214,8 +253,8 @@ export default function DocumentsQualite() {
       ...form,
       type: selectedType,
       statut: selectedStatus,
-      objet: isProcedure ? (form.objectif || form.objet || '') : (form.objet || ''),
-      contenu: isProcedure ? (form.deroulement || form.contenu || '') : (form.contenu || ''),
+      objet: isProcedure ? (form.document_text || form.objet || '').split('\n')[0] : (form.objet || ''),
+      contenu: isProcedure ? (form.document_text || form.contenu || '') : (form.contenu || ''),
       updated_at: new Date().toISOString()
     };
     const saved = await upsertRecord('documentsQualite', {
@@ -239,17 +278,6 @@ export default function DocumentsQualite() {
   };
 
   const buildProcedureHtml = (record) => {
-    const sections = procedureSections.map((section) => {
-      const value = sectionValue(record, section.key);
-      if (!value) return '';
-      return `
-        <section>
-          <h3>${escapeHtml(section.title)}</h3>
-          <p>${escapeHtml(value).replace(/\n/g, '<br />')}</p>
-        </section>
-      `;
-    }).join('');
-
     return `
       <!doctype html>
       <html lang="fr">
@@ -299,7 +327,7 @@ export default function DocumentsQualite() {
             <div><span>Application</span><strong>${escapeHtml(record.date_application || '-')}</strong></div>
             <div><span>Revision</span><strong>${escapeHtml(record.date_revision || '-')}</strong></div>
           </div>
-          ${sections || '<section><p>Aucun contenu redige.</p></section>'}
+          ${procedureTextHtml(record)}
           ${(record.lien_document || record.observation) ? `
             <div class="footerBox">
               ${record.lien_document ? `<strong>Document source:</strong> ${escapeHtml(record.lien_document)}<br />` : ''}
@@ -346,16 +374,20 @@ export default function DocumentsQualite() {
       </header>
 
       <div className="procedureDocumentBody">
-        {procedureSections.map((section) => {
-          const value = sectionValue(record, section.key);
-          if (!value) return null;
-          return (
-            <section className="procedureDocumentSection" key={section.key}>
-              <h4>{section.title}</h4>
-              <p>{value}</p>
-            </section>
-          );
-        })}
+        <div className="procedureDocumentText">
+          {procedureText(record).split(/\n{2,}/).filter(Boolean).map((block, index) => {
+            const lines = block.split('\n');
+            const title = lines[0] || '';
+            const body = lines.slice(1).join('\n');
+            const isHeading = /^\d+\.\s/.test(title);
+            return (
+              <section className="procedureDocumentSection" key={`${record.id}-text-${index}`}>
+                {isHeading ? <h4>{title}</h4> : null}
+                <p>{isHeading ? body : block}</p>
+              </section>
+            );
+          })}
+        </div>
         {(record.lien_document || record.observation) && (
           <footer className="procedureDocumentFooter">
             {record.lien_document && <span>Document source: {record.lien_document}</span>}
@@ -443,7 +475,7 @@ export default function DocumentsQualite() {
       <div className="formHeader">
         <div>
           <strong>{editingId ? 'Modifier la procedure' : 'Rediger une nouvelle procedure'}</strong>
-          <small>Redaction complete du document qualite, avec les sections attendues pour une procedure de laboratoire.</small>
+          <small>Redigez directement le document comme dans Word. Les informations de reference restent seulement en entete.</small>
         </div>
         <button type="button" className="ghostButton" onClick={closeForm}>Fermer</button>
       </div>
@@ -479,28 +511,20 @@ export default function DocumentsQualite() {
         </label>
       </div>
 
-      <div className="procedureWritingSurface">
-        {procedureSections.map((section) => {
-          const fallback = section.key === 'objectif'
-            ? form.objet
-            : section.key === 'deroulement'
-              ? form.contenu
-              : '';
-          return (
-            <section className="procedureSection" key={section.key}>
-              <div className="procedureSectionHeader">
-                <strong>{section.title}</strong>
-                <small>{section.helper}</small>
-              </div>
-              <textarea
-                value={form[section.key] || fallback || ''}
-                onChange={(event) => updateField(section.key, event.target.value)}
-                rows={section.key === 'deroulement' ? 10 : 5}
-                placeholder="Redigez ici..."
-              />
-            </section>
-          );
-        })}
+      <div className="procedureWritingSurface documentWritingSurface">
+        <div className="documentWriterToolbar">
+          <strong>Document</strong>
+          <button type="button" className="ghostButton" onClick={() => updateField('document_text', defaultProcedureText())}>
+            Inserer le modele
+          </button>
+        </div>
+        <textarea
+          className="documentWriter"
+          value={form.document_text || ''}
+          onChange={(event) => updateField('document_text', event.target.value)}
+          rows="24"
+          placeholder="Redigez la procedure ici..."
+        />
       </div>
 
       <div className="procedureAppendixGrid">
@@ -605,7 +629,7 @@ export default function DocumentsQualite() {
             const count = records.filter((record) => record.statut === folder.key).length;
             return (
               <button type="button" className="documentFolder" key={folder.key} onClick={() => openStatusFolder(folder.key)}>
-                <span className="folderIcon">DIR</span>
+                <span className="folderIcon" aria-hidden="true" />
                 <strong>{folder.label}</strong>
                 <small>{folder.description}</small>
                 <em>{count} document(s)</em>
@@ -621,7 +645,7 @@ export default function DocumentsQualite() {
             const count = records.filter((record) => record.statut === selectedStatus && record.type === folder.key).length;
             return (
               <button type="button" className="documentFolder" key={folder.key} onClick={() => openTypeFolder(folder.key)}>
-                <span className="folderIcon">DIR</span>
+                <span className="folderIcon" aria-hidden="true" />
                 <strong>{folder.label}</strong>
                 <small>{folder.description}</small>
                 <em>{count} document(s)</em>
