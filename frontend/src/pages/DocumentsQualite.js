@@ -74,7 +74,7 @@ function emptyForm(status, type, records) {
     date_revision: '',
     objet: '',
     contenu: '',
-    document_text: type === 'procedure' ? defaultProcedureText() : '',
+    document_text: '',
     lien_document: '',
     observation: '',
     ...procedureDefaults()
