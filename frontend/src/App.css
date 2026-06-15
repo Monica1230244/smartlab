@@ -740,6 +740,85 @@ button {
   margin-top: 8px;
 }
 
+.documentBreadcrumb {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.documentBreadcrumb button,
+.documentBreadcrumb span {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.documentBreadcrumb button.active,
+.documentBreadcrumb button:hover,
+.documentBreadcrumb span {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.documentFolderGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.documentFolder {
+  background: var(--panel-soft-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: grid;
+  gap: 9px;
+  min-height: 168px;
+  padding: 18px;
+  text-align: left;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.documentFolder:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.documentFolder .folderIcon {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 48px;
+}
+
+.documentFolder strong {
+  font-size: 18px;
+}
+
+.documentFolder small {
+  color: var(--text3);
+  line-height: 1.35;
+}
+
+.documentFolder em {
+  color: var(--accent2);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .statCard {
   min-height: 124px;
   padding: 20px;

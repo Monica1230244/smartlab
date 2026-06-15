@@ -17,6 +17,7 @@ import NonConformites from './pages/NonConformites';
 import Reclamations from './pages/Reclamations';
 import Personnel from './pages/Personnel';
 import Processus from './pages/Processus';
+import DocumentsQualite from './pages/DocumentsQualite';
 import Parametres from './pages/Parametres';
 import Projets from './pages/Projets';
 import CatalogueEssais from './pages/CatalogueEssais';
@@ -50,6 +51,7 @@ function App() {
           <Route path="/reclamations" element={<Reclamations />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/processus" element={<Processus />} />
+          <Route path="/documents-qualite" element={<DocumentsQualite />} />
           <Route path="/catalogue-essais" element={<CatalogueEssais />} />
           <Route path="/resultats-essais" element={<ResultatsEssais />} />
           <Route path="/projets" element={<Projets />} />

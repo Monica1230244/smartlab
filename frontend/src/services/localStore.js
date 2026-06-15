@@ -34,6 +34,11 @@ const seedData = {
   resultatsEssais: [
     { id: 'res-1', numero: 'RES-2026-001', objet_essai: 'EA-2026-051', essai_code: 'RC28', client_nom: 'Sogea BTP Benin', date_resultat: today, valeur_1: 27.4, valeur_2: 26.1, valeur_3: 25.8, moyenne: 26.43, unite: 'MPa', exigence: 25, decision: 'conforme', technicien: 'KASSIN Harrison', observations: 'Ruptures correctes, aucune anomalie visible.' }
   ],
+  documentsQualite: [
+    { id: 'docq-1', reference: 'PRO-2026-001', titre: 'Procedure de reception des objets d essais', type: 'procedure', statut: 'en_vigueur', version: '01', processus: 'Reception', responsable: 'Responsable Qualite', date_application: today, date_revision: today, objet: 'Definir les controles a effectuer a la reception.', contenu: 'Identification, verification de conformite, codification, enregistrement et transmission au laboratoire.', lien_document: 'PRO-Reception-Objets-Essais.pdf', observation: '' },
+    { id: 'docq-2', reference: 'FIC-2026-001', titre: 'Fiche de reception objet d essai', type: 'fiche', statut: 'en_vigueur', version: '01', processus: 'Reception', responsable: 'Receptionniste', date_application: today, date_revision: today, objet: 'Support de saisie des informations de reception.', contenu: 'Client, nature, provenance, date de prelevement, essais demandes, observations et signature.', lien_document: 'FIC-Reception-Objet-Essai.docx', observation: '' },
+    { id: 'docq-3', reference: 'PRO-2025-001', titre: 'Ancienne procedure devis client', type: 'procedure', statut: 'perime', version: '00', processus: 'Commercial', responsable: 'Responsable des offres', date_application: today, date_revision: today, objet: 'Ancienne methode de revue et emission des devis.', contenu: 'Document remplace par le circuit de validation RT/DG/client.', lien_document: 'Archive-PRO-Devis-Client.pdf', observation: 'Remplacee par PRO-2026-002.' }
+  ],
   rapports: [
     { id: 'rap-1', numero: 'RAP-2026-046', essai: 'EA-2026-050', client_nom: 'AGETUR Benin', date: today, statut: 'valide' },
     { id: 'rap-2', numero: 'RAP-2026-045', essai: 'EA-2026-049', client_nom: 'MAEP', date: today, statut: 'brouillon' }
@@ -194,7 +199,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

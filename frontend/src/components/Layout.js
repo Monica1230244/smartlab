@@ -8,6 +8,7 @@ const navItems = [
   { to: '/essais', label: "Objets d'essais", icon: 'OE' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
+  { to: '/documents-qualite', label: 'Gestion des documents qualite', icon: 'DQ' },
   { to: '/catalogue-essais', label: 'Catalogue des essais', icon: 'CE' },
   { to: '/resultats-essais', label: 'Resultats & calculs', icon: 'RC' },
   { to: '/equipements', label: 'Gestion des équipements', icon: 'EQ' },
@@ -24,10 +25,10 @@ const navItems = [
 
 const menuByRole = {
   responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/catalogue-essais'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus'],
-  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus', '/documents-qualite']
 };
 
 const titles = {
@@ -40,6 +41,7 @@ const titles = {
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
+  '/documents-qualite': 'Gestion des documents qualite',
   '/equipements': 'Gestion des équipements',
   '/audits': 'Gestion des audits qualité',
   '/non-conformites': 'Gestion des non-conformités',
@@ -137,7 +139,7 @@ function Layout({ publicMode = false }) {
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
   const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/documents-qualite', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
