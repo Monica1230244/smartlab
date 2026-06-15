@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
 
@@ -170,6 +170,7 @@ export default function DocumentsQualite() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState({});
+  const editorRef = useRef(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -200,6 +201,15 @@ export default function DocumentsQualite() {
     window.addEventListener('smartlab:data-changed', reload);
     return () => window.removeEventListener('smartlab:data-changed', reload);
   }, []);
+
+  useEffect(() => {
+    if (!formOpen || selectedType !== 'procedure') return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      editorRef.current?.querySelector('.documentWriter')?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [formOpen, selectedType, editingId]);
 
   const currentDocuments = useMemo(() => (
     records
@@ -365,9 +375,6 @@ export default function DocumentsQualite() {
         <div>
           <span>{record.reference} - Version {record.version || '01'}</span>
           <h3>{record.titre || 'Procedure sans titre'}</h3>
-          <p>
-            Processus: {record.processus || '-'} | Responsable: {record.responsable || '-'} | Application: {record.date_application || '-'} | Revision: {record.date_revision || '-'}
-          </p>
         </div>
         <div className="rowActions">
           {record.statut === 'en_vigueur' && <button type="button" className="primaryButton" onClick={() => generateProcedure(record)}>Generer procedure</button>}
@@ -413,6 +420,7 @@ export default function DocumentsQualite() {
           <span className="archiveNotice">Archive automatique des procedures expirees</span>
         )}
       </div>
+      {formOpen && renderProcedureEditor()}
       <div className="procedureDocumentList">
         {currentDocuments.map(renderProcedureDocument)}
         {!loading && currentDocuments.length === 0 && (
@@ -474,7 +482,7 @@ export default function DocumentsQualite() {
   );
 
   const renderProcedureEditor = () => (
-    <form className="editorPanel procedureEditorPanel" onSubmit={submit}>
+    <form className="editorPanel procedureEditorPanel" ref={editorRef} onSubmit={submit}>
       <div className="formHeader">
         <div>
           <strong>{editingId ? 'Modifier la procedure' : 'Rediger une nouvelle procedure'}</strong>
@@ -620,7 +628,7 @@ export default function DocumentsQualite() {
         <>
           {selectedType === 'procedure' ? renderProcedureLibrary() : renderFicheTable()}
 
-          {formOpen && (selectedType === 'procedure' ? renderProcedureEditor() : renderFicheForm())}
+          {formOpen && selectedType !== 'procedure' && renderFicheForm()}
         </>
       )}
     </div>
