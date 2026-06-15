@@ -114,6 +114,15 @@ function sectionValue(record, sectionKey) {
   return '';
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export default function DocumentsQualite() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -229,6 +238,96 @@ export default function DocumentsQualite() {
     await refresh();
   };
 
+  const buildProcedureHtml = (record) => {
+    const sections = procedureSections.map((section) => {
+      const value = sectionValue(record, section.key);
+      if (!value) return '';
+      return `
+        <section>
+          <h3>${escapeHtml(section.title)}</h3>
+          <p>${escapeHtml(value).replace(/\n/g, '<br />')}</p>
+        </section>
+      `;
+    }).join('');
+
+    return `
+      <!doctype html>
+      <html lang="fr">
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(record.reference || 'Procedure')}</title>
+          <style>
+            @page { margin: 18mm; }
+            body { color: #111827; font-family: Arial, sans-serif; line-height: 1.55; margin: 0; }
+            header { border-bottom: 3px solid #2563eb; display: flex; justify-content: space-between; gap: 20px; padding-bottom: 16px; margin-bottom: 24px; }
+            h1 { font-size: 28px; letter-spacing: .05em; margin: 0; }
+            h2 { color: #1f2937; font-size: 20px; margin: 8px 0 0; }
+            .subtitle { color: #64748b; margin: 5px 0 0; }
+            .meta { color: #475569; font-size: 12px; text-align: right; min-width: 210px; }
+            .meta strong { color: #111827; display: block; font-size: 14px; margin-bottom: 6px; }
+            .identity { border: 1px solid #dbe4f0; border-radius: 8px; display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 22px; overflow: hidden; }
+            .identity div { border-right: 1px solid #dbe4f0; padding: 10px 12px; }
+            .identity div:last-child { border-right: 0; }
+            .identity span { color: #64748b; display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+            .identity strong { color: #111827; display: block; font-size: 13px; margin-top: 4px; }
+            section { border-bottom: 1px solid #e2e8f0; padding: 16px 0; page-break-inside: avoid; }
+            h3 { color: #111827; font-size: 16px; margin: 0 0 8px; }
+            p { color: #334155; font-size: 13px; margin: 0; white-space: normal; }
+            .footerBox { background: #f8fafc; border: 1px solid #dbe4f0; border-radius: 8px; color: #475569; font-size: 12px; margin-top: 22px; padding: 12px; }
+            .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 42px; }
+            .signature { border-top: 1px solid #94a3b8; color: #334155; font-size: 12px; min-height: 54px; padding-top: 8px; }
+            footer { color: #64748b; font-size: 11px; margin-top: 24px; }
+          </style>
+        </head>
+        <body>
+          <header>
+            <div>
+              <h1>TESTLAB</h1>
+              <h2>${escapeHtml(record.titre || 'Procedure qualite')}</h2>
+              <p class="subtitle">Document qualite - References: ISO/IEC 17025 et ISO 9001</p>
+            </div>
+            <div class="meta">
+              <strong>${escapeHtml(record.reference || '')}</strong>
+              Version: ${escapeHtml(record.version || '01')}<br />
+              Generation: ${new Date().toLocaleDateString('fr-FR')}<br />
+              Statut: ${escapeHtml(statusLabel(record.statut))}
+            </div>
+          </header>
+          <div class="identity">
+            <div><span>Processus</span><strong>${escapeHtml(record.processus || '-')}</strong></div>
+            <div><span>Responsable</span><strong>${escapeHtml(record.responsable || '-')}</strong></div>
+            <div><span>Application</span><strong>${escapeHtml(record.date_application || '-')}</strong></div>
+            <div><span>Revision</span><strong>${escapeHtml(record.date_revision || '-')}</strong></div>
+          </div>
+          ${sections || '<section><p>Aucun contenu redige.</p></section>'}
+          ${(record.lien_document || record.observation) ? `
+            <div class="footerBox">
+              ${record.lien_document ? `<strong>Document source:</strong> ${escapeHtml(record.lien_document)}<br />` : ''}
+              ${record.observation ? `<strong>Observation:</strong> ${escapeHtml(record.observation)}` : ''}
+            </div>
+          ` : ''}
+          <div class="signatures">
+            <div class="signature">Responsable qualite / Visa</div>
+            <div class="signature">Direction / Validation</div>
+          </div>
+          <footer>Procedure generee depuis l'application TESTLAB.</footer>
+        </body>
+      </html>
+    `;
+  };
+
+  const generateProcedure = (record) => {
+    const doc = window.open('', '_blank');
+    if (!doc) {
+      toast.error('Fenetre PDF bloquee par le navigateur');
+      return;
+    }
+    doc.document.write(buildProcedureHtml(record));
+    doc.document.close();
+    doc.focus();
+    setTimeout(() => doc.print(), 450);
+  };
+
   const renderProcedureDocument = (record) => (
     <article className="procedureDocument" key={record.id}>
       <header className="procedureDocumentHeader">
@@ -240,6 +339,7 @@ export default function DocumentsQualite() {
           </p>
         </div>
         <div className="rowActions">
+          {record.statut === 'en_vigueur' && <button type="button" className="primaryButton" onClick={() => generateProcedure(record)}>Generer procedure</button>}
           {record.statut === 'en_vigueur' && <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>}
           <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
         </div>
