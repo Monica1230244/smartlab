@@ -929,6 +929,141 @@ button {
   text-align: center;
 }
 
+.equipmentFolderGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.equipmentFolder {
+  background: var(--panel-soft-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  min-height: 170px;
+  padding: 18px;
+  text-align: left;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.equipmentFolder:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.equipmentFolder .folderIcon {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 48px;
+}
+
+.equipmentFolder strong {
+  font-size: 18px;
+}
+
+.equipmentFolder small {
+  color: var(--text3);
+  line-height: 1.35;
+}
+
+.equipmentFolder em {
+  color: var(--accent2);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.equipmentIdentityPanel {
+  background: var(--panel-soft-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.equipmentIdentityPanel div {
+  border-right: 1px solid var(--border);
+  padding: 16px;
+}
+
+.equipmentIdentityPanel div:last-child {
+  border-right: 0;
+}
+
+.equipmentIdentityPanel span {
+  color: var(--text3);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.equipmentIdentityPanel strong {
+  color: var(--text);
+  display: block;
+  font-size: 16px;
+  margin-top: 6px;
+}
+
+.equipmentDocumentsGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.equipmentDocumentCard {
+  background: var(--panel-soft-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 190px;
+  padding: 18px;
+}
+
+.equipmentDocumentCard span {
+  color: var(--accent);
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equipmentDocumentCard h3 {
+  color: var(--text);
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.equipmentDocumentCard p {
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
+.equipmentSheetEditor {
+  display: grid;
+  gap: 16px;
+}
+
 .statCard {
   min-height: 124px;
   padding: 20px;
@@ -1708,6 +1843,8 @@ tbody tr:hover {
   .formGrid,
   .procedureMetaGrid,
   .procedureAppendixGrid,
+  .equipmentIdentityPanel,
+  .equipmentDocumentsGrid,
   .infoGrid,
   .workflowSteps,
   .multiSelectPanel,
@@ -1722,6 +1859,15 @@ tbody tr:hover {
 
   .procedureSection {
     grid-template-columns: 1fr;
+  }
+
+  .equipmentIdentityPanel div {
+    border-bottom: 1px solid var(--border);
+    border-right: 0;
+  }
+
+  .equipmentIdentityPanel div:last-child {
+    border-bottom: 0;
   }
 
   .welcomeBand,
