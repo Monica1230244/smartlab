@@ -249,12 +249,15 @@ export default function DocumentsQualite() {
   const submit = async (event) => {
     event.preventDefault();
     const isProcedure = selectedType === 'procedure';
+    const documentText = form.document_text || '';
+    const documentTitle = documentText.split('\n').find((line) => line.trim()) || form.titre || form.reference || 'Procedure qualite';
     const payload = {
       ...form,
       type: selectedType,
       statut: selectedStatus,
-      objet: isProcedure ? (form.document_text || form.objet || '').split('\n')[0] : (form.objet || ''),
-      contenu: isProcedure ? (form.document_text || form.contenu || '') : (form.contenu || ''),
+      titre: isProcedure ? documentTitle : form.titre,
+      objet: isProcedure ? documentTitle : (form.objet || ''),
+      contenu: isProcedure ? documentText : (form.contenu || ''),
       updated_at: new Date().toISOString()
     };
     const saved = await upsertRecord('documentsQualite', {
@@ -475,45 +478,14 @@ export default function DocumentsQualite() {
       <div className="formHeader">
         <div>
           <strong>{editingId ? 'Modifier la procedure' : 'Rediger une nouvelle procedure'}</strong>
-          <small>Redigez directement le document comme dans Word. Les informations de reference restent seulement en entete.</small>
+          <small>Redigez directement le document.</small>
         </div>
         <button type="button" className="ghostButton" onClick={closeForm}>Fermer</button>
       </div>
 
-      <div className="procedureMetaGrid">
-        <label>
-          <span>Reference</span>
-          <input value={form.reference || ''} onChange={(event) => updateField('reference', event.target.value)} required />
-        </label>
-        <label>
-          <span>Version</span>
-          <input value={form.version || ''} onChange={(event) => updateField('version', event.target.value)} required />
-        </label>
-        <label>
-          <span>Processus</span>
-          <input value={form.processus || ''} onChange={(event) => updateField('processus', event.target.value)} placeholder="Reception, technique, qualite..." />
-        </label>
-        <label>
-          <span>Responsable</span>
-          <input value={form.responsable || ''} onChange={(event) => updateField('responsable', event.target.value)} placeholder="Responsable qualite" />
-        </label>
-        <label className="wide">
-          <span>Titre de la procedure</span>
-          <input value={form.titre || ''} onChange={(event) => updateField('titre', event.target.value)} required placeholder="Ex: Procedure de reception des objets d essais" />
-        </label>
-        <label>
-          <span>Date d'application</span>
-          <input type="date" value={form.date_application || ''} onChange={(event) => updateField('date_application', event.target.value)} />
-        </label>
-        <label>
-          <span>Date de revision</span>
-          <input type="date" value={form.date_revision || ''} onChange={(event) => updateField('date_revision', event.target.value)} />
-        </label>
-      </div>
-
       <div className="procedureWritingSurface documentWritingSurface">
         <div className="documentWriterToolbar">
-          <strong>Document</strong>
+          <strong>Redaction</strong>
           <button type="button" className="ghostButton" onClick={() => updateField('document_text', defaultProcedureText())}>
             Inserer le modele
           </button>
@@ -525,17 +497,6 @@ export default function DocumentsQualite() {
           rows="24"
           placeholder="Redigez la procedure ici..."
         />
-      </div>
-
-      <div className="procedureAppendixGrid">
-        <label>
-          <span>Lien ou nom du fichier</span>
-          <input value={form.lien_document || ''} onChange={(event) => updateField('lien_document', event.target.value)} placeholder="Nom Word/PDF ou lien Drive" />
-        </label>
-        <label>
-          <span>Observation qualite</span>
-          <textarea value={form.observation || ''} onChange={(event) => updateField('observation', event.target.value)} rows="3" placeholder="Motif de revision, commentaire, remplacement..." />
-        </label>
       </div>
 
       <div className="formActions">
