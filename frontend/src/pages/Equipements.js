@@ -1045,7 +1045,7 @@ export default function Equipements() {
       <div className="equipmentFolderGrid">
         {records.map((record) => (
           <button type="button" className="equipmentFolder" key={record.id} onClick={() => setSelectedId(record.id)}>
-            <span className="folderIcon">EQ</span>
+            <span className="folderIcon" aria-hidden="true" />
             <strong>{record.designation}</strong>
             <small>{record.code} | {record.famille || 'Famille non definie'}</small>
             <em>{statusLabel(record.statut)}</em>
