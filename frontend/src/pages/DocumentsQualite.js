@@ -102,6 +102,18 @@ function compareDocuments(a, b) {
   });
 }
 
+function isExpiredProcedure(record) {
+  if (record.type !== 'procedure' || record.statut !== 'en_vigueur' || !record.date_revision) return false;
+  return record.date_revision < today();
+}
+
+function sectionValue(record, sectionKey) {
+  if (record[sectionKey]) return record[sectionKey];
+  if (sectionKey === 'objectif') return record.objet || '';
+  if (sectionKey === 'deroulement') return record.contenu || '';
+  return '';
+}
+
 export default function DocumentsQualite() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,8 +126,24 @@ export default function DocumentsQualite() {
   const refresh = async () => {
     setLoading(true);
     const docs = await listRecords('documentsQualite');
-    setRecords(docs);
+    const expiredProcedures = docs.filter(isExpiredProcedure);
+    const normalizedDocs = docs.map((record) => {
+      if (!isExpiredProcedure(record)) return record;
+      return {
+        ...record,
+        statut: 'perime',
+        observation: record.observation
+          ? record.observation
+          : `Archive automatiquement le ${today()} car la date de revision est depassee.`,
+        updated_at: new Date().toISOString()
+      };
+    });
+    setRecords(normalizedDocs);
     setLoading(false);
+    if (expiredProcedures.length > 0) {
+      await Promise.all(normalizedDocs.filter((record) => expiredProcedures.some((expired) => expired.id === record.id)).map((record) => upsertRecord('documentsQualite', record)));
+      toast.success(`${expiredProcedures.length} procedure(s) archivee(s) dans Perimes`);
+    }
   };
 
   useEffect(() => {
@@ -145,6 +173,10 @@ export default function DocumentsQualite() {
   };
 
   const openCreate = () => {
+    if (selectedType === 'procedure' && selectedStatus === 'perime') {
+      toast.error('Une procedure perimee ne se cree pas ici. Elle doit venir de En Vigueur apres expiration.');
+      return;
+    }
     setEditingId('');
     setForm(emptyForm(selectedStatus, selectedType, records));
     setFormOpen(true);
@@ -196,6 +228,115 @@ export default function DocumentsQualite() {
     toast.success('Document supprime');
     await refresh();
   };
+
+  const renderProcedureDocument = (record) => (
+    <article className="procedureDocument" key={record.id}>
+      <header className="procedureDocumentHeader">
+        <div>
+          <span>{record.reference} - Version {record.version || '01'}</span>
+          <h3>{record.titre || 'Procedure sans titre'}</h3>
+          <p>
+            Processus: {record.processus || '-'} | Responsable: {record.responsable || '-'} | Application: {record.date_application || '-'} | Revision: {record.date_revision || '-'}
+          </p>
+        </div>
+        <div className="rowActions">
+          {record.statut === 'en_vigueur' && <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>}
+          <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+        </div>
+      </header>
+
+      <div className="procedureDocumentBody">
+        {procedureSections.map((section) => {
+          const value = sectionValue(record, section.key);
+          if (!value) return null;
+          return (
+            <section className="procedureDocumentSection" key={section.key}>
+              <h4>{section.title}</h4>
+              <p>{value}</p>
+            </section>
+          );
+        })}
+        {(record.lien_document || record.observation) && (
+          <footer className="procedureDocumentFooter">
+            {record.lien_document && <span>Document source: {record.lien_document}</span>}
+            {record.observation && <span>Observation: {record.observation}</span>}
+          </footer>
+        )}
+      </div>
+    </article>
+  );
+
+  const renderProcedureLibrary = () => (
+    <div className="procedureLibraryPanel">
+      <div className="tableTools">
+        <strong>{typeLabel(selectedType)} - {statusLabel(selectedStatus)}</strong>
+        {selectedStatus === 'en_vigueur' ? (
+          <button type="button" className="secondaryButton" onClick={openCreate}>
+            + Nouvelle procedure
+          </button>
+        ) : (
+          <span className="archiveNotice">Archive automatique des procedures expirees</span>
+        )}
+      </div>
+      <div className="procedureDocumentList">
+        {currentDocuments.map(renderProcedureDocument)}
+        {!loading && currentDocuments.length === 0 && (
+          <div className="emptyDocumentState">Aucune procedure dans ce dossier</div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderFicheTable = () => (
+    <div className="tablePanel">
+      <div className="tableTools">
+        <strong>{typeLabel(selectedType)} - {statusLabel(selectedStatus)}</strong>
+        <button type="button" className="secondaryButton" onClick={openCreate}>
+          + Nouvelle {typeLabel(selectedType).toLowerCase()}
+        </button>
+      </div>
+      <div className="tableScroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Titre</th>
+              <th>Version</th>
+              <th>Processus</th>
+              <th>Responsable</th>
+              <th>Application</th>
+              <th>Revision</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentDocuments.map((record) => (
+              <tr key={record.id}>
+                <td><strong>{record.reference}</strong></td>
+                <td>{record.titre}</td>
+                <td>{record.version}</td>
+                <td>{record.processus || '-'}</td>
+                <td>{record.responsable || '-'}</td>
+                <td>{record.date_application || '-'}</td>
+                <td>{record.date_revision || '-'}</td>
+                <td>
+                  <div className="rowActions">
+                    <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                    <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!loading && currentDocuments.length === 0 && (
+              <tr>
+                <td colSpan="8" className="emptyCell">Aucun document dans ce dossier</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   const renderProcedureEditor = () => (
     <form className="editorPanel procedureEditorPanel" onSubmit={submit}>
@@ -392,54 +533,7 @@ export default function DocumentsQualite() {
 
       {selectedStatus && selectedType && (
         <>
-          <div className="tablePanel">
-            <div className="tableTools">
-              <strong>{typeLabel(selectedType)} - {statusLabel(selectedStatus)}</strong>
-              <button type="button" className="secondaryButton" onClick={openCreate}>
-                + Nouvelle {typeLabel(selectedType).toLowerCase()}
-              </button>
-            </div>
-            <div className="tableScroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Reference</th>
-                    <th>Titre</th>
-                    <th>Version</th>
-                    <th>Processus</th>
-                    <th>Responsable</th>
-                    <th>Application</th>
-                    <th>Revision</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentDocuments.map((record) => (
-                    <tr key={record.id}>
-                      <td><strong>{record.reference}</strong></td>
-                      <td>{record.titre}</td>
-                      <td>{record.version}</td>
-                      <td>{record.processus || '-'}</td>
-                      <td>{record.responsable || '-'}</td>
-                      <td>{record.date_application || '-'}</td>
-                      <td>{record.date_revision || '-'}</td>
-                      <td>
-                        <div className="rowActions">
-                          <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
-                          <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!loading && currentDocuments.length === 0 && (
-                    <tr>
-                      <td colSpan="8" className="emptyCell">Aucun document dans ce dossier</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {selectedType === 'procedure' ? renderProcedureLibrary() : renderFicheTable()}
 
           {formOpen && (selectedType === 'procedure' ? renderProcedureEditor() : renderFicheForm())}
         </>
