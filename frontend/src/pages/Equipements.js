@@ -142,6 +142,49 @@ const emptyDocument = {
   observation: ''
 };
 
+const signaletiqueMainFields = [
+  ['dossier_administratif', 'Dossier administratif N'],
+  ['designation', 'Designation'],
+  ['marque', 'Marque'],
+  ['modele', 'Modele'],
+  ['numero_serie', 'N de serie'],
+  ['date_reception', 'Date de reception', 'date'],
+  ['date_mise_service', 'Date de mise en service', 'date'],
+  ['date_reforme', 'Date de reforme', 'date'],
+  ['caracteristiques', 'Caracteristiques', 'textarea'],
+  ['divers', 'Divers', 'textarea']
+];
+
+const signaletiqueInternalFields = [
+  ['etalonnage_reference', 'Reference procedure'],
+  ['etalonnage_operation', 'Operation etalonnage / verification'],
+  ['etalonnage_periodicite', 'Periodicite etalonnage / verification'],
+  ['maintenance_reference', 'N fiche maintenance'],
+  ['maintenance_operation', 'Operation maintenance preventive'],
+  ['maintenance_periodicite', 'Periodicite maintenance preventive']
+];
+
+const consumableFields = [
+  ['matieres_consommables', 'Matieres consommables'],
+  ['pieces_detachees', 'Pieces detachees'],
+  ['produits_maintenance', 'Produits de maintenance']
+];
+
+const lifeMainFields = [
+  ['designation', 'Designation'],
+  ['type', 'Type'],
+  ['marque', 'Marque'],
+  ['numero_serie', 'N de serie'],
+  ['numero_interne', 'N identification interne'],
+  ['etat_reception', 'Etat de l equipement a la reception'],
+  ['date_reception', 'Date de reception', 'date'],
+  ['date_mise_service', 'Date de mise en service', 'date'],
+  ['conditions_utilisation', 'Conditions particulieres d utilisation', 'textarea'],
+  ['intervalle_etalonnage', 'Intervalle entre deux etalonnages'],
+  ['intervalle_verification', 'Intervalle entre deux verifications metrologiques'],
+  ['intervalle_maintenance', 'Intervalle entre deux maintenances']
+];
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -185,44 +228,142 @@ function statusLabel(value) {
 }
 
 function signaletiqueAssociatedRows(data) {
-  return [1, 2].map((index) => `
+  return getSignaletiqueAssociatedLines(data).map((line) => `
     <tr>
-      <td>${escapeHtml(data[`associe_${index}_designation`])}</td>
-      <td>${escapeHtml(data[`associe_${index}_marque`])}</td>
-      <td>${escapeHtml(data[`associe_${index}_modele`])}</td>
-      <td>${escapeHtml(data[`associe_${index}_numero_serie`])}</td>
-      <td>${escapeHtml(data[`associe_${index}_caracteristiques`])}</td>
+      <td>${escapeHtml(line.designation)}</td>
+      <td>${escapeHtml(line.marque)}</td>
+      <td>${escapeHtml(line.modele)}</td>
+      <td>${escapeHtml(line.numero_serie)}</td>
+      <td>${escapeHtml(line.caracteristiques)}</td>
+    </tr>
+  `).join('');
+}
+
+function signaletiqueExternalRows(data) {
+  return getSignaletiqueExternalLines(data).map((line) => `
+    <tr>
+      <td>${escapeHtml(line.type)}</td>
+      <td>${escapeHtml(line.ref_contrat)}</td>
+      <td>${escapeHtml(line.societe)}</td>
+      <td>${escapeHtml(line.adresse)}</td>
+      <td>${escapeHtml(line.tel)}</td>
+      <td>${escapeHtml(line.fax)}</td>
+      <td>${escapeHtml(line.correspondant)}</td>
+      <td>${escapeHtml(line.periodicite)}</td>
     </tr>
   `).join('');
 }
 
 function lifeAccessoryRows(data) {
-  return [1, 2, 3].map((index) => `
+  return getLifeAccessoryLines(data).map((line) => `
     <tr>
-      <td>${escapeHtml(data[`accessoire_${index}_designation`])}</td>
-      <td>${escapeHtml(data[`accessoire_${index}_numero_identification`])}</td>
-      <td>${escapeHtml(data[`accessoire_${index}_incertitudes_etalonnage`])}</td>
-      <td>${escapeHtml(data[`accessoire_${index}_points_etalonnage`])}</td>
+      <td>${escapeHtml(line.designation)}</td>
+      <td>${escapeHtml(line.numero_identification)}</td>
+      <td>${escapeHtml(line.incertitudes_etalonnage)}</td>
+      <td>${escapeHtml(line.points_etalonnage)}</td>
     </tr>
   `).join('');
 }
 
 function lifeInterventionRows(data) {
-  return [1, 2, 3].map((index) => `
+  return getLifeInterventionLines(data).map((line) => `
     <tr>
-      <td>${escapeHtml(data[`intervention_${index}_numero`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_nature`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_references_moyens`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_reference_document`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_date`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_prochaine_date`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_affectation`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_intervenant`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_reference_rapport`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_resultats_observations`])}</td>
-      <td>${escapeHtml(data[`intervention_${index}_visa_responsable_metrologie`])}</td>
+      <td>${escapeHtml(line.numero)}</td>
+      <td>${escapeHtml(line.nature)}</td>
+      <td>${escapeHtml(line.references_moyens)}</td>
+      <td>${escapeHtml(line.reference_document)}</td>
+      <td>${escapeHtml(line.date)}</td>
+      <td>${escapeHtml(line.prochaine_date)}</td>
+      <td>${escapeHtml(line.affectation)}</td>
+      <td>${escapeHtml(line.intervenant)}</td>
+      <td>${escapeHtml(line.reference_rapport)}</td>
+      <td>${escapeHtml(line.resultats_observations)}</td>
+      <td>${escapeHtml(line.visa_responsable_metrologie)}</td>
     </tr>
   `).join('');
+}
+
+function hasRowValue(row) {
+  return Object.values(row).some((value) => String(value || '').trim());
+}
+
+function getSignaletiqueAssociatedLines(data = {}) {
+  if (Array.isArray(data.equipements_associes_lignes)) return data.equipements_associes_lignes;
+  return [1, 2].map((index) => ({
+    designation: data[`associe_${index}_designation`] || '',
+    marque: data[`associe_${index}_marque`] || '',
+    modele: data[`associe_${index}_modele`] || '',
+    numero_serie: data[`associe_${index}_numero_serie`] || '',
+    caracteristiques: data[`associe_${index}_caracteristiques`] || ''
+  })).filter(hasRowValue);
+}
+
+function getSignaletiqueExternalLines(data = {}) {
+  if (Array.isArray(data.prestataires_externes_lignes)) return data.prestataires_externes_lignes;
+  return [
+    {
+      type: 'Etalonnage / Verification',
+      ref_contrat: data.externe_etalonnage_ref_contrat || '',
+      societe: data.externe_etalonnage_societe || '',
+      adresse: data.externe_etalonnage_adresse || '',
+      tel: data.externe_etalonnage_tel || '',
+      fax: data.externe_etalonnage_fax || '',
+      correspondant: data.externe_etalonnage_correspondant || '',
+      periodicite: data.externe_etalonnage_periodicite || ''
+    },
+    {
+      type: 'Maintenance preventive',
+      ref_contrat: data.externe_maintenance_ref_contrat || '',
+      societe: data.externe_maintenance_societe || '',
+      adresse: data.externe_maintenance_adresse || '',
+      tel: data.externe_maintenance_tel || '',
+      fax: data.externe_maintenance_fax || '',
+      correspondant: data.externe_maintenance_correspondant || '',
+      periodicite: data.externe_maintenance_periodicite || ''
+    }
+  ].filter(hasRowValue);
+}
+
+function getLifeAccessoryLines(data = {}) {
+  if (Array.isArray(data.accessoire_lignes)) return data.accessoire_lignes;
+  return [1, 2, 3].map((index) => ({
+    designation: data[`accessoire_${index}_designation`] || '',
+    numero_identification: data[`accessoire_${index}_numero_identification`] || '',
+    incertitudes_etalonnage: data[`accessoire_${index}_incertitudes_etalonnage`] || '',
+    points_etalonnage: data[`accessoire_${index}_points_etalonnage`] || ''
+  })).filter(hasRowValue);
+}
+
+function getLifeInterventionLines(data = {}) {
+  if (Array.isArray(data.intervention_lignes)) return data.intervention_lignes;
+  return [1, 2, 3].map((index) => ({
+    numero: data[`intervention_${index}_numero`] || '',
+    nature: data[`intervention_${index}_nature`] || '',
+    references_moyens: data[`intervention_${index}_references_moyens`] || '',
+    reference_document: data[`intervention_${index}_reference_document`] || '',
+    date: data[`intervention_${index}_date`] || '',
+    prochaine_date: data[`intervention_${index}_prochaine_date`] || '',
+    affectation: data[`intervention_${index}_affectation`] || '',
+    intervenant: data[`intervention_${index}_intervenant`] || '',
+    reference_rapport: data[`intervention_${index}_reference_rapport`] || '',
+    resultats_observations: data[`intervention_${index}_resultats_observations`] || '',
+    visa_responsable_metrologie: data[`intervention_${index}_visa_responsable_metrologie`] || ''
+  })).filter(hasRowValue);
+}
+
+function normalizeSheetRows(mode, data) {
+  if (mode === 'signaletique') {
+    return {
+      ...data,
+      equipements_associes_lignes: getSignaletiqueAssociatedLines(data),
+      prestataires_externes_lignes: getSignaletiqueExternalLines(data)
+    };
+  }
+  return {
+    ...data,
+    accessoire_lignes: getLifeAccessoryLines(data),
+    intervention_lignes: getLifeInterventionLines(data)
+  };
 }
 
 export default function Equipements() {
@@ -321,11 +462,34 @@ export default function Equipements() {
   const openSheet = (mode) => {
     if (!selectedEquipment) return;
     setSheetMode(mode);
-    setSheetForm(mode === 'signaletique' ? selectedEquipment.signaletique : selectedEquipment.fiche_vie);
+    setSheetForm(normalizeSheetRows(mode, mode === 'signaletique' ? selectedEquipment.signaletique : selectedEquipment.fiche_vie));
   };
 
   const updateSheetField = (name, value) => {
     setSheetForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const addSheetRow = (collection, row) => {
+    setSheetForm((current) => ({
+      ...current,
+      [collection]: [...(Array.isArray(current[collection]) ? current[collection] : []), row]
+    }));
+  };
+
+  const updateSheetRow = (collection, index, name, value) => {
+    setSheetForm((current) => ({
+      ...current,
+      [collection]: (Array.isArray(current[collection]) ? current[collection] : []).map((row, rowIndex) => (
+        rowIndex === index ? { ...row, [name]: value } : row
+      ))
+    }));
+  };
+
+  const removeSheetRow = (collection, index) => {
+    setSheetForm((current) => ({
+      ...current,
+      [collection]: (Array.isArray(current[collection]) ? current[collection] : []).filter((_, rowIndex) => rowIndex !== index)
+    }));
   };
 
   const saveSheet = async (event) => {
@@ -479,15 +643,17 @@ export default function Equipements() {
               <tr><td>Operation a effectuer</td><td>${escapeHtml(data.etalonnage_operation)}</td><td>Operation a effectuer</td><td>${escapeHtml(data.maintenance_operation)}</td></tr>
               <tr><td>Periodicite</td><td>${escapeHtml(data.etalonnage_periodicite)}</td><td>Periodicite</td><td>${escapeHtml(data.maintenance_periodicite)}</td></tr>
               <tr><th colspan="4">Interventions externes</th></tr>
-              <tr><th colspan="2">Etalonnage / Verification</th><th colspan="2">Maintenance preventive</th></tr>
-              <tr><td>Ref contrat</td><td>${escapeHtml(data.externe_etalonnage_ref_contrat)}</td><td>Ref contrat</td><td>${escapeHtml(data.externe_maintenance_ref_contrat)}</td></tr>
-              <tr><td>Societe</td><td>${escapeHtml(data.externe_etalonnage_societe)}</td><td>Societe</td><td>${escapeHtml(data.externe_maintenance_societe)}</td></tr>
-              <tr><td>Adresse</td><td>${escapeHtml(data.externe_etalonnage_adresse)}</td><td>Adresse</td><td>${escapeHtml(data.externe_maintenance_adresse)}</td></tr>
-              <tr><td>Tel</td><td>${escapeHtml(data.externe_etalonnage_tel)}</td><td>Tel</td><td>${escapeHtml(data.externe_maintenance_tel)}</td></tr>
-              <tr><td>Fax</td><td>${escapeHtml(data.externe_etalonnage_fax)}</td><td>Fax</td><td>${escapeHtml(data.externe_maintenance_fax)}</td></tr>
-              <tr><td>Correspondant</td><td>${escapeHtml(data.externe_etalonnage_correspondant)}</td><td>Correspondant</td><td>${escapeHtml(data.externe_maintenance_correspondant)}</td></tr>
-              <tr><td>Periodicite</td><td>${escapeHtml(data.externe_etalonnage_periodicite)}</td><td>Periodicite</td><td>${escapeHtml(data.externe_maintenance_periodicite)}</td></tr>
+            </tbody>
+          </table>
+          <table class="grid">
+            <tbody>
+              <tr><th>Type</th><th>Ref contrat</th><th>Societe</th><th>Adresse</th><th>Tel</th><th>Fax</th><th>Correspondant</th><th>Periodicite</th></tr>
+              ${signaletiqueExternalRows(data)}
               <tr><th colspan="4">Matieres consommables / pieces detachees / produits de maintenance</th></tr>
+            </tbody>
+          </table>
+          <table class="grid">
+            <tbody>
               <tr><td>Matieres consommables</td><td>${escapeHtml(data.matieres_consommables)}</td><td>Pieces detachees</td><td>${escapeHtml(data.pieces_detachees)}</td></tr>
               <tr><td>Produits de maintenance</td><td colspan="3">${escapeHtml(data.produits_maintenance)}</td></tr>
             </tbody>
@@ -625,30 +791,152 @@ export default function Equipements() {
               <button type="button" className="ghostButton" onClick={() => setSheetMode('')}>Fermer</button>
             </div>
             {sheetMode === 'signaletique' ? (
-              <div className="formGrid">
-                {Object.keys(emptySignaletique).map((key) => (
-                  <label className={['equipements_associes', 'matieres_consommables', 'pieces_detachees', 'produits_maintenance'].includes(key) ? 'full' : ''} key={key}>
-                    <span>{key.replaceAll('_', ' ')}</span>
-                    {['equipements_associes', 'matieres_consommables', 'pieces_detachees', 'produits_maintenance'].includes(key) ? (
-                      <textarea value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} rows="3" />
-                    ) : (
-                      <input type={key.startsWith('date_') ? 'date' : 'text'} value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} />
-                    )}
-                  </label>
-                ))}
+              <div className="sheetCompactForm">
+                <div className="formGrid">
+                  {signaletiqueMainFields.map(([key, label, type]) => (
+                    <label className={type === 'textarea' ? 'full' : ''} key={key}>
+                      <span>{label}</span>
+                      {type === 'textarea' ? (
+                        <textarea value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} rows="3" />
+                      ) : (
+                        <input type={type || 'text'} value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                <div className="repeatableBlock">
+                  <div className="repeatableHeader">
+                    <strong>Autres equipements associes</strong>
+                    <button type="button" className="secondaryButton" onClick={() => addSheetRow('equipements_associes_lignes', { designation: '', marque: '', modele: '', numero_serie: '', caracteristiques: '' })}>+ Ligne</button>
+                  </div>
+                  <div className="tableScroll">
+                    <table className="editableRowsTable">
+                      <thead><tr><th>Designation</th><th>Marque</th><th>Modele</th><th>N de serie</th><th>Caracteristiques</th><th /></tr></thead>
+                      <tbody>
+                        {(sheetForm.equipements_associes_lignes || []).map((row, index) => (
+                          <tr key={`associe-${index}`}>
+                            {['designation', 'marque', 'modele', 'numero_serie', 'caracteristiques'].map((field) => (
+                              <td key={field}><input value={row[field] || ''} onChange={(event) => updateSheetRow('equipements_associes_lignes', index, field, event.target.value)} /></td>
+                            ))}
+                            <td><button type="button" className="dangerButton" onClick={() => removeSheetRow('equipements_associes_lignes', index)}>Retirer</button></td>
+                          </tr>
+                        ))}
+                        {(!sheetForm.equipements_associes_lignes || sheetForm.equipements_associes_lignes.length === 0) && (
+                          <tr><td colSpan="6" className="emptyCell">Aucune ligne ajoutee</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="formGrid">
+                  {signaletiqueInternalFields.map(([key, label]) => (
+                    <label key={key}>
+                      <span>{label}</span>
+                      <input value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="repeatableBlock">
+                  <div className="repeatableHeader">
+                    <strong>Interventions externes</strong>
+                    <button type="button" className="secondaryButton" onClick={() => addSheetRow('prestataires_externes_lignes', { type: '', ref_contrat: '', societe: '', adresse: '', tel: '', fax: '', correspondant: '', periodicite: '' })}>+ Ligne</button>
+                  </div>
+                  <div className="tableScroll">
+                    <table className="editableRowsTable wideRowsTable">
+                      <thead><tr><th>Type</th><th>Ref contrat</th><th>Societe</th><th>Adresse</th><th>Tel</th><th>Fax</th><th>Correspondant</th><th>Periodicite</th><th /></tr></thead>
+                      <tbody>
+                        {(sheetForm.prestataires_externes_lignes || []).map((row, index) => (
+                          <tr key={`prestataire-${index}`}>
+                            {['type', 'ref_contrat', 'societe', 'adresse', 'tel', 'fax', 'correspondant', 'periodicite'].map((field) => (
+                              <td key={field}><input value={row[field] || ''} onChange={(event) => updateSheetRow('prestataires_externes_lignes', index, field, event.target.value)} /></td>
+                            ))}
+                            <td><button type="button" className="dangerButton" onClick={() => removeSheetRow('prestataires_externes_lignes', index)}>Retirer</button></td>
+                          </tr>
+                        ))}
+                        {(!sheetForm.prestataires_externes_lignes || sheetForm.prestataires_externes_lignes.length === 0) && (
+                          <tr><td colSpan="9" className="emptyCell">Aucune ligne ajoutee</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="formGrid">
+                  {consumableFields.map(([key, label]) => (
+                    <label className="full" key={key}>
+                      <span>{label}</span>
+                      <textarea value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} rows="2" />
+                    </label>
+                  ))}
+                </div>
               </div>
             ) : (
-              <div className="formGrid">
-                {Object.keys(emptyLifeSheet).map((key) => (
-                  <label className={['accessoires', 'interventions', 'conditions_utilisation'].includes(key) ? 'full' : ''} key={key}>
-                    <span>{key.replaceAll('_', ' ')}</span>
-                    {['accessoires', 'interventions', 'conditions_utilisation'].includes(key) ? (
-                      <textarea value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} rows={key === 'interventions' ? '6' : '3'} />
-                    ) : (
-                      <input type={key.startsWith('date_') ? 'date' : 'text'} value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} />
-                    )}
-                  </label>
-                ))}
+              <div className="sheetCompactForm">
+                <div className="formGrid">
+                  {lifeMainFields.map(([key, label, type]) => (
+                    <label className={type === 'textarea' ? 'full' : ''} key={key}>
+                      <span>{label}</span>
+                      {type === 'textarea' ? (
+                        <textarea value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} rows="3" />
+                      ) : (
+                        <input type={type || 'text'} value={sheetForm[key] || ''} onChange={(event) => updateSheetField(key, event.target.value)} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                <div className="repeatableBlock">
+                  <div className="repeatableHeader">
+                    <strong>Equipements ou accessoires associes</strong>
+                    <button type="button" className="secondaryButton" onClick={() => addSheetRow('accessoire_lignes', { designation: '', numero_identification: '', incertitudes_etalonnage: '', points_etalonnage: '' })}>+ Ligne</button>
+                  </div>
+                  <div className="tableScroll">
+                    <table className="editableRowsTable">
+                      <thead><tr><th>Designation</th><th>N identification</th><th>Incertitudes demandees</th><th>Points demandes</th><th /></tr></thead>
+                      <tbody>
+                        {(sheetForm.accessoire_lignes || []).map((row, index) => (
+                          <tr key={`accessoire-${index}`}>
+                            {['designation', 'numero_identification', 'incertitudes_etalonnage', 'points_etalonnage'].map((field) => (
+                              <td key={field}><input value={row[field] || ''} onChange={(event) => updateSheetRow('accessoire_lignes', index, field, event.target.value)} /></td>
+                            ))}
+                            <td><button type="button" className="dangerButton" onClick={() => removeSheetRow('accessoire_lignes', index)}>Retirer</button></td>
+                          </tr>
+                        ))}
+                        {(!sheetForm.accessoire_lignes || sheetForm.accessoire_lignes.length === 0) && (
+                          <tr><td colSpan="5" className="emptyCell">Aucune ligne ajoutee</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="repeatableBlock">
+                  <div className="repeatableHeader">
+                    <strong>Interventions</strong>
+                    <button type="button" className="secondaryButton" onClick={() => addSheetRow('intervention_lignes', { numero: '', nature: '', references_moyens: '', reference_document: '', date: '', prochaine_date: '', affectation: '', intervenant: '', reference_rapport: '', resultats_observations: '', visa_responsable_metrologie: '' })}>+ Ligne</button>
+                  </div>
+                  <div className="tableScroll">
+                    <table className="editableRowsTable wideRowsTable">
+                      <thead><tr><th>N</th><th>Nature</th><th>Moyens</th><th>Document</th><th>Date</th><th>Prochaine date</th><th>Affectation</th><th>Intervenant</th><th>Rapport</th><th>Observations</th><th>Visa RM</th><th /></tr></thead>
+                      <tbody>
+                        {(sheetForm.intervention_lignes || []).map((row, index) => (
+                          <tr key={`intervention-${index}`}>
+                            {['numero', 'nature', 'references_moyens', 'reference_document', 'date', 'prochaine_date', 'affectation', 'intervenant', 'reference_rapport', 'resultats_observations', 'visa_responsable_metrologie'].map((field) => (
+                              <td key={field}><input type={field.includes('date') ? 'date' : 'text'} value={row[field] || ''} onChange={(event) => updateSheetRow('intervention_lignes', index, field, event.target.value)} /></td>
+                            ))}
+                            <td><button type="button" className="dangerButton" onClick={() => removeSheetRow('intervention_lignes', index)}>Retirer</button></td>
+                          </tr>
+                        ))}
+                        {(!sheetForm.intervention_lignes || sheetForm.intervention_lignes.length === 0) && (
+                          <tr><td colSpan="12" className="emptyCell">Aucune ligne ajoutee</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
             <div className="formActions">

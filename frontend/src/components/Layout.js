@@ -24,11 +24,11 @@ const navItems = [
 ];
 
 const menuByRole = {
-  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais'],
+  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus', '/parametres'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite'],
-  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus', '/documents-qualite']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres']
 };
 
 const titles = {
@@ -386,7 +386,9 @@ function Layout({ publicMode = false }) {
         )}
 
         <div className="userCard">
-          <div className="avatar">{user?.initials || 'TL'}</div>
+          <div className="avatar">
+            {user?.photo ? <img src={user.photo} alt="Profil" /> : (user?.initials || 'TL')}
+          </div>
           <div>
             <strong>{user?.name || 'TESTLAB'}</strong>
             <span>{roleLabels?.[currentRole] || 'Utilisateur'} - Version {APP_VERSION}</span>

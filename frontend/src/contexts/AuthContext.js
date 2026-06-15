@@ -75,8 +75,16 @@ export const AuthProvider = ({ children }) => {
     toast.success('Deconnexion reussie');
   };
 
+  const updateProfile = (profile) => {
+    const nextUser = { ...(user || {}), ...profile };
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+    window.dispatchEvent(new CustomEvent('smartlab:profile-changed', { detail: nextUser }));
+    toast.success('Profil mis a jour');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, roleLabels }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateProfile, roleLabels }}>
       {children}
     </AuthContext.Provider>
   );
