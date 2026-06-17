@@ -396,6 +396,24 @@ export default function Equipements() {
     [records, selectedId]
   );
 
+  const closeEquipmentFolder = () => {
+    setSelectedId('');
+    setSheetMode('');
+    setDocumentFormOpen(false);
+    setDocumentForm(emptyDocument);
+  };
+
+  const closeEquipmentSubFolder = () => {
+    setSheetMode('');
+    setDocumentFormOpen(false);
+    setDocumentForm(emptyDocument);
+  };
+
+  const closeEquipmentForm = () => {
+    setEquipmentFormOpen(false);
+    setEquipmentForm(emptyEquipment);
+  };
+
   const openCreateEquipment = () => {
     setEquipmentForm({
       ...emptyEquipment,
@@ -739,9 +757,25 @@ export default function Equipements() {
             <p>Dossier equipement: fiche signaletique, fiche de vie et documents associes.</p>
           </div>
           <div className="headerActions">
-            <button type="button" className="ghostButton" onClick={() => setSelectedId('')}>Retour aux dossiers</button>
             <button type="button" className="dangerButton" onClick={() => removeEquipment(selectedEquipment)}>Supprimer dossier</button>
           </div>
+        </div>
+
+        <div className="documentBreadcrumb">
+          <button type="button" onClick={closeEquipmentFolder}>
+            Gestion des equipements
+          </button>
+          <button
+            type="button"
+            className={!sheetMode && !documentFormOpen ? 'active' : ''}
+            onClick={closeEquipmentSubFolder}
+          >
+            {selectedEquipment.code}
+          </button>
+          {sheetMode && (
+            <span>{sheetMode === 'signaletique' ? 'Fiche signaletique' : 'Fiche de vie'}</span>
+          )}
+          {documentFormOpen && <span>Ajouter document</span>}
         </div>
 
         <div className="equipmentIdentityPanel">
@@ -1012,6 +1046,17 @@ export default function Equipements() {
           <button type="button" className="ghostButton" onClick={generateEquipmentList}>Generer liste des equipements</button>
           <button type="button" className="secondaryButton" onClick={openCreateEquipment}>+ Ajouter un nouvel equipement</button>
         </div>
+      </div>
+
+      <div className="documentBreadcrumb">
+        <button
+          type="button"
+          className={!equipmentFormOpen ? 'active' : ''}
+          onClick={closeEquipmentForm}
+        >
+          Gestion des equipements
+        </button>
+        {equipmentFormOpen && <span>Nouvel equipement</span>}
       </div>
 
       {equipmentFormOpen && (
