@@ -1051,6 +1051,253 @@ button {
   max-width: 100%;
 }
 
+.qualityProcedurePreview {
+  background: #e8edf5;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  display: block;
+  max-height: 820px;
+  overflow: auto;
+  padding: 24px;
+}
+
+.qualityProcedureModel {
+  color: #111827;
+  display: grid;
+  font-family: Arial, sans-serif;
+  gap: 18px;
+  line-height: 1.55;
+  margin: 0 auto;
+  max-width: 820px;
+}
+
+.qualityProcedurePage {
+  background: #fff;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.16);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 1060px;
+  padding: 28px 34px 24px;
+  position: relative;
+}
+
+.qualityProcedureCartouche {
+  border: 1px solid #111827;
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr) 138px;
+  min-height: 84px;
+}
+
+.qualityProcedureBrand,
+.qualityProcedureTitle,
+.qualityProcedureRef {
+  align-items: center;
+  border-right: 1px solid #111827;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+
+.qualityProcedureBrand {
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.qualityProcedureBrand strong {
+  color: #111827;
+  font-size: 16px;
+  letter-spacing: 6px;
+}
+
+.qualityProcedureBrand span {
+  color: #111827;
+  font-size: 11px;
+}
+
+.qualityProcedureLogo {
+  align-items: center;
+  background: linear-gradient(135deg, #ef4444, #ef4444 48%, transparent 49%);
+  border: 2px solid #ef4444;
+  color: #111827;
+  display: flex;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  letter-spacing: 2px;
+  width: 68px;
+}
+
+.qualityProcedureTitle {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.qualityProcedureRef {
+  align-items: stretch;
+  border-right: 0;
+  color: #111827;
+  flex-direction: column;
+  font-size: 14px;
+  gap: 8px;
+  justify-content: center;
+}
+
+.qualityStamp {
+  align-self: flex-start;
+  border: 2px solid #ef4444;
+  color: #ef4444;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 34px 0 18px;
+  padding: 8px 18px;
+  transform: rotate(-6deg);
+}
+
+.qualityProcedureTable {
+  border-collapse: collapse;
+  color: #111827;
+  font-size: 12px;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.qualityProcedureTable th,
+.qualityProcedureTable td {
+  border: 1px solid #111827;
+  color: #111827;
+  min-height: 34px;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.qualityProcedureTable thead th,
+.qualityProcedureTable tbody th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.validationTable td {
+  height: 38px;
+}
+
+.recipientTable {
+  margin-top: 22px;
+}
+
+.recipientTable th {
+  width: 160px;
+}
+
+.qualityTocTitle {
+  color: #111827;
+  font-size: 18px;
+  margin: 64px 0 28px;
+  text-align: center;
+}
+
+.qualityToc {
+  color: #111827;
+  font-size: 14px;
+  list-style-position: inside;
+  margin: 0 auto;
+  max-width: 560px;
+  padding: 0;
+  width: 100%;
+}
+
+.qualityToc li {
+  align-items: baseline;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr auto;
+  line-height: 1.9;
+}
+
+.qualityToc em {
+  font-style: normal;
+}
+
+.qualityProcedureContent {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.78;
+  margin-top: 28px;
+}
+
+.qualityProcedureContent h1,
+.qualityProcedureContent h2,
+.qualityProcedureContent h3 {
+  color: #111827;
+  font-size: 15px;
+  margin: 24px 0 12px;
+  text-align: center;
+}
+
+.qualityProcedureContent p {
+  color: #111827;
+  margin: 0 0 12px;
+  text-align: justify;
+}
+
+.qualityProcedureContent ul,
+.qualityProcedureContent ol {
+  margin: 8px 0 14px 42px;
+}
+
+.qualityProcedureContent img {
+  display: block;
+  margin: 14px 0;
+  max-width: 100%;
+}
+
+.qualityProcedureContent table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.qualityProcedureContent td,
+.qualityProcedureContent th {
+  border: 1px solid #111827;
+  color: #111827;
+  padding: 7px;
+}
+
+.qualityProcedureNotes {
+  border: 1px solid #111827;
+  color: #111827;
+  font-size: 12px;
+  margin-top: 18px;
+  padding: 10px;
+}
+
+.qualityProcedureFooter {
+  align-items: flex-end;
+  color: #111827;
+  display: grid;
+  font-size: 10px;
+  gap: 14px;
+  grid-template-columns: 1fr auto;
+  margin-top: auto;
+  padding-top: 32px;
+}
+
+.qualityProcedureFooter span {
+  color: #111827;
+  max-width: 620px;
+}
+
+.qualityProcedureFooter strong {
+  color: #111827;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .procedureDocumentFooter {
   display: grid;
   gap: 8px;
@@ -1397,6 +1644,38 @@ select option {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.procedureTemplateSettings {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+}
+
+.procedureTemplateSettings summary {
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  list-style-position: inside;
+  padding: 14px 16px;
+}
+
+.procedureTemplateSettings[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.procedureTemplateSettings .procedureMetaGrid,
+.procedureTemplateSettings .procedureValidationGrid {
+  padding: 16px;
+}
+
+.procedureValidationGrid {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .procedureMetaGrid .wide {
@@ -2249,6 +2528,7 @@ tbody tr:hover {
   .formGrid,
   .profileSettingsPanel,
   .procedureMetaGrid,
+  .procedureValidationGrid,
   .procedureAppendixGrid,
   .equipmentIdentityPanel,
   .equipmentDocumentsGrid,
@@ -2266,6 +2546,15 @@ tbody tr:hover {
 
   .procedureSection {
     grid-template-columns: 1fr;
+  }
+
+  .qualityProcedurePreview {
+    padding: 12px;
+  }
+
+  .qualityProcedureModel {
+    max-width: 720px;
+    min-width: 680px;
   }
 
   .equipmentIdentityPanel div {

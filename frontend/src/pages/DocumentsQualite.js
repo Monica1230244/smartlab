@@ -66,6 +66,26 @@ const procedureDefaults = () => procedureSections.reduce((values, section) => ({
   [section.key]: ''
 }), {});
 
+const procedureTemplateDefaults = () => ({
+  laboratoire_nom: 'TESTLAB',
+  laboratoire_sous_titre: 'Laboratoire Geotechnique',
+  date_evolution: today(),
+  etat_evolution: 'Creation',
+  redacteur_modificateur: '',
+  redacteur_nom: '',
+  redacteur_fonction: '',
+  redacteur_date: today(),
+  redacteur_visa: '',
+  verificateur_nom: '',
+  verificateur_fonction: 'Responsable Qualite',
+  verificateur_date: today(),
+  verificateur_visa: '',
+  approbateur_fonction: 'Directeur General',
+  approbateur_date: today(),
+  approbateur_visa: '',
+  destinataire: 'Tout le personnel du laboratoire'
+});
+
 function emptyForm(status, type, records) {
   return {
     reference: nextDocumentReference(records, type),
@@ -89,6 +109,7 @@ function emptyForm(status, type, records) {
     soumis_le: '',
     lien_document: '',
     observation: '',
+    ...procedureTemplateDefaults(),
     ...procedureDefaults()
   };
 }
@@ -163,6 +184,173 @@ function htmlFromPlainText(value) {
 function procedureHtml(record) {
   if (record.document_html) return record.document_html;
   return htmlFromPlainText(procedureText(record));
+}
+
+function formatProcedureDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('fr-FR');
+}
+
+function procedureTitle(record) {
+  return String(record.titre || firstDocumentLine(procedureHtml(record), 'Procedure qualite')).trim();
+}
+
+function procedureHeadings(record) {
+  if (typeof document === 'undefined') return [];
+  const container = document.createElement('div');
+  container.innerHTML = procedureHtml(record);
+  return Array.from(container.querySelectorAll('h1, h2, h3'))
+    .map((heading) => heading.textContent.trim())
+    .filter(Boolean)
+    .slice(0, 14);
+}
+
+function defaultProcedureHeadings(record) {
+  const fromContent = procedureHeadings(record);
+  if (fromContent.length > 0) return fromContent;
+  return [
+    '1. Objet',
+    "2. Champ d'application",
+    '3. Responsabilites',
+    '4. Documents de reference',
+    '5. Description de la demarche'
+  ];
+}
+
+function procedureCartouche(record) {
+  const title = procedureTitle(record).toUpperCase();
+  return `
+    <div class="qualityProcedureCartouche">
+      <div class="qualityProcedureBrand">
+        <div class="qualityProcedureLogo">TL</div>
+        <strong>${escapeHtml(record.laboratoire_nom || 'TESTLAB')}</strong>
+        <span>${escapeHtml(record.laboratoire_sous_titre || 'Laboratoire Geotechnique')}</span>
+      </div>
+      <div class="qualityProcedureTitle">${escapeHtml(title)}</div>
+      <div class="qualityProcedureRef">
+        <div><strong>Ref :</strong> ${escapeHtml(record.reference || '-')}</div>
+        <div><strong>Version :</strong> ${escapeHtml(record.version || '01')}</div>
+        <div><strong>du</strong> ${escapeHtml(formatProcedureDate(record.date_application || record.created_at || today()))}</div>
+      </div>
+    </div>
+  `;
+}
+
+function procedureFooter(pageLabel = '') {
+  return `
+    <div class="qualityProcedureFooter">
+      <span>Le laboratoire TESTLAB exerce exclusivement son droit de propriete sur le present document. De ce fait, toute reproduction ou utilisation sans autorisation prealable est strictement interdite</span>
+      <strong>${escapeHtml(pageLabel)}</strong>
+    </div>
+  `;
+}
+
+function procedureTableCell(value) {
+  return escapeHtml(value || '-');
+}
+
+function procedureModelInnerHtml(record) {
+  const headings = defaultProcedureHeadings(record);
+  const totalPages = Math.max(3, headings.length > 7 ? 4 : 3);
+  return `
+    <div class="qualityProcedureModel">
+      <section class="qualityProcedurePage">
+        ${procedureCartouche(record)}
+        <div class="qualityStamp">EN VIGUEUR</div>
+        <table class="qualityProcedureTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Version</th>
+              <th>Etat des evolutions</th>
+              <th>Redacteur / Modificateur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${procedureTableCell(formatProcedureDate(record.date_evolution || record.date_application))}</td>
+              <td>${procedureTableCell(record.version || '01')}</td>
+              <td>${procedureTableCell(record.etat_evolution || 'Creation')}</td>
+              <td>${procedureTableCell(record.redacteur_modificateur || record.redige_par)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="qualityProcedureTable validationTable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Redacteur</th>
+              <th>Verificateur</th>
+              <th>Approbateur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Nom</th>
+              <td>${procedureTableCell(record.redacteur_nom || record.redige_par)}</td>
+              <td>${procedureTableCell(record.verificateur_nom || record.approbateur_nom)}</td>
+              <td>${procedureTableCell(record.approbateur_nom)}</td>
+            </tr>
+            <tr>
+              <th>Fonction</th>
+              <td>${procedureTableCell(record.redacteur_fonction || record.responsable)}</td>
+              <td>${procedureTableCell(record.verificateur_fonction || 'Responsable Qualite')}</td>
+              <td>${procedureTableCell(record.approbateur_fonction || 'Directeur General')}</td>
+            </tr>
+            <tr>
+              <th>Date</th>
+              <td>${procedureTableCell(formatProcedureDate(record.redacteur_date || record.date_application))}</td>
+              <td>${procedureTableCell(formatProcedureDate(record.verificateur_date || record.date_application))}</td>
+              <td>${procedureTableCell(formatProcedureDate(record.approbateur_date || record.date_application))}</td>
+            </tr>
+            <tr>
+              <th>Visa</th>
+              <td>${procedureTableCell(record.redacteur_visa)}</td>
+              <td>${procedureTableCell(record.verificateur_visa)}</td>
+              <td>${procedureTableCell(record.approbateur_visa)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="qualityProcedureTable recipientTable">
+          <tbody>
+            <tr>
+              <th>Destinataire</th>
+              <td>${procedureTableCell(record.destinataire || 'Tout le personnel du laboratoire')}</td>
+            </tr>
+          </tbody>
+        </table>
+        ${procedureFooter(`Page 1 sur ${totalPages}`)}
+      </section>
+
+      <section class="qualityProcedurePage">
+        ${procedureCartouche(record)}
+        <h2 class="qualityTocTitle">Table des matieres</h2>
+        <ol class="qualityToc">
+          ${headings.map((heading, index) => `
+            <li>
+              <span>${escapeHtml(heading)}</span>
+              <em>${index < 4 ? 3 : Math.min(totalPages, 4)}</em>
+            </li>
+          `).join('')}
+        </ol>
+        ${procedureFooter(`Page 2 sur ${totalPages}`)}
+      </section>
+
+      <section class="qualityProcedurePage">
+        ${procedureCartouche(record)}
+        <main class="qualityProcedureContent">${procedureHtml(record)}</main>
+        ${(record.lien_document || record.observation) ? `
+          <div class="qualityProcedureNotes">
+            ${record.lien_document ? `<strong>Document source:</strong> ${escapeHtml(record.lien_document)}<br />` : ''}
+            ${record.observation ? `<strong>Observation:</strong> ${escapeHtml(record.observation)}` : ''}
+          </div>
+        ` : ''}
+        ${procedureFooter(`Page 3 sur ${totalPages}`)}
+      </section>
+    </div>
+  `;
 }
 
 function stripHtml(value) {
@@ -466,8 +654,11 @@ export default function DocumentsQualite() {
       ...emptyForm(selectedStatus, selectedType, records),
       redige_par: user?.name || user?.label || '',
       responsable: user?.name || user?.label || '',
+      redacteur_nom: user?.name || user?.label || '',
+      redacteur_modificateur: user?.name || user?.label || '',
+      redacteur_fonction: user?.fonction || user?.label || '',
       approbateur_role: approverOptions[0]?.role || '',
-      approbateur_nom: approverOptions[0]?.label || ''
+      approbateur_nom: approverOptions[0]?.label || 'OKOUNDE Joel'
     });
     setFormOpen(true);
   };
@@ -476,6 +667,7 @@ export default function DocumentsQualite() {
     setEditingId(record.id);
     setForm({
       ...procedureDefaults(),
+      ...procedureTemplateDefaults(),
       ...record,
       document_text: procedureText(record),
       document_html: procedureHtml(record),
@@ -526,7 +718,7 @@ export default function DocumentsQualite() {
     const isProcedure = selectedType === 'procedure';
     const currentHtml = isProcedure ? (writerRef.current?.innerHTML || form.document_html || '') : '';
     const documentText = isProcedure ? stripHtml(currentHtml) : (form.document_text || '');
-    const documentTitle = isProcedure ? firstDocumentLine(currentHtml, form.titre || form.reference || 'Procedure qualite') : form.titre;
+    const documentTitle = isProcedure ? (String(form.titre || '').trim() || firstDocumentLine(currentHtml, form.reference || 'Procedure qualite')) : form.titre;
     const approver = approverOptions.find((item) => item.role === form.approbateur_role);
     if (submitForApproval && isProcedure && !approver) {
       toast.error('Choisissez un responsable habilite avant la soumission');
@@ -541,6 +733,18 @@ export default function DocumentsQualite() {
       contenu: isProcedure ? documentText : (form.contenu || ''),
       document_text: isProcedure ? documentText : form.document_text,
       document_html: isProcedure ? currentHtml : form.document_html,
+      date_evolution: isProcedure ? (form.date_evolution || today()) : form.date_evolution,
+      etat_evolution: isProcedure ? (form.etat_evolution || 'Creation') : form.etat_evolution,
+      redacteur_modificateur: isProcedure ? (form.redacteur_modificateur || form.redige_par || user?.name || user?.label || '') : form.redacteur_modificateur,
+      redacteur_nom: isProcedure ? (form.redacteur_nom || form.redige_par || user?.name || user?.label || '') : form.redacteur_nom,
+      redacteur_fonction: isProcedure ? (form.redacteur_fonction || user?.fonction || user?.label || '') : form.redacteur_fonction,
+      redacteur_date: isProcedure ? (form.redacteur_date || today()) : form.redacteur_date,
+      verificateur_nom: isProcedure ? (form.verificateur_nom || form.approbateur_nom || '') : form.verificateur_nom,
+      verificateur_fonction: isProcedure ? (form.verificateur_fonction || 'Responsable Qualite') : form.verificateur_fonction,
+      verificateur_date: isProcedure ? (form.verificateur_date || today()) : form.verificateur_date,
+      approbateur_fonction: isProcedure ? (form.approbateur_fonction || 'Directeur General') : form.approbateur_fonction,
+      approbateur_date: isProcedure ? (form.approbateur_date || today()) : form.approbateur_date,
+      destinataire: isProcedure ? (form.destinataire || 'Tout le personnel du laboratoire') : form.destinataire,
       workflow_status: submitForApproval ? 'soumis_validation' : (form.workflow_status || 'brouillon'),
       redige_par: form.redige_par || user?.name || user?.label || '',
       redacteur_role: form.redacteur_role || user?.role || '',
@@ -613,67 +817,53 @@ export default function DocumentsQualite() {
           <meta charset="utf-8" />
           <title>${escapeHtml(record.reference || 'Procedure')}</title>
           <style>
-            @page { margin: 18mm; }
-            body { color: #111827; font-family: Arial, sans-serif; line-height: 1.55; margin: 0; }
-            header { border-bottom: 3px solid #2563eb; display: flex; justify-content: space-between; gap: 20px; padding-bottom: 16px; margin-bottom: 24px; }
-            h1 { font-size: 28px; letter-spacing: .05em; margin: 0; }
-            h2 { color: #1f2937; font-size: 20px; margin: 8px 0 0; }
-            .subtitle { color: #64748b; margin: 5px 0 0; }
-            .meta { color: #475569; font-size: 12px; text-align: right; min-width: 210px; }
-            .meta strong { color: #111827; display: block; font-size: 14px; margin-bottom: 6px; }
-            .identity { border: 1px solid #dbe4f0; border-radius: 8px; display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 22px; overflow: hidden; }
-            .identity div { border-right: 1px solid #dbe4f0; padding: 10px 12px; }
-            .identity div:last-child { border-right: 0; }
-            .identity span { color: #64748b; display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-            .identity strong { color: #111827; display: block; font-size: 13px; margin-top: 4px; }
-            section { border-bottom: 1px solid #e2e8f0; padding: 16px 0; page-break-inside: avoid; }
-            h3 { color: #111827; font-size: 16px; margin: 0 0 8px; }
-            p { color: #334155; font-size: 13px; margin: 0; white-space: normal; }
-            .procedureContent { color: #334155; font-size: 13px; line-height: 1.65; }
-            .procedureContent h1, .procedureContent h2, .procedureContent h3 { color: #111827; margin: 16px 0 8px; }
-            .procedureContent p { margin: 0 0 10px; }
-            .procedureContent ul, .procedureContent ol { margin: 8px 0 12px 24px; }
-            .procedureContent img { display: block; max-width: 100%; margin: 12px 0; }
-            .procedureContent table { border-collapse: collapse; width: 100%; }
-            .procedureContent td, .procedureContent th { border: 1px solid #dbe4f0; padding: 7px; }
-            .footerBox { background: #f8fafc; border: 1px solid #dbe4f0; border-radius: 8px; color: #475569; font-size: 12px; margin-top: 22px; padding: 12px; }
-            .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 42px; }
-            .signature { border-top: 1px solid #94a3b8; color: #334155; font-size: 12px; min-height: 54px; padding-top: 8px; }
-            footer { color: #64748b; font-size: 11px; margin-top: 24px; }
+            @page { margin: 13mm 16mm; size: A4; }
+            body { background: #eef2f7; color: #111827; font-family: Arial, sans-serif; margin: 0; }
+            .qualityProcedureModel { display: grid; gap: 18px; margin: 0 auto; max-width: 820px; }
+            .qualityProcedurePage { background: #fff; box-sizing: border-box; display: flex; flex-direction: column; min-height: 1060px; padding: 28px 34px 24px; page-break-after: always; position: relative; }
+            .qualityProcedureCartouche { border: 1px solid #111827; display: grid; grid-template-columns: 176px minmax(0, 1fr) 138px; min-height: 84px; }
+            .qualityProcedureBrand, .qualityProcedureTitle, .qualityProcedureRef { align-items: center; border-right: 1px solid #111827; display: flex; justify-content: center; padding: 8px; }
+            .qualityProcedureBrand { flex-direction: column; gap: 2px; text-align: center; }
+            .qualityProcedureBrand strong { font-size: 16px; letter-spacing: 6px; }
+            .qualityProcedureBrand span { font-size: 11px; }
+            .qualityProcedureLogo { align-items: center; background: linear-gradient(135deg, #ef4444, #ef4444 48%, transparent 49%); border: 2px solid #ef4444; color: #111827; display: flex; font-weight: 900; height: 34px; justify-content: center; letter-spacing: 2px; width: 68px; }
+            .qualityProcedureTitle { font-size: 15px; font-weight: 700; text-align: center; text-transform: uppercase; }
+            .qualityProcedureRef { align-items: stretch; border-right: 0; flex-direction: column; font-size: 14px; gap: 8px; justify-content: center; }
+            .qualityProcedureRef div { line-height: 1.25; }
+            .qualityStamp { align-self: flex-start; border: 2px solid #ef4444; color: #ef4444; font-size: 22px; font-weight: 900; letter-spacing: 0.08em; margin: 34px 0 18px; padding: 8px 18px; transform: rotate(-6deg); }
+            .qualityProcedureTable { border-collapse: collapse; color: #111827; font-size: 12px; margin: 16px 0; width: 100%; }
+            .qualityProcedureTable th, .qualityProcedureTable td { border: 1px solid #111827; min-height: 34px; padding: 9px 10px; text-align: left; vertical-align: top; }
+            .qualityProcedureTable thead th, .qualityProcedureTable tbody th { background: #f8fafc; font-weight: 700; }
+            .validationTable td { height: 38px; }
+            .recipientTable { margin-top: 22px; }
+            .recipientTable th { width: 160px; }
+            .qualityTocTitle { font-size: 18px; margin: 64px 0 28px; text-align: center; }
+            .qualityToc { color: #111827; font-size: 14px; list-style-position: inside; margin: 0 auto; max-width: 560px; padding: 0; width: 100%; }
+            .qualityToc li { align-items: baseline; display: grid; gap: 12px; grid-template-columns: 1fr auto; line-height: 1.9; }
+            .qualityToc li span { overflow: hidden; position: relative; }
+            .qualityToc li span::after { border-bottom: 1px dotted #64748b; bottom: 8px; content: ''; left: 0; position: absolute; right: 0; z-index: 0; }
+            .qualityToc li span::first-letter { position: relative; }
+            .qualityToc em { font-style: normal; }
+            .qualityProcedureContent { color: #111827; font-size: 13px; line-height: 1.78; margin-top: 28px; }
+            .qualityProcedureContent h1, .qualityProcedureContent h2, .qualityProcedureContent h3 { color: #111827; font-size: 15px; margin: 24px 0 12px; text-align: center; }
+            .qualityProcedureContent p { margin: 0 0 12px; text-align: justify; }
+            .qualityProcedureContent ul, .qualityProcedureContent ol { margin: 8px 0 14px 42px; }
+            .qualityProcedureContent img { display: block; margin: 14px 0; max-width: 100%; }
+            .qualityProcedureContent table { border-collapse: collapse; width: 100%; }
+            .qualityProcedureContent td, .qualityProcedureContent th { border: 1px solid #111827; padding: 7px; }
+            .qualityProcedureNotes { border: 1px solid #111827; font-size: 12px; margin-top: 18px; padding: 10px; }
+            .qualityProcedureFooter { align-items: flex-end; color: #111827; display: grid; font-size: 10px; gap: 14px; grid-template-columns: 1fr auto; margin-top: auto; padding-top: 32px; }
+            .qualityProcedureFooter span { max-width: 620px; }
+            .qualityProcedureFooter strong { font-size: 11px; white-space: nowrap; }
+            @media print {
+              body { background: #fff; }
+              .qualityProcedureModel { display: block; margin: 0; max-width: none; }
+              .qualityProcedurePage { box-shadow: none; min-height: calc(297mm - 26mm); padding: 0; }
+            }
           </style>
         </head>
         <body>
-          <header>
-            <div>
-              <h1>TESTLAB</h1>
-              <h2>${escapeHtml(record.titre || 'Procedure qualite')}</h2>
-              <p class="subtitle">Document qualite - References: ISO/IEC 17025 et ISO 9001</p>
-            </div>
-            <div class="meta">
-              <strong>${escapeHtml(record.reference || '')}</strong>
-              Version: ${escapeHtml(record.version || '01')}<br />
-              Generation: ${new Date().toLocaleDateString('fr-FR')}<br />
-              Statut: ${escapeHtml(statusLabel(record.statut))}
-            </div>
-          </header>
-          <div class="identity">
-            <div><span>Processus</span><strong>${escapeHtml(record.processus || '-')}</strong></div>
-            <div><span>Responsable</span><strong>${escapeHtml(record.responsable || '-')}</strong></div>
-            <div><span>Application</span><strong>${escapeHtml(record.date_application || '-')}</strong></div>
-            <div><span>Revision</span><strong>${escapeHtml(record.date_revision || '-')}</strong></div>
-          </div>
-          <main class="procedureContent">${procedureHtml(record)}</main>
-          ${(record.lien_document || record.observation) ? `
-            <div class="footerBox">
-              ${record.lien_document ? `<strong>Document source:</strong> ${escapeHtml(record.lien_document)}<br />` : ''}
-              ${record.observation ? `<strong>Observation:</strong> ${escapeHtml(record.observation)}` : ''}
-            </div>
-          ` : ''}
-          <div class="signatures">
-            <div class="signature">Responsable qualite / Visa</div>
-            <div class="signature">Direction / Validation</div>
-          </div>
-          <footer>Procedure generee depuis l'application TESTLAB.</footer>
+          ${procedureModelInnerHtml(record)}
         </body>
       </html>
     `;
@@ -835,13 +1025,7 @@ export default function DocumentsQualite() {
       </header>
 
       <div className="procedureDocumentBody">
-        <div className="procedureDocumentText" dangerouslySetInnerHTML={{ __html: procedureHtml(record) }} />
-        {(record.lien_document || record.observation) && (
-          <footer className="procedureDocumentFooter">
-            {record.lien_document && <span>Document source: {record.lien_document}</span>}
-            {record.observation && <span>Observation: {record.observation}</span>}
-          </footer>
-        )}
+        <div className="procedureDocumentText qualityProcedurePreview" dangerouslySetInnerHTML={{ __html: procedureModelInnerHtml(record) }} />
       </div>
     </article>
   );
@@ -928,6 +1112,82 @@ export default function DocumentsQualite() {
         </div>
         <button type="button" className="ghostButton" onClick={closeForm}>Fermer</button>
       </div>
+
+      <details className="procedureTemplateSettings">
+        <summary>Cartouche, evolution et validation du document</summary>
+        <div className="procedureMetaGrid">
+          <label>
+            <span>Titre officiel</span>
+            <input value={form.titre || ''} onChange={(event) => updateField('titre', event.target.value)} placeholder="PROCEDURE DE..." />
+          </label>
+          <label>
+            <span>Reference</span>
+            <input value={form.reference || ''} onChange={(event) => updateField('reference', event.target.value)} required />
+          </label>
+          <label>
+            <span>Version</span>
+            <input value={form.version || ''} onChange={(event) => updateField('version', event.target.value)} required />
+          </label>
+          <label>
+            <span>Date application</span>
+            <input type="date" value={form.date_application || ''} onChange={(event) => updateField('date_application', event.target.value)} />
+          </label>
+          <label>
+            <span>Date evolution</span>
+            <input type="date" value={form.date_evolution || ''} onChange={(event) => updateField('date_evolution', event.target.value)} />
+          </label>
+          <label>
+            <span>Etat evolution</span>
+            <input value={form.etat_evolution || ''} onChange={(event) => updateField('etat_evolution', event.target.value)} placeholder="Creation, modification..." />
+          </label>
+          <label>
+            <span>Redacteur / modificateur</span>
+            <input value={form.redacteur_modificateur || ''} onChange={(event) => updateField('redacteur_modificateur', event.target.value)} />
+          </label>
+          <label>
+            <span>Destinataire</span>
+            <input value={form.destinataire || ''} onChange={(event) => updateField('destinataire', event.target.value)} />
+          </label>
+        </div>
+        <div className="procedureValidationGrid">
+          <label>
+            <span>Redacteur - nom</span>
+            <input value={form.redacteur_nom || ''} onChange={(event) => updateField('redacteur_nom', event.target.value)} />
+          </label>
+          <label>
+            <span>Redacteur - fonction</span>
+            <input value={form.redacteur_fonction || ''} onChange={(event) => updateField('redacteur_fonction', event.target.value)} />
+          </label>
+          <label>
+            <span>Redacteur - date</span>
+            <input type="date" value={form.redacteur_date || ''} onChange={(event) => updateField('redacteur_date', event.target.value)} />
+          </label>
+          <label>
+            <span>Verificateur - nom</span>
+            <input value={form.verificateur_nom || ''} onChange={(event) => updateField('verificateur_nom', event.target.value)} />
+          </label>
+          <label>
+            <span>Verificateur - fonction</span>
+            <input value={form.verificateur_fonction || ''} onChange={(event) => updateField('verificateur_fonction', event.target.value)} />
+          </label>
+          <label>
+            <span>Verificateur - date</span>
+            <input type="date" value={form.verificateur_date || ''} onChange={(event) => updateField('verificateur_date', event.target.value)} />
+          </label>
+          <label>
+            <span>Approbateur - nom</span>
+            <input value={form.approbateur_nom || ''} onChange={(event) => updateField('approbateur_nom', event.target.value)} />
+          </label>
+          <label>
+            <span>Approbateur - fonction</span>
+            <input value={form.approbateur_fonction || ''} onChange={(event) => updateField('approbateur_fonction', event.target.value)} />
+          </label>
+          <label>
+            <span>Approbateur - date</span>
+            <input type="date" value={form.approbateur_date || ''} onChange={(event) => updateField('approbateur_date', event.target.value)} />
+          </label>
+        </div>
+      </details>
 
       <div className="procedureWritingSurface documentWritingSurface">
         <div className="documentWriterToolbar">
