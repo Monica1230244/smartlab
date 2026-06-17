@@ -142,6 +142,15 @@ const emptyDocument = {
   observation: ''
 };
 
+const documentFieldLabels = {
+  type: 'Type de document',
+  titre: 'Titre',
+  reference: 'Reference',
+  date_document: 'Date du document',
+  lien: 'Lien externe ou emplacement',
+  observation: 'Observation'
+};
+
 const signaletiqueMainFields = [
   ['dossier_administratif', 'Dossier administratif N'],
   ['designation', 'Designation'],
@@ -524,6 +533,48 @@ export default function Equipements() {
   const openDocumentForm = () => {
     setDocumentForm({ ...emptyDocument, date_document: today() });
     setDocumentFormOpen(true);
+  };
+
+  const importDocumentFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Fichier trop lourd. Importez un document de moins de 5 Mo.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDocumentForm((current) => ({
+        ...current,
+        titre: current.titre || file.name.replace(/\.[^.]+$/, ''),
+        lien: current.lien || file.name,
+        fichier_nom: file.name,
+        fichier_type: file.type || 'application/octet-stream',
+        fichier_taille: file.size,
+        fichier_data: reader.result
+      }));
+      toast.success('Fichier importe dans le dossier');
+    };
+    reader.onerror = () => toast.error('Import du fichier impossible');
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const openImportedDocument = (doc) => {
+    if (doc.fichier_data) {
+      const link = document.createElement('a');
+      link.href = doc.fichier_data;
+      link.download = doc.fichier_nom || doc.titre || 'document';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+    if (doc.lien) {
+      window.open(doc.lien, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const saveDocument = async (event) => {
@@ -988,7 +1039,7 @@ export default function Equipements() {
             <div className="formGrid">
               {Object.keys(emptyDocument).map((key) => (
                 <label className={key === 'observation' ? 'full' : ''} key={key}>
-                  <span>{key.replaceAll('_', ' ')}</span>
+                  <span>{documentFieldLabels[key] || key.replaceAll('_', ' ')}</span>
                   {key === 'observation' ? (
                     <textarea value={documentForm[key] || ''} onChange={(event) => setDocumentForm((current) => ({ ...current, [key]: event.target.value }))} rows="3" />
                   ) : (
@@ -996,6 +1047,13 @@ export default function Equipements() {
                   )}
                 </label>
               ))}
+              <label className="full fileImportBox">
+                <span>Importer un document externe</span>
+                <input type="file" onChange={importDocumentFile} />
+                {documentForm.fichier_nom && (
+                  <small>Fichier importe: {documentForm.fichier_nom} ({Math.ceil((documentForm.fichier_taille || 0) / 1024)} Ko)</small>
+                )}
+              </label>
             </div>
             <div className="formActions">
               <button type="submit" className="primaryButton">Enregistrer document</button>
@@ -1011,7 +1069,7 @@ export default function Equipements() {
           <div className="tableScroll">
             <table>
               <thead>
-                <tr><th>Type</th><th>Titre</th><th>Reference</th><th>Date</th><th>Lien</th><th>Actions</th></tr>
+                <tr><th>Type</th><th>Titre</th><th>Reference</th><th>Date</th><th>Document</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {selectedEquipment.documents.map((doc) => (
@@ -1020,8 +1078,15 @@ export default function Equipements() {
                     <td>{doc.titre}</td>
                     <td>{doc.reference || '-'}</td>
                     <td>{doc.date_document || '-'}</td>
-                    <td>{doc.lien || '-'}</td>
-                    <td><button type="button" className="dangerButton" onClick={() => removeDocument(doc.id)}>Retirer</button></td>
+                    <td>{doc.fichier_nom || doc.lien || '-'}</td>
+                    <td>
+                      <div className="rowActions">
+                        {(doc.fichier_data || doc.lien) && (
+                          <button type="button" className="ghostButton" onClick={() => openImportedDocument(doc)}>Ouvrir</button>
+                        )}
+                        <button type="button" className="dangerButton" onClick={() => removeDocument(doc.id)}>Retirer</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {selectedEquipment.documents.length === 0 && (

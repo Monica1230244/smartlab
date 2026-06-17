@@ -1711,6 +1711,31 @@ select option {
   display: none;
 }
 
+.fileImportBox {
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  text-transform: none;
+}
+
+.fileImportBox span {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fileImportBox input {
+  background: var(--panel-bg);
+}
+
+.fileImportBox small {
+  color: var(--accent2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .attachmentList {
   display: grid;
   gap: 8px;
