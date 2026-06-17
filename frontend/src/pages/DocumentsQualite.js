@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
+import { authProfiles, useAuth } from '../contexts/AuthContext';
 
 const statusFolders = [
   { key: 'en_vigueur', label: 'En Vigueur', description: 'Documents applicables et utilises au laboratoire.' },
@@ -11,6 +12,14 @@ const typeFolders = [
   { key: 'procedure', label: 'Procedure', prefix: 'PRO', description: 'Mode operatoire, responsabilites, etapes et preuves attendues.' },
   { key: 'fiche', label: 'Fiche', prefix: 'FIC', description: 'Formulaire, support de saisie, fiche de controle ou enregistrement.' }
 ];
+
+const approverRoles = ['responsable_technique', 'dg', 'responsable_labo'];
+const documentWorkflowLabels = {
+  brouillon: 'Brouillon',
+  soumis_validation: 'Soumis pour validation',
+  valide: 'Valide',
+  rejete: 'Rejete'
+};
 
 const procedureSections = [
   {
@@ -57,10 +66,6 @@ const procedureDefaults = () => procedureSections.reduce((values, section) => ({
   [section.key]: ''
 }), {});
 
-function defaultProcedureText() {
-  return procedureSections.map((section) => `${section.title}\n${section.helper}\n`).join('\n');
-}
-
 function emptyForm(status, type, records) {
   return {
     reference: nextDocumentReference(records, type),
@@ -75,6 +80,13 @@ function emptyForm(status, type, records) {
     objet: '',
     contenu: '',
     document_text: '',
+    document_html: '',
+    workflow_status: 'brouillon',
+    approbateur_role: '',
+    approbateur_nom: '',
+    redige_par: '',
+    redacteur_role: '',
+    soumis_le: '',
     lien_document: '',
     observation: '',
     ...procedureDefaults()
@@ -130,10 +142,10 @@ function procedureText(record) {
   return sections.join('\n\n');
 }
 
-function procedureTextHtml(record) {
-  const text = procedureText(record);
-  if (!text) return '<section><p>Aucun contenu redige.</p></section>';
-  return escapeHtml(text)
+function htmlFromPlainText(value) {
+  const text = String(value || '').trim();
+  if (!text) return '<p>Aucun contenu redige.</p>';
+  return text
     .split(/\n{2,}/)
     .map((block) => {
       const lines = block.split('\n');
@@ -141,16 +153,50 @@ function procedureTextHtml(record) {
       const rest = lines.slice(1).join('\n');
       const isHeading = /^\d+\.\s/.test(firstLine);
       if (isHeading) {
-        return `
-          <section>
-            <h3>${firstLine}</h3>
-            ${rest ? `<p>${rest.replace(/\n/g, '<br />')}</p>` : ''}
-          </section>
-        `;
+        return `<section><h3>${escapeHtml(firstLine)}</h3>${rest ? `<p>${escapeHtml(rest).replace(/\n/g, '<br />')}</p>` : ''}</section>`;
       }
-      return `<section><p>${block.replace(/\n/g, '<br />')}</p></section>`;
+      return `<p>${escapeHtml(block).replace(/\n/g, '<br />')}</p>`;
     })
     .join('');
+}
+
+function procedureHtml(record) {
+  if (record.document_html) return record.document_html;
+  return htmlFromPlainText(procedureText(record));
+}
+
+function stripHtml(value) {
+  return String(value || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h1|h2|h3|h4|li|section)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n\s+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function firstDocumentLine(html, fallback = 'Procedure qualite') {
+  return stripHtml(html).split('\n').find((line) => line.trim()) || fallback;
+}
+
+function safeFileName(value) {
+  return String(value || 'procedure')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'procedure';
+}
+
+function workflowLabel(value) {
+  return documentWorkflowLabels[value] || documentWorkflowLabels.brouillon;
 }
 
 function escapeHtml(value) {
@@ -163,6 +209,7 @@ function escapeHtml(value) {
 }
 
 export default function DocumentsQualite() {
+  const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -171,6 +218,11 @@ export default function DocumentsQualite() {
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState({});
   const editorRef = useRef(null);
+  const writerRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const approverOptions = useMemo(() => (
+    authProfiles.filter((profile) => approverRoles.includes(profile.role) && profile.role !== user?.role)
+  ), [user?.role]);
 
   const refresh = async () => {
     setLoading(true);
@@ -206,10 +258,18 @@ export default function DocumentsQualite() {
     if (!formOpen || selectedType !== 'procedure') return undefined;
     const frame = window.requestAnimationFrame(() => {
       editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      editorRef.current?.querySelector('.documentWriter')?.focus({ preventScroll: true });
+      writerRef.current?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [formOpen, selectedType, editingId]);
+
+  useEffect(() => {
+    if (!formOpen || selectedType !== 'procedure' || !writerRef.current) return;
+    const nextHtml = form.document_html || '';
+    if (writerRef.current.innerHTML !== nextHtml) {
+      writerRef.current.innerHTML = nextHtml;
+    }
+  }, [formOpen, selectedType, editingId, form.document_html]);
 
   const currentDocuments = useMemo(() => (
     records
@@ -236,13 +296,26 @@ export default function DocumentsQualite() {
       return;
     }
     setEditingId('');
-    setForm(emptyForm(selectedStatus, selectedType, records));
+    setForm({
+      ...emptyForm(selectedStatus, selectedType, records),
+      redige_par: user?.name || user?.label || '',
+      responsable: user?.name || user?.label || '',
+      approbateur_role: approverOptions[0]?.role || '',
+      approbateur_nom: approverOptions[0]?.label || ''
+    });
     setFormOpen(true);
   };
 
   const openEdit = (record) => {
     setEditingId(record.id);
-    setForm({ ...procedureDefaults(), ...record, document_text: procedureText(record) });
+    setForm({
+      ...procedureDefaults(),
+      ...record,
+      document_text: procedureText(record),
+      document_html: procedureHtml(record),
+      approbateur_role: record.approbateur_role || approverOptions[0]?.role || '',
+      approbateur_nom: record.approbateur_nom || approverOptions[0]?.label || ''
+    });
     setFormOpen(true);
   };
 
@@ -256,11 +329,35 @@ export default function DocumentsQualite() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const updateWriterContent = () => {
+    const html = writerRef.current?.innerHTML || '';
+    updateField('document_html', html);
+  };
+
+  const createDocumentNotification = async (record, approver) => {
+    const notification = {
+      id: `notif-doc-${record.id}-${Date.now()}`,
+      title: 'Document qualite a valider',
+      message: `${record.reference || 'Procedure'} soumis par ${record.redige_par || 'un responsable'}`,
+      path: '/documents-qualite',
+      tone: 'info',
+      targetRole: approver?.role || record.approbateur_role || 'responsable_technique',
+      created_at: new Date().toISOString(),
+      read: false
+    };
+    await upsertRecord('notifications', notification);
+  };
+
+  const saveDocument = async ({ submitForApproval = false } = {}) => {
     const isProcedure = selectedType === 'procedure';
-    const documentText = form.document_text || '';
-    const documentTitle = documentText.split('\n').find((line) => line.trim()) || form.titre || form.reference || 'Procedure qualite';
+    const currentHtml = isProcedure ? (writerRef.current?.innerHTML || form.document_html || '') : '';
+    const documentText = isProcedure ? stripHtml(currentHtml) : (form.document_text || '');
+    const documentTitle = isProcedure ? firstDocumentLine(currentHtml, form.titre || form.reference || 'Procedure qualite') : form.titre;
+    const approver = approverOptions.find((item) => item.role === form.approbateur_role);
+    if (submitForApproval && isProcedure && !approver) {
+      toast.error('Choisissez un responsable habilite avant la soumission');
+      return;
+    }
     const payload = {
       ...form,
       type: selectedType,
@@ -268,6 +365,14 @@ export default function DocumentsQualite() {
       titre: isProcedure ? documentTitle : form.titre,
       objet: isProcedure ? documentTitle : (form.objet || ''),
       contenu: isProcedure ? documentText : (form.contenu || ''),
+      document_text: isProcedure ? documentText : form.document_text,
+      document_html: isProcedure ? currentHtml : form.document_html,
+      workflow_status: submitForApproval ? 'soumis_validation' : (form.workflow_status || 'brouillon'),
+      redige_par: form.redige_par || user?.name || user?.label || '',
+      redacteur_role: form.redacteur_role || user?.role || '',
+      approbateur_role: isProcedure ? (form.approbateur_role || approver?.role || '') : form.approbateur_role,
+      approbateur_nom: isProcedure ? (approver?.label || form.approbateur_nom || '') : form.approbateur_nom,
+      soumis_le: submitForApproval ? new Date().toISOString() : form.soumis_le,
       updated_at: new Date().toISOString()
     };
     const saved = await upsertRecord('documentsQualite', {
@@ -277,10 +382,20 @@ export default function DocumentsQualite() {
     if (saved.__syncError) {
       toast.error(`Enregistre localement, mais pas dans Supabase: ${saved.__syncError}`);
     } else {
-      toast.success(editingId ? 'Document modifie dans Supabase' : 'Document qualite ajoute dans Supabase');
+      if (submitForApproval && isProcedure) {
+        await createDocumentNotification(saved, approver);
+        toast.success(`Procedure soumise a ${approver.label}`);
+      } else {
+        toast.success(editingId ? 'Document modifie dans Supabase' : 'Document qualite ajoute dans Supabase');
+      }
     }
     closeForm();
     await refresh();
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    await saveDocument();
   };
 
   const remove = async (record) => {
@@ -314,6 +429,13 @@ export default function DocumentsQualite() {
             section { border-bottom: 1px solid #e2e8f0; padding: 16px 0; page-break-inside: avoid; }
             h3 { color: #111827; font-size: 16px; margin: 0 0 8px; }
             p { color: #334155; font-size: 13px; margin: 0; white-space: normal; }
+            .procedureContent { color: #334155; font-size: 13px; line-height: 1.65; }
+            .procedureContent h1, .procedureContent h2, .procedureContent h3 { color: #111827; margin: 16px 0 8px; }
+            .procedureContent p { margin: 0 0 10px; }
+            .procedureContent ul, .procedureContent ol { margin: 8px 0 12px 24px; }
+            .procedureContent img { display: block; max-width: 100%; margin: 12px 0; }
+            .procedureContent table { border-collapse: collapse; width: 100%; }
+            .procedureContent td, .procedureContent th { border: 1px solid #dbe4f0; padding: 7px; }
             .footerBox { background: #f8fafc; border: 1px solid #dbe4f0; border-radius: 8px; color: #475569; font-size: 12px; margin-top: 22px; padding: 12px; }
             .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 42px; }
             .signature { border-top: 1px solid #94a3b8; color: #334155; font-size: 12px; min-height: 54px; padding-top: 8px; }
@@ -340,7 +462,7 @@ export default function DocumentsQualite() {
             <div><span>Application</span><strong>${escapeHtml(record.date_application || '-')}</strong></div>
             <div><span>Revision</span><strong>${escapeHtml(record.date_revision || '-')}</strong></div>
           </div>
-          ${procedureTextHtml(record)}
+          <main class="procedureContent">${procedureHtml(record)}</main>
           ${(record.lien_document || record.observation) ? `
             <div class="footerBox">
               ${record.lien_document ? `<strong>Document source:</strong> ${escapeHtml(record.lien_document)}<br />` : ''}
@@ -369,35 +491,103 @@ export default function DocumentsQualite() {
     setTimeout(() => doc.print(), 450);
   };
 
+  const exportProcedureWord = (record) => {
+    const html = buildProcedureHtml(record);
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeFileName(record.reference || record.titre)}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const runEditorCommand = (command, value = null) => {
+    writerRef.current?.focus();
+    document.execCommand(command, false, value);
+    updateWriterContent();
+  };
+
+  const changeBlockStyle = (value) => {
+    if (!value) return;
+    runEditorCommand('formatBlock', value);
+  };
+
+  const insertEditorLink = () => {
+    const url = window.prompt('Lien a inserer');
+    if (!url) return;
+    runEditorCommand('createLink', url);
+  };
+
+  const insertEditorImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      runEditorCommand('insertImage', reader.result);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const updateProcedureWorkflow = async (record, nextStatus) => {
+    const updated = {
+      ...record,
+      workflow_status: nextStatus,
+      valide_par: nextStatus === 'valide' ? (user?.name || user?.label || '') : record.valide_par,
+      valide_le: nextStatus === 'valide' ? new Date().toISOString() : record.valide_le,
+      rejete_par: nextStatus === 'rejete' ? (user?.name || user?.label || '') : record.rejete_par,
+      rejete_le: nextStatus === 'rejete' ? new Date().toISOString() : record.rejete_le,
+      updated_at: new Date().toISOString()
+    };
+    await upsertRecord('documentsQualite', updated);
+    if (record.redacteur_role) {
+      await upsertRecord('notifications', {
+        id: `notif-doc-retour-${record.id}-${Date.now()}`,
+        title: nextStatus === 'valide' ? 'Procedure validee' : 'Procedure rejetee',
+        message: `${record.reference || 'Procedure'} ${nextStatus === 'valide' ? 'validee' : 'rejetee'} par ${user?.name || user?.label || 'le responsable habilite'}`,
+        path: '/documents-qualite',
+        tone: nextStatus === 'valide' ? 'success' : 'warning',
+        targetRole: record.redacteur_role,
+        created_at: new Date().toISOString(),
+        read: false
+      });
+    }
+    toast.success(nextStatus === 'valide' ? 'Procedure validee' : 'Procedure rejetee');
+    await refresh();
+  };
+
   const renderProcedureDocument = (record) => (
     <article className="procedureDocument" key={record.id}>
       <header className="procedureDocumentHeader">
         <div>
           <span>{record.reference} - Version {record.version || '01'}</span>
           <h3>{record.titre || 'Procedure sans titre'}</h3>
+          <div className="documentMetaLine">
+            <span className={`statusBadge ${record.workflow_status === 'soumis_validation' ? 'info' : 'neutral'}`}>
+              {workflowLabel(record.workflow_status)}
+            </span>
+            {record.approbateur_nom && <em>Responsable habilite: {record.approbateur_nom}</em>}
+          </div>
         </div>
         <div className="rowActions">
           {record.statut === 'en_vigueur' && <button type="button" className="primaryButton" onClick={() => generateProcedure(record)}>Generer procedure</button>}
+          {record.statut === 'en_vigueur' && <button type="button" className="ghostButton" onClick={() => exportProcedureWord(record)}>Word</button>}
+          {record.workflow_status === 'soumis_validation' && record.approbateur_role === user?.role && (
+            <>
+              <button type="button" className="ghostButton" onClick={() => updateProcedureWorkflow(record, 'valide')}>Valider</button>
+              <button type="button" className="dangerButton" onClick={() => updateProcedureWorkflow(record, 'rejete')}>Rejeter</button>
+            </>
+          )}
           {record.statut === 'en_vigueur' && <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>}
           <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
         </div>
       </header>
 
       <div className="procedureDocumentBody">
-        <div className="procedureDocumentText">
-          {procedureText(record).split(/\n{2,}/).filter(Boolean).map((block, index) => {
-            const lines = block.split('\n');
-            const title = lines[0] || '';
-            const body = lines.slice(1).join('\n');
-            const isHeading = /^\d+\.\s/.test(title);
-            return (
-              <section className="procedureDocumentSection" key={`${record.id}-text-${index}`}>
-                {isHeading ? <h4>{title}</h4> : null}
-                <p>{isHeading ? body : block}</p>
-              </section>
-            );
-          })}
-        </div>
+        <div className="procedureDocumentText" dangerouslySetInnerHTML={{ __html: procedureHtml(record) }} />
         {(record.lien_document || record.observation) && (
           <footer className="procedureDocumentFooter">
             {record.lien_document && <span>Document source: {record.lien_document}</span>}
@@ -486,29 +676,70 @@ export default function DocumentsQualite() {
       <div className="formHeader">
         <div>
           <strong>{editingId ? 'Modifier la procedure' : 'Rediger une nouvelle procedure'}</strong>
-          <small>Redigez directement le document.</small>
+          <small>Redigez et mettez en forme le document comme dans un traitement de texte.</small>
         </div>
         <button type="button" className="ghostButton" onClick={closeForm}>Fermer</button>
       </div>
 
       <div className="procedureWritingSurface documentWritingSurface">
         <div className="documentWriterToolbar">
-          <strong>Redaction</strong>
-          <button type="button" className="ghostButton" onClick={() => updateField('document_text', defaultProcedureText())}>
-            Inserer le modele
-          </button>
+          <select aria-label="Style du paragraphe" defaultValue="" onChange={(event) => changeBlockStyle(event.target.value)}>
+            <option value="">Style</option>
+            <option value="h1">Titre 1</option>
+            <option value="h2">Titre 2</option>
+            <option value="h3">Titre 3</option>
+            <option value="p">Paragraphe</option>
+          </select>
+          <button type="button" title="Gras" onClick={() => runEditorCommand('bold')}>B</button>
+          <button type="button" title="Italique" onClick={() => runEditorCommand('italic')}><i>I</i></button>
+          <button type="button" title="Souligner" onClick={() => runEditorCommand('underline')}><u>U</u></button>
+          <button type="button" title="Liste a puces" onClick={() => runEditorCommand('insertUnorderedList')}>Liste</button>
+          <button type="button" title="Liste numerotee" onClick={() => runEditorCommand('insertOrderedList')}>1.</button>
+          <button type="button" title="Aligner a gauche" onClick={() => runEditorCommand('justifyLeft')}>Gauche</button>
+          <button type="button" title="Centrer" onClick={() => runEditorCommand('justifyCenter')}>Centre</button>
+          <button type="button" title="Aligner a droite" onClick={() => runEditorCommand('justifyRight')}>Droite</button>
+          <button type="button" title="Inserer un lien" onClick={insertEditorLink}>Lien</button>
+          <button type="button" title="Inserer une image" onClick={() => imageInputRef.current?.click()}>Image</button>
+          <input ref={imageInputRef} type="file" accept="image/*" onChange={insertEditorImage} hidden />
         </div>
-        <textarea
+        <div
           className="documentWriter"
-          value={form.document_text || ''}
-          onChange={(event) => updateField('document_text', event.target.value)}
-          rows="24"
-          placeholder="Redigez la procedure ici..."
+          ref={writerRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={updateWriterContent}
+          data-placeholder="Redigez la procedure ici..."
         />
+      </div>
+
+      <div className="approvalBox">
+        <label>
+          <span>Soumettre au responsable habilite</span>
+          <select
+            value={form.approbateur_role || ''}
+            onChange={(event) => {
+              const approver = approverOptions.find((item) => item.role === event.target.value);
+              updateField('approbateur_role', event.target.value);
+              updateField('approbateur_nom', approver?.label || '');
+            }}
+          >
+            {approverOptions.map((profile) => (
+              <option key={profile.role} value={profile.role}>{profile.label}</option>
+            ))}
+          </select>
+        </label>
+        <div>
+          <span className={`statusBadge ${form.workflow_status === 'soumis_validation' ? 'info' : 'neutral'}`}>
+            {workflowLabel(form.workflow_status)}
+          </span>
+        </div>
       </div>
 
       <div className="formActions">
         <button type="submit" className="primaryButton">Enregistrer la procedure</button>
+        <button type="button" className="secondaryButton" onClick={() => saveDocument({ submitForApproval: true })}>
+          Soumettre au responsable
+        </button>
       </div>
     </form>
   );
