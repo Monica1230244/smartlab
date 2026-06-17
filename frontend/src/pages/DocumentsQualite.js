@@ -217,6 +217,7 @@ export default function DocumentsQualite() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState({});
+  const [procedureApprovers, setProcedureApprovers] = useState({});
   const editorRef = useRef(null);
   const writerRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -348,6 +349,14 @@ export default function DocumentsQualite() {
     await upsertRecord('notifications', notification);
   };
 
+  const selectedApproverRole = (record) => (
+    procedureApprovers[record.id] || record.approbateur_role || approverOptions[0]?.role || ''
+  );
+
+  const selectedApprover = (record) => (
+    approverOptions.find((item) => item.role === selectedApproverRole(record))
+  );
+
   const saveDocument = async ({ submitForApproval = false } = {}) => {
     const isProcedure = selectedType === 'procedure';
     const currentHtml = isProcedure ? (writerRef.current?.innerHTML || form.document_html || '') : '';
@@ -396,6 +405,32 @@ export default function DocumentsQualite() {
   const submit = async (event) => {
     event.preventDefault();
     await saveDocument();
+  };
+
+  const submitSavedProcedure = async (record) => {
+    const approver = selectedApprover(record);
+    if (!approver) {
+      toast.error('Choisissez un responsable habilite avant la soumission');
+      return;
+    }
+    const updated = {
+      ...record,
+      workflow_status: 'soumis_validation',
+      redige_par: record.redige_par || user?.name || user?.label || '',
+      redacteur_role: record.redacteur_role || user?.role || '',
+      approbateur_role: approver.role,
+      approbateur_nom: approver.label,
+      soumis_le: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const saved = await upsertRecord('documentsQualite', updated);
+    if (saved.__syncError) {
+      toast.error(`Soumission locale, mais pas dans Supabase: ${saved.__syncError}`);
+      return;
+    }
+    await createDocumentNotification(saved, approver);
+    toast.success(`Procedure soumise a ${approver.label}`);
+    await refresh();
   };
 
   const remove = async (record) => {
@@ -581,6 +616,22 @@ export default function DocumentsQualite() {
               <button type="button" className="dangerButton" onClick={() => updateProcedureWorkflow(record, 'rejete')}>Rejeter</button>
             </>
           )}
+          {record.statut === 'en_vigueur' && !['soumis_validation', 'valide'].includes(record.workflow_status || 'brouillon') && (
+            <div className="submitProcedureBox">
+              <select
+                aria-label="Responsable habilite"
+                value={selectedApproverRole(record)}
+                onChange={(event) => setProcedureApprovers((current) => ({ ...current, [record.id]: event.target.value }))}
+              >
+                {approverOptions.map((profile) => (
+                  <option key={profile.role} value={profile.role}>{profile.label}</option>
+                ))}
+              </select>
+              <button type="button" className="secondaryButton" onClick={() => submitSavedProcedure(record)}>
+                Soumettre
+              </button>
+            </div>
+          )}
           {record.statut === 'en_vigueur' && <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>}
           <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
         </div>
@@ -712,34 +763,8 @@ export default function DocumentsQualite() {
         />
       </div>
 
-      <div className="approvalBox">
-        <label>
-          <span>Soumettre au responsable habilite</span>
-          <select
-            value={form.approbateur_role || ''}
-            onChange={(event) => {
-              const approver = approverOptions.find((item) => item.role === event.target.value);
-              updateField('approbateur_role', event.target.value);
-              updateField('approbateur_nom', approver?.label || '');
-            }}
-          >
-            {approverOptions.map((profile) => (
-              <option key={profile.role} value={profile.role}>{profile.label}</option>
-            ))}
-          </select>
-        </label>
-        <div>
-          <span className={`statusBadge ${form.workflow_status === 'soumis_validation' ? 'info' : 'neutral'}`}>
-            {workflowLabel(form.workflow_status)}
-          </span>
-        </div>
-      </div>
-
       <div className="formActions">
         <button type="submit" className="primaryButton">Enregistrer la procedure</button>
-        <button type="button" className="secondaryButton" onClick={() => saveDocument({ submitForApproval: true })}>
-          Soumettre au responsable
-        </button>
       </div>
     </form>
   );

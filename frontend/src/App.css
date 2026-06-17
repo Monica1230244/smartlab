@@ -1785,6 +1785,18 @@ tbody tr:hover {
   gap: 8px;
 }
 
+.submitProcedureBox {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.submitProcedureBox select {
+  min-height: 34px;
+  min-width: 190px;
+  padding: 7px 9px;
+}
+
 .emptyCell {
   color: var(--text3);
   padding: 36px;
