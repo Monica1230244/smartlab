@@ -199,6 +199,170 @@ function workflowLabel(value) {
   return documentWorkflowLabels[value] || documentWorkflowLabels.brouillon;
 }
 
+function readUInt16(view, offset) {
+  return view.getUint16(offset, true);
+}
+
+function readUInt32(view, offset) {
+  return view.getUint32(offset, true);
+}
+
+function findEndOfCentralDirectory(view) {
+  const minOffset = Math.max(0, view.byteLength - 66000);
+  for (let offset = view.byteLength - 22; offset >= minOffset; offset -= 1) {
+    if (readUInt32(view, offset) === 0x06054b50) return offset;
+  }
+  return -1;
+}
+
+function zipEntries(arrayBuffer) {
+  const view = new DataView(arrayBuffer);
+  const decoder = new TextDecoder('utf-8');
+  const endOffset = findEndOfCentralDirectory(view);
+  if (endOffset < 0) throw new Error('Archive Word invalide');
+  const entriesCount = readUInt16(view, endOffset + 10);
+  const centralDirectoryOffset = readUInt32(view, endOffset + 16);
+  const entries = {};
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entriesCount; index += 1) {
+    if (readUInt32(view, offset) !== 0x02014b50) break;
+    const compression = readUInt16(view, offset + 10);
+    const compressedSize = readUInt32(view, offset + 20);
+    const fileNameLength = readUInt16(view, offset + 28);
+    const extraLength = readUInt16(view, offset + 30);
+    const commentLength = readUInt16(view, offset + 32);
+    const localHeaderOffset = readUInt32(view, offset + 42);
+    const fileName = decoder.decode(new Uint8Array(arrayBuffer, offset + 46, fileNameLength));
+    entries[fileName] = { compression, compressedSize, localHeaderOffset };
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+async function unzipEntry(arrayBuffer, entry) {
+  const view = new DataView(arrayBuffer);
+  const localOffset = entry.localHeaderOffset;
+  if (readUInt32(view, localOffset) !== 0x04034b50) throw new Error('Entree Word invalide');
+  const fileNameLength = readUInt16(view, localOffset + 26);
+  const extraLength = readUInt16(view, localOffset + 28);
+  const dataOffset = localOffset + 30 + fileNameLength + extraLength;
+  const compressed = new Uint8Array(arrayBuffer, dataOffset, entry.compressedSize);
+  if (entry.compression === 0) return compressed;
+  if (entry.compression !== 8) throw new Error('Compression Word non supportee');
+
+  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function elementsByLocalName(node, localName) {
+  return Array.from(node.getElementsByTagName('*')).filter((item) => item.localName === localName);
+}
+
+function firstByLocalName(node, localName) {
+  return elementsByLocalName(node, localName)[0];
+}
+
+function attrValue(node, name) {
+  if (!node) return '';
+  return node.getAttribute(`w:${name}`) || node.getAttribute(name) || '';
+}
+
+function runText(run) {
+  return Array.from(run.childNodes).map((node) => {
+    if (node.localName === 't') return node.textContent || '';
+    if (node.localName === 'tab') return ' ';
+    if (node.localName === 'br') return '\n';
+    return '';
+  }).join('');
+}
+
+function formattedRun(run) {
+  const text = escapeHtml(runText(run)).replace(/\n/g, '<br />');
+  if (!text) return '';
+  const props = firstByLocalName(run, 'rPr');
+  let output = text;
+  if (props && firstByLocalName(props, 'u')) output = `<u>${output}</u>`;
+  if (props && firstByLocalName(props, 'i')) output = `<em>${output}</em>`;
+  if (props && firstByLocalName(props, 'b')) output = `<strong>${output}</strong>`;
+  return output;
+}
+
+function paragraphTag(paragraph) {
+  const props = firstByLocalName(paragraph, 'pPr');
+  const style = attrValue(firstByLocalName(props || paragraph, 'pStyle'), 'val').toLowerCase();
+  if (style.includes('heading1') || style.includes('titre1')) return 'h1';
+  if (style.includes('heading2') || style.includes('titre2')) return 'h2';
+  if (style.includes('heading3') || style.includes('titre3')) return 'h3';
+  return 'p';
+}
+
+function paragraphHtml(paragraph) {
+  const content = Array.from(paragraph.childNodes)
+    .filter((node) => node.localName === 'r')
+    .map(formattedRun)
+    .join('');
+  if (!content.trim()) return '';
+  const tag = paragraphTag(paragraph);
+  return `<${tag}>${content}</${tag}>`;
+}
+
+function tableHtml(table) {
+  const rows = Array.from(table.childNodes).filter((node) => node.localName === 'tr');
+  if (rows.length === 0) return '';
+  return `<table>${rows.map((row) => {
+    const cells = Array.from(row.childNodes).filter((node) => node.localName === 'tc');
+    return `<tr>${cells.map((cell) => {
+      const cellContent = Array.from(cell.childNodes)
+        .filter((node) => node.localName === 'p')
+        .map(paragraphHtml)
+        .join('');
+      return `<td>${cellContent || '&nbsp;'}</td>`;
+    }).join('')}</tr>`;
+  }).join('')}</table>`;
+}
+
+function docxXmlToHtml(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  const parserError = doc.querySelector('parsererror');
+  if (parserError) throw new Error('Document Word illisible');
+  const body = firstByLocalName(doc, 'body');
+  if (!body) throw new Error('Corps du document Word introuvable');
+  return Array.from(body.childNodes).map((node) => {
+    if (node.localName === 'p') return paragraphHtml(node);
+    if (node.localName === 'tbl') return tableHtml(node);
+    return '';
+  }).filter(Boolean).join('');
+}
+
+async function readDocxFile(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const entries = zipEntries(arrayBuffer);
+  const documentEntry = entries['word/document.xml'];
+  if (!documentEntry) throw new Error('Le fichier Word ne contient pas de document principal');
+  const xmlBytes = await unzipEntry(arrayBuffer, documentEntry);
+  return docxXmlToHtml(new TextDecoder('utf-8').decode(xmlBytes));
+}
+
+async function readTextFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+function importedHtmlFromText(text) {
+  if (/<(html|body|p|h1|h2|h3|table|div|span)\b/i.test(text)) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    doc.querySelectorAll('script, style, meta, link').forEach((node) => node.remove());
+    return doc.body?.innerHTML || '';
+  }
+  return htmlFromPlainText(text);
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -221,6 +385,7 @@ export default function DocumentsQualite() {
   const editorRef = useRef(null);
   const writerRef = useRef(null);
   const imageInputRef = useRef(null);
+  const wordInputRef = useRef(null);
   const approverOptions = useMemo(() => (
     authProfiles.filter((profile) => approverRoles.includes(profile.role) && profile.role !== user?.role)
   ), [user?.role]);
@@ -567,6 +732,38 @@ export default function DocumentsQualite() {
     reader.readAsDataURL(file);
   };
 
+  const importWordDocument = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    try {
+      let html = '';
+      if (extension === 'docx') {
+        html = await readDocxFile(file);
+      } else if (['doc', 'html', 'htm', 'txt'].includes(extension)) {
+        html = importedHtmlFromText(await readTextFile(file));
+      } else {
+        toast.error('Format non supporte. Importez un fichier .docx, .doc, .html ou .txt');
+        return;
+      }
+
+      if (!html.trim()) {
+        toast.error('Aucun contenu lisible trouve dans le fichier');
+        return;
+      }
+
+      if (writerRef.current) writerRef.current.innerHTML = html;
+      updateField('document_html', html);
+      updateField('document_text', stripHtml(html));
+      toast.success('Document importe dans la zone de redaction');
+    } catch (error) {
+      toast.error(`Import impossible: ${error.message || 'fichier Word illisible'}`);
+    } finally {
+      if (wordInputRef.current) wordInputRef.current.value = '';
+    }
+  };
+
   const updateProcedureWorkflow = async (record, nextStatus) => {
     const updated = {
       ...record,
@@ -750,7 +947,9 @@ export default function DocumentsQualite() {
           <button type="button" title="Centrer" onClick={() => runEditorCommand('justifyCenter')}>Centre</button>
           <button type="button" title="Aligner a droite" onClick={() => runEditorCommand('justifyRight')}>Droite</button>
           <button type="button" title="Inserer un lien" onClick={insertEditorLink}>Lien</button>
+          <button type="button" title="Importer un fichier Word" onClick={() => wordInputRef.current?.click()}>Importer Word</button>
           <button type="button" title="Inserer une image" onClick={() => imageInputRef.current?.click()}>Image</button>
+          <input ref={wordInputRef} type="file" accept=".docx,.doc,.html,.htm,.txt" onChange={importWordDocument} hidden />
           <input ref={imageInputRef} type="file" accept="image/*" onChange={insertEditorImage} hidden />
         </div>
         <div
