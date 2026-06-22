@@ -1182,8 +1182,21 @@ button {
   font-weight: 700;
 }
 
+.qualitySignatureImage {
+  display: block;
+  height: 42px;
+  max-width: 150px;
+  object-fit: contain;
+}
+
 .validationTable td {
   height: 38px;
+}
+
+.instructionTable th:first-child,
+.instructionTable td:first-child {
+  text-align: center;
+  width: 46px;
 }
 
 .recipientTable {
@@ -1676,6 +1689,135 @@ select option {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.signatureGrid {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.signatureControl {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.signatureControl > span {
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.signaturePreviewBox {
+  align-items: center;
+  background: #fff;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  display: flex;
+  height: 76px;
+  justify-content: center;
+  padding: 8px;
+}
+
+.signaturePreviewBox img {
+  max-height: 58px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.signaturePreviewBox em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.signatureModalOverlay {
+  z-index: 1200;
+}
+
+.signatureModal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  max-width: 780px;
+  padding: 18px;
+  width: min(92vw, 780px);
+}
+
+.signatureCanvas {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: crosshair;
+  display: block;
+  height: 260px;
+  margin-top: 16px;
+  touch-action: none;
+  width: 100%;
+}
+
+.instructionBuilder {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.instructionBuilderHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.instructionBuilderHeader strong {
+  color: var(--text);
+  display: block;
+  font-size: 14px;
+}
+
+.instructionBuilderHeader small {
+  color: var(--text3);
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.instructionRows {
+  display: grid;
+  gap: 10px;
+}
+
+.instructionRow {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 62px minmax(220px, 1.4fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+}
+
+.instructionActionField textarea {
+  min-height: 64px;
+}
+
+.emptyInstructionState {
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text3);
+  font-size: 13px;
+  padding: 14px;
 }
 
 .procedureMetaGrid .wide {
@@ -2529,6 +2671,7 @@ tbody tr:hover {
   .profileSettingsPanel,
   .procedureMetaGrid,
   .procedureValidationGrid,
+  .signatureGrid,
   .procedureAppendixGrid,
   .equipmentIdentityPanel,
   .equipmentDocumentsGrid,
@@ -2545,6 +2688,12 @@ tbody tr:hover {
   }
 
   .procedureSection {
+    grid-template-columns: 1fr;
+  }
+
+  .instructionBuilderHeader,
+  .instructionRow {
+    align-items: stretch;
     grid-template-columns: 1fr;
   }
 

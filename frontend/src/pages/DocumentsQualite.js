@@ -83,7 +83,8 @@ const procedureTemplateDefaults = () => ({
   approbateur_fonction: 'Directeur General',
   approbateur_date: today(),
   approbateur_visa: '',
-  destinataire: 'Tout le personnel du laboratoire'
+  destinataire: 'Tout le personnel du laboratoire',
+  instruction_steps: []
 });
 
 function emptyForm(status, type, records) {
@@ -251,9 +252,105 @@ function procedureTableCell(value) {
   return escapeHtml(value || '-');
 }
 
+function isSignatureValue(value) {
+  return String(value || '').startsWith('data:image/');
+}
+
+function procedureVisaCell(value) {
+  if (isSignatureValue(value)) {
+    return `<img class="qualitySignatureImage" src="${value}" alt="Signature numerique" />`;
+  }
+  return procedureTableCell(value);
+}
+
+function normalizeInstructionSteps(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function extractInstructionSteps(html, record = {}) {
+  const steps = [];
+  const pushStep = (text) => {
+    const clean = String(text || '')
+      .replace(/^\s*(\d+[\).\-\s]+|[-*]\s+)/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (clean.length < 8 || steps.some((item) => item.action.toLowerCase() === clean.toLowerCase())) return;
+    steps.push({
+      id: `step-${Date.now()}-${steps.length}`,
+      ordre: steps.length + 1,
+      action: clean,
+      responsable: record.responsable || record.redacteur_fonction || 'Responsable concerne',
+      preuve: 'Enregistrement, visa ou document associe'
+    });
+  };
+
+  if (typeof document !== 'undefined') {
+    const container = document.createElement('div');
+    container.innerHTML = html || '';
+    Array.from(container.querySelectorAll('li')).forEach((item) => pushStep(item.textContent));
+  }
+
+  if (steps.length === 0) {
+    stripHtml(html)
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => /^(\d+[\).\-\s]+|[-*]\s+)/.test(line))
+      .forEach(pushStep);
+  }
+
+  return steps.slice(0, 20);
+}
+
+function instructionSteps(record) {
+  return normalizeInstructionSteps(record.instruction_steps);
+}
+
+function instructionStepsHtml(record) {
+  const steps = instructionSteps(record);
+  if (steps.length === 0) return '';
+  return `
+    <section class="qualityProcedurePage">
+      ${procedureCartouche(record)}
+      <h2 class="qualityTocTitle">Instruction operationnelle associee</h2>
+      <table class="qualityProcedureTable instructionTable">
+        <thead>
+          <tr>
+            <th>N</th>
+            <th>Etape a executer</th>
+            <th>Responsable</th>
+            <th>Preuve attendue</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${steps.map((step, index) => `
+            <tr>
+              <td>${escapeHtml(step.ordre || index + 1)}</td>
+              <td>${escapeHtml(step.action)}</td>
+              <td>${escapeHtml(step.responsable || '-')}</td>
+              <td>${escapeHtml(step.preuve || '-')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${procedureFooter(`Instruction - ${steps.length} etape(s)`)}
+    </section>
+  `;
+}
+
 function procedureModelInnerHtml(record) {
   const headings = defaultProcedureHeadings(record);
-  const totalPages = Math.max(3, headings.length > 7 ? 4 : 3);
+  const steps = instructionSteps(record);
+  const totalPages = Math.max(3, headings.length > 7 ? 4 : 3) + (steps.length > 0 ? 1 : 0);
   return `
     <div class="qualityProcedureModel">
       <section class="qualityProcedurePage">
@@ -307,9 +404,9 @@ function procedureModelInnerHtml(record) {
             </tr>
             <tr>
               <th>Visa</th>
-              <td>${procedureTableCell(record.redacteur_visa)}</td>
-              <td>${procedureTableCell(record.verificateur_visa)}</td>
-              <td>${procedureTableCell(record.approbateur_visa)}</td>
+              <td>${procedureVisaCell(record.redacteur_visa)}</td>
+              <td>${procedureVisaCell(record.verificateur_visa)}</td>
+              <td>${procedureVisaCell(record.approbateur_visa)}</td>
             </tr>
           </tbody>
         </table>
@@ -334,6 +431,7 @@ function procedureModelInnerHtml(record) {
               <em>${index < 4 ? 3 : Math.min(totalPages, 4)}</em>
             </li>
           `).join('')}
+          ${steps.length > 0 ? '<li><span>Instruction operationnelle associee</span><em>4</em></li>' : ''}
         </ol>
         ${procedureFooter(`Page 2 sur ${totalPages}`)}
       </section>
@@ -349,6 +447,7 @@ function procedureModelInnerHtml(record) {
         ` : ''}
         ${procedureFooter(`Page 3 sur ${totalPages}`)}
       </section>
+      ${instructionStepsHtml(record)}
     </div>
   `;
 }
@@ -570,10 +669,13 @@ export default function DocumentsQualite() {
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState({});
   const [procedureApprovers, setProcedureApprovers] = useState({});
+  const [signatureTarget, setSignatureTarget] = useState(null);
+  const [isSigning, setIsSigning] = useState(false);
   const editorRef = useRef(null);
   const writerRef = useRef(null);
   const imageInputRef = useRef(null);
   const wordInputRef = useRef(null);
+  const signatureCanvasRef = useRef(null);
   const approverOptions = useMemo(() => (
     authProfiles.filter((profile) => approverRoles.includes(profile.role) && profile.role !== user?.role)
   ), [user?.role]);
@@ -692,6 +794,121 @@ export default function DocumentsQualite() {
     updateField('document_html', html);
   };
 
+  const clearSignaturePad = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const openSignaturePad = (field, label) => {
+    setSignatureTarget({ field, label });
+    window.requestAnimationFrame(clearSignaturePad);
+  };
+
+  const closeSignaturePad = () => {
+    setSignatureTarget(null);
+    setIsSigning(false);
+  };
+
+  const signaturePoint = (event) => {
+    const canvas = signatureCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height
+    };
+  };
+
+  const startSignature = (event) => {
+    event.preventDefault();
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    canvas.setPointerCapture?.(event.pointerId);
+    const context = canvas.getContext('2d');
+    const point = signaturePoint(event);
+    context.strokeStyle = '#0f172a';
+    context.lineWidth = 3;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+    setIsSigning(true);
+  };
+
+  const drawSignature = (event) => {
+    event.preventDefault();
+    if (!isSigning) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    const point = signaturePoint(event);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  };
+
+  const endSignature = () => {
+    setIsSigning(false);
+  };
+
+  const saveSignature = () => {
+    if (!signatureTarget?.field || !signatureCanvasRef.current) return;
+    updateField(signatureTarget.field, signatureCanvasRef.current.toDataURL('image/png'));
+    toast.success('Signature numerique ajoutee');
+    closeSignaturePad();
+  };
+
+  const generateInstructionSteps = () => {
+    const html = writerRef.current?.innerHTML || form.document_html || '';
+    const generated = extractInstructionSteps(html, form);
+    if (generated.length === 0) {
+      toast.error('Ajoutez une liste numerotee ou des puces dans la procedure pour generer les etapes.');
+      return;
+    }
+    updateField('instruction_steps', generated);
+    toast.success(`${generated.length} etape(s) creee(s) depuis la procedure`);
+  };
+
+  const updateInstructionStep = (index, field, value) => {
+    setForm((current) => {
+      const steps = normalizeInstructionSteps(current.instruction_steps);
+      const next = steps.map((step, stepIndex) => (
+        stepIndex === index ? { ...step, [field]: value } : step
+      ));
+      return { ...current, instruction_steps: next };
+    });
+  };
+
+  const addInstructionStep = () => {
+    setForm((current) => {
+      const steps = normalizeInstructionSteps(current.instruction_steps);
+      return {
+        ...current,
+        instruction_steps: [
+          ...steps,
+          {
+            id: `step-${Date.now()}`,
+            ordre: steps.length + 1,
+            action: '',
+            responsable: current.responsable || 'Responsable concerne',
+            preuve: ''
+          }
+        ]
+      };
+    });
+  };
+
+  const removeInstructionStep = (index) => {
+    setForm((current) => ({
+      ...current,
+      instruction_steps: normalizeInstructionSteps(current.instruction_steps)
+        .filter((_, stepIndex) => stepIndex !== index)
+        .map((step, stepIndex) => ({ ...step, ordre: stepIndex + 1 }))
+    }));
+  };
+
   const createDocumentNotification = async (record, approver) => {
     const notification = {
       id: `notif-doc-${record.id}-${Date.now()}`,
@@ -720,6 +937,11 @@ export default function DocumentsQualite() {
     const documentText = isProcedure ? stripHtml(currentHtml) : (form.document_text || '');
     const documentTitle = isProcedure ? (String(form.titre || '').trim() || firstDocumentLine(currentHtml, form.reference || 'Procedure qualite')) : form.titre;
     const approver = approverOptions.find((item) => item.role === form.approbateur_role);
+    const currentInstructionSteps = isProcedure
+      ? (normalizeInstructionSteps(form.instruction_steps).length > 0
+        ? normalizeInstructionSteps(form.instruction_steps)
+        : extractInstructionSteps(currentHtml, form))
+      : form.instruction_steps;
     if (submitForApproval && isProcedure && !approver) {
       toast.error('Choisissez un responsable habilite avant la soumission');
       return;
@@ -733,6 +955,7 @@ export default function DocumentsQualite() {
       contenu: isProcedure ? documentText : (form.contenu || ''),
       document_text: isProcedure ? documentText : form.document_text,
       document_html: isProcedure ? currentHtml : form.document_html,
+      instruction_steps: currentInstructionSteps,
       date_evolution: isProcedure ? (form.date_evolution || today()) : form.date_evolution,
       etat_evolution: isProcedure ? (form.etat_evolution || 'Creation') : form.etat_evolution,
       redacteur_modificateur: isProcedure ? (form.redacteur_modificateur || form.redige_par || user?.name || user?.label || '') : form.redacteur_modificateur,
@@ -834,6 +1057,8 @@ export default function DocumentsQualite() {
             .qualityProcedureTable { border-collapse: collapse; color: #111827; font-size: 12px; margin: 16px 0; width: 100%; }
             .qualityProcedureTable th, .qualityProcedureTable td { border: 1px solid #111827; min-height: 34px; padding: 9px 10px; text-align: left; vertical-align: top; }
             .qualityProcedureTable thead th, .qualityProcedureTable tbody th { background: #f8fafc; font-weight: 700; }
+            .qualitySignatureImage { display: block; height: 42px; max-width: 150px; object-fit: contain; }
+            .instructionTable th:first-child, .instructionTable td:first-child { text-align: center; width: 46px; }
             .validationTable td { height: 38px; }
             .recipientTable { margin-top: 22px; }
             .recipientTable th { width: 160px; }
@@ -1103,6 +1328,96 @@ export default function DocumentsQualite() {
     </div>
   );
 
+  const renderSignatureControl = (field, label) => (
+    <div className="signatureControl">
+      <span>{label}</span>
+      <div className="signaturePreviewBox">
+        {isSignatureValue(form[field]) ? (
+          <img src={form[field]} alt={`Signature ${label}`} />
+        ) : (
+          <em>Aucune signature</em>
+        )}
+      </div>
+      <div className="rowActions">
+        <button type="button" className="secondaryButton" onClick={() => openSignaturePad(field, label)}>Signer</button>
+        {form[field] && <button type="button" className="ghostButton" onClick={() => updateField(field, '')}>Effacer</button>}
+      </div>
+    </div>
+  );
+
+  const renderInstructionEditor = () => {
+    const steps = normalizeInstructionSteps(form.instruction_steps);
+    return (
+      <div className="instructionBuilder">
+        <div className="instructionBuilderHeader">
+          <div>
+            <strong>Instruction operationnelle etape par etape</strong>
+            <small>Le logiciel transforme la procedure en consignes executables: etape, responsable et preuve attendue.</small>
+          </div>
+          <div className="rowActions">
+            <button type="button" className="secondaryButton" onClick={generateInstructionSteps}>Generer depuis la redaction</button>
+            <button type="button" className="ghostButton" onClick={addInstructionStep}>+ Etape</button>
+          </div>
+        </div>
+        {steps.length > 0 ? (
+          <div className="instructionRows">
+            {steps.map((step, index) => (
+              <div className="instructionRow" key={step.id || index}>
+                <label>
+                  <span>N</span>
+                  <input value={step.ordre || index + 1} onChange={(event) => updateInstructionStep(index, 'ordre', event.target.value)} />
+                </label>
+                <label className="instructionActionField">
+                  <span>Etape a executer</span>
+                  <textarea rows="2" value={step.action || ''} onChange={(event) => updateInstructionStep(index, 'action', event.target.value)} />
+                </label>
+                <label>
+                  <span>Responsable</span>
+                  <input value={step.responsable || ''} onChange={(event) => updateInstructionStep(index, 'responsable', event.target.value)} />
+                </label>
+                <label>
+                  <span>Preuve attendue</span>
+                  <input value={step.preuve || ''} onChange={(event) => updateInstructionStep(index, 'preuve', event.target.value)} />
+                </label>
+                <button type="button" className="dangerButton" onClick={() => removeInstructionStep(index)}>Supprimer</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="emptyInstructionState">Aucune instruction generee. Utilisez une liste numerotee ou des puces dans la redaction, puis cliquez sur “Generer depuis la redaction”.</div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSignatureModal = () => signatureTarget && (
+    <div className="modalOverlay signatureModalOverlay">
+      <div className="signatureModal">
+        <div className="formHeader">
+          <div>
+            <strong>Signature numerique - {signatureTarget.label}</strong>
+            <small>Signez dans le cadre avec la souris ou le doigt, puis enregistrez.</small>
+          </div>
+          <button type="button" className="ghostButton" onClick={closeSignaturePad}>Fermer</button>
+        </div>
+        <canvas
+          ref={signatureCanvasRef}
+          width="720"
+          height="260"
+          className="signatureCanvas"
+          onPointerDown={startSignature}
+          onPointerMove={drawSignature}
+          onPointerUp={endSignature}
+          onPointerLeave={endSignature}
+        />
+        <div className="formActions">
+          <button type="button" className="ghostButton" onClick={clearSignaturePad}>Effacer</button>
+          <button type="button" className="primaryButton" onClick={saveSignature}>Enregistrer la signature</button>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderProcedureEditor = () => (
     <form className="editorPanel procedureEditorPanel" ref={editorRef} onSubmit={submit}>
       <div className="formHeader">
@@ -1187,6 +1502,11 @@ export default function DocumentsQualite() {
             <input type="date" value={form.approbateur_date || ''} onChange={(event) => updateField('approbateur_date', event.target.value)} />
           </label>
         </div>
+        <div className="signatureGrid">
+          {renderSignatureControl('redacteur_visa', 'Visa redacteur')}
+          {renderSignatureControl('verificateur_visa', 'Visa verificateur')}
+          {renderSignatureControl('approbateur_visa', 'Visa approbateur')}
+        </div>
       </details>
 
       <div className="procedureWritingSurface documentWritingSurface">
@@ -1221,6 +1541,9 @@ export default function DocumentsQualite() {
           data-placeholder="Redigez la procedure ici..."
         />
       </div>
+
+      {renderInstructionEditor()}
+      {renderSignatureModal()}
 
       <div className="formActions">
         <button type="submit" className="primaryButton">Enregistrer la procedure</button>
