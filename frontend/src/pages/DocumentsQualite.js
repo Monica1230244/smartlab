@@ -282,6 +282,7 @@ function extractInstructionSteps(html, record = {}) {
   const pushStep = (text) => {
     const clean = String(text || '')
       .replace(/^\s*(\d+[\).\-\s]+|[-*]\s+)/, '')
+      .replace(/^(etape|phase)\s*\d+\s*[:.\-]\s*/i, '')
       .replace(/\s+/g, ' ')
       .trim();
     if (clean.length < 8 || steps.some((item) => item.action.toLowerCase() === clean.toLowerCase())) return;
@@ -300,11 +301,35 @@ function extractInstructionSteps(html, record = {}) {
     Array.from(container.querySelectorAll('li')).forEach((item) => pushStep(item.textContent));
   }
 
+  const plainText = stripHtml(html);
+
   if (steps.length === 0) {
-    stripHtml(html)
+    plainText
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => /^(\d+[\).\-\s]+|[-*]\s+)/.test(line))
+      .forEach(pushStep);
+  }
+
+  if (steps.length === 0) {
+    const actionStarters = [
+      'accueillir', 'analyser', 'approuver', 'archiver', 'attribuer', 'calculer', 'classer',
+      'collecter', 'comparer', 'controler', 'corriger', 'creer', 'declarer', 'diffuser',
+      'documenter', 'emettre', 'enregistrer', 'envoyer', 'etablir', 'generer', 'identifier',
+      'informer', 'mesurer', 'notifier', 'planifier', 'prelever', 'preparer', 'recevoir',
+      'rediger', 'rejeter', 'remplir', 'signaler', 'signer', 'soumettre', 'transmettre',
+      'valider', 'verifier'
+    ];
+    plainText
+      .split(/(?<=[.!?])\s+|\n+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => {
+        const normalized = sentence
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase();
+        return actionStarters.some((verb) => normalized.startsWith(verb));
+      })
       .forEach(pushStep);
   }
 
@@ -312,6 +337,8 @@ function extractInstructionSteps(html, record = {}) {
 }
 
 function instructionSteps(record) {
+  const detected = extractInstructionSteps(procedureHtml(record), record);
+  if (detected.length > 0) return detected;
   return normalizeInstructionSteps(record.instruction_steps);
 }
 
@@ -860,55 +887,6 @@ export default function DocumentsQualite() {
     closeSignaturePad();
   };
 
-  const generateInstructionSteps = () => {
-    const html = writerRef.current?.innerHTML || form.document_html || '';
-    const generated = extractInstructionSteps(html, form);
-    if (generated.length === 0) {
-      toast.error('Ajoutez une liste numerotee ou des puces dans la procedure pour generer les etapes.');
-      return;
-    }
-    updateField('instruction_steps', generated);
-    toast.success(`${generated.length} etape(s) creee(s) depuis la procedure`);
-  };
-
-  const updateInstructionStep = (index, field, value) => {
-    setForm((current) => {
-      const steps = normalizeInstructionSteps(current.instruction_steps);
-      const next = steps.map((step, stepIndex) => (
-        stepIndex === index ? { ...step, [field]: value } : step
-      ));
-      return { ...current, instruction_steps: next };
-    });
-  };
-
-  const addInstructionStep = () => {
-    setForm((current) => {
-      const steps = normalizeInstructionSteps(current.instruction_steps);
-      return {
-        ...current,
-        instruction_steps: [
-          ...steps,
-          {
-            id: `step-${Date.now()}`,
-            ordre: steps.length + 1,
-            action: '',
-            responsable: current.responsable || 'Responsable concerne',
-            preuve: ''
-          }
-        ]
-      };
-    });
-  };
-
-  const removeInstructionStep = (index) => {
-    setForm((current) => ({
-      ...current,
-      instruction_steps: normalizeInstructionSteps(current.instruction_steps)
-        .filter((_, stepIndex) => stepIndex !== index)
-        .map((step, stepIndex) => ({ ...step, ordre: stepIndex + 1 }))
-    }));
-  };
-
   const createDocumentNotification = async (record, approver) => {
     const notification = {
       id: `notif-doc-${record.id}-${Date.now()}`,
@@ -937,11 +915,7 @@ export default function DocumentsQualite() {
     const documentText = isProcedure ? stripHtml(currentHtml) : (form.document_text || '');
     const documentTitle = isProcedure ? (String(form.titre || '').trim() || firstDocumentLine(currentHtml, form.reference || 'Procedure qualite')) : form.titre;
     const approver = approverOptions.find((item) => item.role === form.approbateur_role);
-    const currentInstructionSteps = isProcedure
-      ? (normalizeInstructionSteps(form.instruction_steps).length > 0
-        ? normalizeInstructionSteps(form.instruction_steps)
-        : extractInstructionSteps(currentHtml, form))
-      : form.instruction_steps;
+    const currentInstructionSteps = isProcedure ? extractInstructionSteps(currentHtml, form) : form.instruction_steps;
     if (submitForApproval && isProcedure && !approver) {
       toast.error('Choisissez un responsable habilite avant la soumission');
       return;
@@ -1345,51 +1319,6 @@ export default function DocumentsQualite() {
     </div>
   );
 
-  const renderInstructionEditor = () => {
-    const steps = normalizeInstructionSteps(form.instruction_steps);
-    return (
-      <div className="instructionBuilder">
-        <div className="instructionBuilderHeader">
-          <div>
-            <strong>Instruction operationnelle etape par etape</strong>
-            <small>Le logiciel transforme la procedure en consignes executables: etape, responsable et preuve attendue.</small>
-          </div>
-          <div className="rowActions">
-            <button type="button" className="secondaryButton" onClick={generateInstructionSteps}>Generer depuis la redaction</button>
-            <button type="button" className="ghostButton" onClick={addInstructionStep}>+ Etape</button>
-          </div>
-        </div>
-        {steps.length > 0 ? (
-          <div className="instructionRows">
-            {steps.map((step, index) => (
-              <div className="instructionRow" key={step.id || index}>
-                <label>
-                  <span>N</span>
-                  <input value={step.ordre || index + 1} onChange={(event) => updateInstructionStep(index, 'ordre', event.target.value)} />
-                </label>
-                <label className="instructionActionField">
-                  <span>Etape a executer</span>
-                  <textarea rows="2" value={step.action || ''} onChange={(event) => updateInstructionStep(index, 'action', event.target.value)} />
-                </label>
-                <label>
-                  <span>Responsable</span>
-                  <input value={step.responsable || ''} onChange={(event) => updateInstructionStep(index, 'responsable', event.target.value)} />
-                </label>
-                <label>
-                  <span>Preuve attendue</span>
-                  <input value={step.preuve || ''} onChange={(event) => updateInstructionStep(index, 'preuve', event.target.value)} />
-                </label>
-                <button type="button" className="dangerButton" onClick={() => removeInstructionStep(index)}>Supprimer</button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="emptyInstructionState">Aucune instruction generee. Utilisez une liste numerotee ou des puces dans la redaction, puis cliquez sur “Generer depuis la redaction”.</div>
-        )}
-      </div>
-    );
-  };
-
   const renderSignatureModal = () => signatureTarget && (
     <div className="modalOverlay signatureModalOverlay">
       <div className="signatureModal">
@@ -1542,7 +1471,10 @@ export default function DocumentsQualite() {
         />
       </div>
 
-      {renderInstructionEditor()}
+      <div className="procedureAutoInstructionNotice">
+        Le logiciel lit automatiquement la procedure enregistree et en deduit les instructions operationnelles a partir des listes, des numerotations et des phrases d action.
+      </div>
+
       {renderSignatureModal()}
 
       <div className="formActions">

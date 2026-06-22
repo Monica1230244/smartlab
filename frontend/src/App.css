@@ -1820,6 +1820,16 @@ select option {
   padding: 14px;
 }
 
+.procedureAutoInstructionNotice {
+  background: rgba(59, 158, 255, 0.1);
+  border: 1px solid rgba(59, 158, 255, 0.22);
+  border-radius: 10px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 12px 14px;
+}
+
 .procedureMetaGrid .wide {
   grid-column: span 2;
 }
