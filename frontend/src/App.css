@@ -615,9 +615,192 @@ html[data-theme="light"] .essaisInfoCard {
   font-size: 12px;
 }
 
+.resourceBoard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.resourceBoard.withDetail {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.resourceDetailPanel {
+  position: sticky;
+  top: 78px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(11, 15, 26, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.resourceDetailPanel .detailList {
+  margin-top: 14px;
+}
+
+.iconOnlyButton {
+  width: 31px;
+  min-width: 31px;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+html[data-theme="light"] .resourceDetailPanel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
+@media (max-width: 1200px) {
+  .resourceBoard.withDetail {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceDetailPanel {
+    position: static;
+  }
+}
+
 html[data-theme="light"] .pageStack .statCard,
 html[data-theme="light"] .pageStack .tablePanel {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
+.dashboardDesignGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr) 310px;
+  gap: 14px;
+}
+
+.dashboardBottomGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 14px;
+}
+
+.dashboardChartPanel,
+.dashboardStatusPanel,
+.dashboardSidePanel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 26, 0.96));
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.panelTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panelTitleRow span,
+.panelTitleRow a {
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.dashboardBars {
+  display: grid;
+  gap: 13px;
+}
+
+.dashboardBarRow {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 44px;
+  gap: 10px;
+  align-items: center;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.dashboardBarRow div {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(59, 158, 255, 0.12);
+  overflow: hidden;
+}
+
+.dashboardBarRow i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.dashboardBarRow strong {
+  color: var(--text);
+  text-align: right;
+}
+
+.dashboardAlert,
+.recentActivityItem {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.08);
+}
+
+.dashboardAlert:last-child,
+.recentActivityItem:last-child {
+  border-bottom: 0;
+}
+
+.dashboardAlert strong,
+.recentActivityItem strong {
+  font-size: 13px;
+}
+
+.dashboardAlert span,
+.recentActivityItem span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.dashboardAlert.red strong {
+  color: var(--accent4);
+}
+
+.dashboardAlert.amber strong {
+  color: var(--accent3);
+}
+
+.quickActionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quickActionGrid a {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: var(--surface2);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+html[data-theme="light"] .dashboardChartPanel,
+html[data-theme="light"] .dashboardStatusPanel,
+html[data-theme="light"] .dashboardSidePanel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
+@media (max-width: 1240px) {
+  .dashboardDesignGrid,
+  .dashboardBottomGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 html[data-theme="light"] {

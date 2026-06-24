@@ -398,6 +398,7 @@ function ResourcePage({
   const [saving, setSaving] = useState(false);
   const [dynamicOptions, setDynamicOptions] = useState({});
   const [activeRole, setActiveRole] = useState(currentRole());
+  const [selectedId, setSelectedId] = useState('');
 
   const refresh = async () => {
     setLoading(true);
@@ -467,6 +468,7 @@ function ResourcePage({
   const renderedSummaryCards = useMemo(() => (
     typeof summaryCards === 'function' ? summaryCards(records) : summaryCards
   ), [records, summaryCards]);
+  const selectedRecord = records.find((record) => record.id === selectedId) || null;
 
   const openCreate = () => {
     setEditing(null);
@@ -679,6 +681,7 @@ function ResourcePage({
     const label = record.numero || record.code || record.raison_sociale || record.reference || 'cet element';
     if (!window.confirm(`Supprimer ${label} ?`)) return;
     await deleteRecord(resource, record.id);
+    if (selectedId === record.id) setSelectedId('');
     setRecords(await listRecords(resource));
     toast.success('Suppression effectuee');
   };
@@ -962,56 +965,100 @@ function ResourcePage({
 
       {renderQuoteValidationBoard()}
 
-      <div className="tablePanel">
-        <div className="tableTools">
-          <strong>{loading ? 'Chargement...' : `${records.length} element(s)`}</strong>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher..." />
-        </div>
-        <div className="tableScroll">
-          <table>
-            <thead>
-              <tr>
-                {columns.map((column) => <th key={column.name}>{column.label}</th>)}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && filteredRecords.map((record) => (
-                <tr key={record.id}>
-                  {columns.map((column) => (
-                    <td key={column.name}>
-                      {column.badge ? (
-                        <span className={`statusBadge ${statusTone(record[column.name])}`}>
-                          {formatValue(record[column.name], column)}
-                        </span>
-                      ) : (
-                        formatValue(record[column.name], column)
-                      )}
-                    </td>
-                  ))}
-                  <td>
-                    <div className="rowActions">
-                      {canEditRecord(record) && (
-                        <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
-                      )}
-                      {resource === 'devis' && (
-                        renderQuoteWorkflowActions(record)
-                      )}
-                      {canDeleteRecord(record) && (
-                        <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filteredRecords.length === 0 && (
+      <div className={`resourceBoard ${selectedRecord ? 'withDetail' : ''}`}>
+        <div className="tablePanel">
+          <div className="tableTools">
+            <strong>{loading ? 'Chargement...' : `${records.length} element(s)`}</strong>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher..." />
+          </div>
+          <div className="tableScroll">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={columns.length + 1} className="emptyCell">Aucun resultat</td>
+                  {columns.map((column) => <th key={column.name}>{column.label}</th>)}
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {!loading && filteredRecords.map((record) => (
+                  <tr key={record.id} className={selectedId === record.id ? 'selectedRow' : ''}>
+                    {columns.map((column) => (
+                      <td key={column.name}>
+                        {column.badge ? (
+                          <span className={`statusBadge ${statusTone(record[column.name])}`}>
+                            {formatValue(record[column.name], column)}
+                          </span>
+                        ) : (
+                          formatValue(record[column.name], column)
+                        )}
+                      </td>
+                    ))}
+                    <td>
+                      <div className="rowActions">
+                        <button type="button" className="ghostButton iconOnlyButton" title="Voir" onClick={() => setSelectedId(record.id)}>○</button>
+                        {canEditRecord(record) && (
+                          <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
+                        )}
+                        {resource === 'devis' && (
+                          renderQuoteWorkflowActions(record)
+                        )}
+                        {canDeleteRecord(record) && (
+                          <button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!loading && filteredRecords.length === 0 && (
+                  <tr>
+                    <td colSpan={columns.length + 1} className="emptyCell">Aucun resultat</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {selectedRecord && (
+          <aside className="resourceDetailPanel">
+            <div className="detailHeader">
+              <div>
+                <h3>{selectedRecord.numero || selectedRecord.reference || selectedRecord.code || selectedRecord.raison_sociale || title}</h3>
+                {(selectedRecord.statut || selectedRecord.status) && (
+                  <span className={`statusBadge ${statusTone(selectedRecord.statut || selectedRecord.status)}`}>
+                    {selectedRecord.statut || selectedRecord.status}
+                  </span>
+                )}
+              </div>
+              <button type="button" className="modalClose" onClick={() => setSelectedId('')}>x</button>
+            </div>
+            <div className="detailTabs">
+              <span className="active">Details</span>
+              <span>Documents</span>
+              <span>Historique</span>
+            </div>
+            <dl className="detailList">
+              {fields.filter((field) => !field.hidden).map((field) => (
+                <React.Fragment key={field.name}>
+                  <dt>{field.label}</dt>
+                  <dd>{formatValue(selectedRecord[field.name], field)}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
+            <div className="detailActionsGrid">
+              {canEditRecord(selectedRecord) && (
+                <button type="button" className="ghostButton" onClick={() => openEdit(selectedRecord)}>Modifier</button>
+              )}
+              <button type="button" className="ghostButton" onClick={generateListPdf}>Imprimer liste</button>
+              {resource === 'devis' && (
+                <button type="button" className="ghostButton" onClick={() => generatePdf(selectedRecord)}>PDF devis</button>
+              )}
+              {canDeleteRecord(selectedRecord) && (
+                <button type="button" className="dangerButton" onClick={() => remove(selectedRecord)}>Supprimer</button>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
 
       {modalOpen && (

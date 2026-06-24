@@ -381,9 +381,67 @@ function Dashboard() {
   }, []);
 
   const dashboard = useMemo(() => buildDashboard(role, data), [role, data]);
+  const statusDistribution = useMemo(() => {
+    const essais = data.essais || [];
+    const statuses = essais.reduce((acc, item) => {
+      const key = item.statut || 'non_renseigne';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(statuses).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [data.essais]);
+  const recentActivity = useMemo(() => {
+    const toActivity = (items, type, labelField, path) => items.map((item) => ({
+      id: `${type}-${item.id}`,
+      type,
+      title: item[labelField] || item.numero || item.reference || item.raison_sociale || type,
+      date: item.date || item.created_at || item.updated_at || '',
+      path
+    }));
+    return [
+      ...toActivity(data.devis || [], 'Devis', 'numero', '/devis'),
+      ...toActivity(data.commandes || [], 'Commande', 'numero', '/commandes'),
+      ...toActivity(data.essais || [], "Objet d'essai", 'numero', '/essais'),
+      ...toActivity(data.nonConformites || [], 'Non-conformite', 'reference', '/non-conformites'),
+      ...toActivity(data.reclamations || [], 'Reclamation', 'reference', '/reclamations')
+    ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 6);
+  }, [data]);
+  const dashboardAlerts = useMemo(() => {
+    const openNc = (data.nonConformites || []).filter((item) => item.statut !== 'cloturee');
+    const openReclamations = (data.reclamations || []).filter((item) => item.statut !== 'cloturee');
+    const lateOrders = (data.commandes || []).filter((item) => item.delai_livraison && item.delai_livraison < new Date().toISOString().slice(0, 10));
+    return [
+      ...openNc.map((item) => ({ label: item.reference || 'Non-conformite', detail: item.description || item.origine || 'A traiter', to: '/non-conformites', tone: 'red' })),
+      ...openReclamations.map((item) => ({ label: item.reference || 'Reclamation', detail: item.objet || item.description || 'A traiter', to: '/reclamations', tone: 'amber' })),
+      ...lateOrders.map((item) => ({ label: item.numero || 'Commande', detail: 'Delai depasse', to: '/commandes', tone: 'red' }))
+    ].slice(0, 5);
+  }, [data]);
+  const quickLinks = [
+    { label: 'Nouvel objet', to: '/essais' },
+    { label: 'Nouveau rapport', to: '/rapports' },
+    { label: 'Nouvelle NC', to: '/non-conformites' },
+    { label: 'Nouveau devis', to: '/devis' }
+  ];
+  const activityBars = useMemo(() => {
+    const values = [
+      (data.devis || []).length,
+      (data.essais || []).length,
+      (data.rapports || []).length,
+      (data.reclamations || []).length,
+      (data.commandes || []).length
+    ];
+    const max = Math.max(...values, 1);
+    return [
+      ['Devis', values[0]],
+      ['Objets', values[1]],
+      ['Rapports', values[2]],
+      ['Reclam.', values[3]],
+      ['Cmdes', values[4]]
+    ].map(([label, value]) => ({ label, value, width: Math.max(8, Math.round((value / max) * 100)) }));
+  }, [data]);
 
   return (
-    <div className="pageStack">
+    <div className="pageStack dashboardDesignPage">
       <div className="welcomeBand">
         <div>
           <p className="eyebrow">{dashboard.eyebrow}</p>
@@ -396,9 +454,75 @@ function Dashboard() {
 
       <StatCards cards={dashboard.cards} />
 
+      <div className="dashboardDesignGrid">
+        <section className="dashboardChartPanel">
+          <div className="panelTitleRow">
+            <strong>Activite du laboratoire</strong>
+            <span>Données reelles</span>
+          </div>
+          <div className="dashboardBars">
+            {activityBars.map((bar) => (
+              <div className="dashboardBarRow" key={bar.label}>
+                <span>{bar.label}</span>
+                <div><i style={{ width: `${bar.width}%` }} /></div>
+                <strong>{bar.value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="dashboardStatusPanel">
+          <div className="panelTitleRow">
+            <strong>Repartition des objets par statut</strong>
+            <span>{(data.essais || []).length} total</span>
+          </div>
+          {statusDistribution.length > 0 ? statusDistribution.map(([status, count]) => (
+            <div className="infoRow" key={status}>
+              <span>{status}</span>
+              <strong>{count}</strong>
+            </div>
+          )) : <div className="notificationEmpty">Aucun objet d'essai</div>}
+        </section>
+        <section className="dashboardSidePanel">
+          <div className="panelTitleRow">
+            <strong>Alertes & notifications</strong>
+            <Link to="/non-conformites">Voir tout</Link>
+          </div>
+          {dashboardAlerts.length > 0 ? dashboardAlerts.map((alert) => (
+            <Link className={`dashboardAlert ${alert.tone}`} to={alert.to} key={`${alert.label}-${alert.detail}`}>
+              <strong>{alert.label}</strong>
+              <span>{alert.detail}</span>
+            </Link>
+          )) : <div className="notificationEmpty">Aucune alerte critique</div>}
+        </section>
+      </div>
+
       {dashboard.tables.map((table) => (
         <SimpleTable key={table.title} {...table} />
       ))}
+
+      <div className="dashboardBottomGrid">
+        <section className="dashboardSidePanel">
+          <div className="panelTitleRow">
+            <strong>Activite recente</strong>
+            <span>{recentActivity.length}</span>
+          </div>
+          {recentActivity.length > 0 ? recentActivity.map((item) => (
+            <Link className="recentActivityItem" to={item.path} key={item.id}>
+              <strong>{item.title}</strong>
+              <span>{item.type}{item.date ? ` - ${item.date}` : ''}</span>
+            </Link>
+          )) : <div className="notificationEmpty">Aucune activite recente</div>}
+        </section>
+        <section className="dashboardSidePanel">
+          <div className="panelTitleRow">
+            <strong>Acces rapides</strong>
+            <span>{roleNames[role] || roleNames.default}</span>
+          </div>
+          <div className="quickActionGrid">
+            {quickLinks.map((link) => <Link to={link.to} key={link.to}>{link.label}</Link>)}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
