@@ -25,6 +25,19 @@ const columns = [
 ];
 
 export default function NonConformites() {
+  const summaryCards = (records) => {
+    const opened = records.filter((item) => item.statut === 'ouverte').length;
+    const processing = records.filter((item) => item.statut === 'en_traitement').length;
+    const closed = records.filter((item) => item.statut === 'cloturee').length;
+
+    return [
+      { label: 'NC totales', value: records.length, tone: 'blue' },
+      { label: 'Ouvertes', value: opened, tone: 'red' },
+      { label: 'En traitement', value: processing, tone: 'amber' },
+      { label: 'Cloturees', value: closed, tone: 'green' }
+    ];
+  };
+
   return (
     <ResourcePage
       title="Gestion des non-conformités"
@@ -33,6 +46,7 @@ export default function NonConformites() {
       fields={fields}
       columns={columns}
       primaryLabel="Nouvelle non-conformite"
+      summaryCards={summaryCards}
     />
   );
 }

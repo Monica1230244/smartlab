@@ -640,6 +640,105 @@ html[data-theme="light"] .essaisInfoCard {
   margin-top: 14px;
 }
 
+.resourceTabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 12px 0;
+  overflow-x: auto;
+}
+
+.resourceTabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text2);
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.resourceTabs button.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.resourceTabs span {
+  color: var(--text3);
+  margin-left: 4px;
+}
+
+.resourceInsightsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.resourceInsightCard {
+  min-height: 180px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 26, 0.96));
+  box-shadow: var(--shadow);
+}
+
+.resourceMiniRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.08);
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.resourceMiniRow:last-child {
+  border-bottom: 0;
+}
+
+.resourceMiniRow strong {
+  color: var(--text);
+}
+
+.resourceProgressRow {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.resourceProgressRow div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.resourceProgressRow i {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.resourceTotalBox {
+  min-height: 120px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.resourceTotalBox small,
+.resourceTotalBox span {
+  color: var(--text3);
+}
+
+.resourceTotalBox strong {
+  font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 28px;
+}
+
 .iconOnlyButton {
   width: 31px;
   min-width: 31px;
@@ -652,6 +751,10 @@ html[data-theme="light"] .resourceDetailPanel {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
 }
 
+html[data-theme="light"] .resourceInsightCard {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
 @media (max-width: 1200px) {
   .resourceBoard.withDetail {
     grid-template-columns: 1fr;
@@ -659,6 +762,10 @@ html[data-theme="light"] .resourceDetailPanel {
 
   .resourceDetailPanel {
     position: static;
+  }
+
+  .resourceInsightsGrid {
+    grid-template-columns: 1fr;
   }
 }
 

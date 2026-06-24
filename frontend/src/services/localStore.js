@@ -58,6 +58,14 @@ const seedData = {
   reclamations: [
     { id: 'rec-1', reference: 'REC-2026-001', client_nom: 'AGETUR Benin', canal: 'email', objet: 'Demande de verification rapport', description: 'Le client demande une verification des valeurs reprises dans le rapport transmis.', responsable: 'Responsable Technique', action_prevue: 'Revue du dossier et reponse client documentee.', date_reception: today, echeance: today, statut: 'en_traitement' }
   ],
+  achatsApprovisionnement: [
+    { id: 'ach-1', reference: 'ACH-2026-001', fournisseur: 'Fournitures Labo Benin', famille: 'Consommables', objet: 'Achat sacs echantillons et etiquettes', montant_ht: 185000, date_demande: today, demandeur: 'Receptionniste', responsable: 'Responsable Labo', priorite: 'normale', statut: 'en_attente' },
+    { id: 'ach-2', reference: 'ACH-2026-002', fournisseur: 'MetroLab Services', famille: 'Maintenance', objet: 'Intervention balance de precision', montant_ht: 320000, date_demande: today, demandeur: 'Responsable Metrologie', responsable: 'Responsable Technique', priorite: 'urgente', statut: 'valide' }
+  ],
+  satisfactionClients: [
+    { id: 'sat-1', reference: 'SAT-2026-001', client_nom: 'AGETUR Benin', projet: 'Route Nationale 1', note_globale: 4, delai: 4, qualite_rapport: 5, communication: 4, commentaire: 'Rapport clair, delai respecte.', date_reponse: today, responsable: 'Responsable des offres', statut: 'traite' },
+    { id: 'sat-2', reference: 'SAT-2026-002', client_nom: 'Sogea BTP Benin', projet: 'Pont de Cotonou', note_globale: 3, delai: 3, qualite_rapport: 4, communication: 3, commentaire: 'Prevoir une meilleure information sur les delais.', date_reponse: today, responsable: 'Responsable Technique', statut: 'a_suivre' }
+  ],
   notifications: [],
   activityLogs: [],
   personnel: [
@@ -199,7 +207,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

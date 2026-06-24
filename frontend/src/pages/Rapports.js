@@ -25,6 +25,21 @@ const columns = [
 ];
 
 export default function Rapports() {
+  const summaryCards = (records) => {
+    const drafts = records.filter((item) => item.statut === 'brouillon').length;
+    const control = records.filter((item) => item.statut === 'controle').length;
+    const valid = records.filter((item) => item.statut === 'valide').length;
+    const sent = records.filter((item) => item.statut === 'envoye').length;
+
+    return [
+      { label: 'Rapports totaux', value: records.length, tone: 'blue' },
+      { label: 'Brouillons', value: drafts, tone: 'amber' },
+      { label: 'En controle', value: control, tone: 'blue' },
+      { label: 'Valides', value: valid, tone: 'green' },
+      { label: 'Envoyes', value: sent, tone: 'green' }
+    ];
+  };
+
   return (
     <ResourcePage
       title="Rapports"
@@ -33,6 +48,7 @@ export default function Rapports() {
       fields={fields}
       columns={columns}
       primaryLabel="Nouveau rapport"
+      summaryCards={summaryCards}
     />
   );
 }

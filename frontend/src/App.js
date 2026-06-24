@@ -22,6 +22,8 @@ import Parametres from './pages/Parametres';
 import Projets from './pages/Projets';
 import CatalogueEssais from './pages/CatalogueEssais';
 import ResultatsEssais from './pages/ResultatsEssais';
+import AchatsApprovisionnement from './pages/AchatsApprovisionnement';
+import SatisfactionClients from './pages/SatisfactionClients';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -54,6 +56,8 @@ function App() {
           <Route path="/documents-qualite" element={<DocumentsQualite />} />
           <Route path="/catalogue-essais" element={<CatalogueEssais />} />
           <Route path="/resultats-essais" element={<ResultatsEssais />} />
+          <Route path="/achats-approvisionnement" element={<AchatsApprovisionnement />} />
+          <Route path="/satisfaction-clients" element={<SatisfactionClients />} />
           <Route path="/projets" element={<Projets />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />

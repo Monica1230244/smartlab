@@ -14,6 +14,7 @@ function emptyForm(fields) {
 
 const AUTO_NUMBERING = {
   audits: { field: 'reference', prefix: 'AUD', withYear: true, pad: 3 },
+  achatsApprovisionnement: { field: 'reference', prefix: 'ACH', withYear: true, pad: 3 },
   clients: { field: 'code', prefix: 'CLI', withYear: false, pad: 3 },
   commandes: { field: 'numero', prefix: 'CMD', withYear: true, pad: 3 },
   catalogueEssais: { field: 'code', prefix: 'CAT', withYear: false, pad: 3 },
@@ -24,7 +25,8 @@ const AUTO_NUMBERING = {
   projets: { field: 'reference', prefix: 'PRJ', withYear: true, pad: 3 },
   reclamations: { field: 'reference', prefix: 'REC', withYear: true, pad: 3 },
   rapports: { field: 'numero', prefix: 'RAP', withYear: true, pad: 3 },
-  resultatsEssais: { field: 'numero', prefix: 'RES', withYear: true, pad: 3 }
+  resultatsEssais: { field: 'numero', prefix: 'RES', withYear: true, pad: 3 },
+  satisfactionClients: { field: 'reference', prefix: 'SAT', withYear: true, pad: 3 }
 };
 
 function nextAutomaticNumber(resource, records) {
@@ -146,6 +148,33 @@ function lineItemsTotal(items) {
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('fr-FR');
+}
+
+function compactMoney(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M FCFA`;
+  return `${amount.toLocaleString('fr-FR')} FCFA`;
+}
+
+function normalizedStatus(value) {
+  return String(value || 'non_renseigne').toLowerCase();
+}
+
+function labelFromOption(options, value) {
+  const option = (options || []).find((item) => item.value === value);
+  return option?.label || value || 'Non renseigne';
+}
+
+function countByField(records, fieldName) {
+  return records.reduce((acc, record) => {
+    const key = record[fieldName] || 'Non renseigne';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function topEntries(map, limit = 5) {
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, limit);
 }
 
 function buildValidationCode(numero) {
@@ -399,6 +428,7 @@ function ResourcePage({
   const [dynamicOptions, setDynamicOptions] = useState({});
   const [activeRole, setActiveRole] = useState(currentRole());
   const [selectedId, setSelectedId] = useState('');
+  const [activeStatus, setActiveStatus] = useState('all');
 
   const refresh = async () => {
     setLoading(true);
@@ -457,6 +487,19 @@ function ResourcePage({
     };
   }, [fields]);
 
+  const statusField = fields.find((field) => field.name === 'statut') || fields.find((field) => field.name === 'status');
+  const statusTabs = useMemo(() => {
+    if (!statusField) return [];
+    const counts = records.reduce((acc, record) => {
+      const key = normalizedStatus(record[statusField.name]);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts)
+      .map(([value, count]) => ({ value, count, label: labelFromOption(statusField.options, value) }))
+      .sort((a, b) => b.count - a.count);
+  }, [records, statusField]);
+
   const filteredRecords = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const visibleRecords = needle
@@ -465,10 +508,69 @@ function ResourcePage({
     return [...visibleRecords].sort(compareNaturalRecords);
   }, [records, query]);
 
+  const visibleRecords = useMemo(() => {
+    if (!statusField || activeStatus === 'all') return filteredRecords;
+    return filteredRecords.filter((record) => normalizedStatus(record[statusField.name]) === activeStatus);
+  }, [activeStatus, filteredRecords, statusField]);
+
   const renderedSummaryCards = useMemo(() => (
     typeof summaryCards === 'function' ? summaryCards(records) : summaryCards
   ), [records, summaryCards]);
   const selectedRecord = records.find((record) => record.id === selectedId) || null;
+
+  const renderDesignInsights = () => {
+    if (records.length === 0) return null;
+    const statusCounts = statusField ? topEntries(countByField(records, statusField.name), 5) : [];
+    const clientCounts = topEntries(countByField(records, 'client_nom'), 5).filter(([label]) => label !== 'Non renseigne');
+    const responsibleCounts = topEntries(countByField(records, 'responsable'), 5).filter(([label]) => label !== 'Non renseigne');
+    const familyCounts = topEntries(countByField(records, 'famille'), 5).filter(([label]) => label !== 'Non renseigne');
+    const middleRows = clientCounts.length > 0 ? clientCounts : responsibleCounts.length > 0 ? responsibleCounts : familyCounts;
+    const middleTitle = clientCounts.length > 0 ? 'Top clients' : responsibleCounts.length > 0 ? 'Par responsable' : familyCounts.length > 0 ? 'Par domaine' : 'Synthese';
+    const totalAmount = records.reduce((sum, record) => sum + Number(record.montant_ht || record.budget || record.prix_unitaire || 0), 0);
+
+    return (
+      <div className="resourceInsightsGrid">
+        <section className="resourceInsightCard">
+          <div className="panelTitleRow">
+            <strong>{statusField ? 'Repartition par statut' : 'Repartition'}</strong>
+            <span>{records.length} total</span>
+          </div>
+          {(statusCounts.length > 0 ? statusCounts : [['Total', records.length]]).map(([label, count]) => (
+            <div className="resourceMiniRow" key={label}>
+              <span>{labelFromOption(statusField?.options, label)}</span>
+              <strong>{count}</strong>
+            </div>
+          ))}
+        </section>
+        <section className="resourceInsightCard">
+          <div className="panelTitleRow">
+            <strong>{middleTitle}</strong>
+            <span>{middleRows.length}</span>
+          </div>
+          {(middleRows.length > 0 ? middleRows : [['Aucune donnee', 0]]).map(([label, count]) => (
+            <div className="resourceProgressRow" key={label}>
+              <div>
+                <span>{label}</span>
+                <strong>{count}</strong>
+              </div>
+              <i style={{ width: `${Math.max(8, Math.round((count / Math.max(records.length, 1)) * 100))}%` }} />
+            </div>
+          ))}
+        </section>
+        <section className="resourceInsightCard">
+          <div className="panelTitleRow">
+            <strong>Indicateur global</strong>
+            <span>Donnees reelles</span>
+          </div>
+          <div className="resourceTotalBox">
+            <small>Total enregistre</small>
+            <strong>{totalAmount > 0 ? compactMoney(totalAmount) : records.length}</strong>
+            <span>{totalAmount > 0 ? 'Somme des montants disponibles' : 'Nombre de dossiers actifs'}</span>
+          </div>
+        </section>
+      </div>
+    );
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -967,8 +1069,20 @@ function ResourcePage({
 
       <div className={`resourceBoard ${selectedRecord ? 'withDetail' : ''}`}>
         <div className="tablePanel">
+          {statusTabs.length > 0 && (
+            <div className="resourceTabs">
+              <button type="button" className={activeStatus === 'all' ? 'active' : ''} onClick={() => setActiveStatus('all')}>
+                Tous <span>{records.length}</span>
+              </button>
+              {statusTabs.map((tab) => (
+                <button type="button" key={tab.value} className={activeStatus === tab.value ? 'active' : ''} onClick={() => setActiveStatus(tab.value)}>
+                  {tab.label} <span>{tab.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="tableTools">
-            <strong>{loading ? 'Chargement...' : `${records.length} element(s)`}</strong>
+            <strong>{loading ? 'Chargement...' : `${visibleRecords.length} element(s)`}</strong>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher..." />
           </div>
           <div className="tableScroll">
@@ -980,7 +1094,7 @@ function ResourcePage({
                 </tr>
               </thead>
               <tbody>
-                {!loading && filteredRecords.map((record) => (
+                {!loading && visibleRecords.map((record) => (
                   <tr key={record.id} className={selectedId === record.id ? 'selectedRow' : ''}>
                     {columns.map((column) => (
                       <td key={column.name}>
@@ -1009,7 +1123,7 @@ function ResourcePage({
                     </td>
                   </tr>
                 ))}
-                {!loading && filteredRecords.length === 0 && (
+                {!loading && visibleRecords.length === 0 && (
                   <tr>
                     <td colSpan={columns.length + 1} className="emptyCell">Aucun resultat</td>
                   </tr>
@@ -1060,6 +1174,8 @@ function ResourcePage({
           </aside>
         )}
       </div>
+
+      {renderDesignInsights()}
 
       {modalOpen && (
         <div className="modalOverlay" onMouseDown={(event) => event.target === event.currentTarget && closeModal()}>

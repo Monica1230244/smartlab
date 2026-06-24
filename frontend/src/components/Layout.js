@@ -16,19 +16,21 @@ const navItems = [
   { to: '/non-conformites', label: 'Gestion des non-conformités', icon: 'NC' },
   { to: '/reclamations', label: 'Gestion des réclamations', icon: 'GR' },
   { to: '/audits', label: 'Gestion des audits qualité', icon: 'AQ' },
+  { to: '/satisfaction-clients', label: 'Satisfaction client', icon: 'SC' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
   { to: '/devis', label: 'Devis', icon: 'DV' },
   { to: '/commandes', label: 'Commandes', icon: 'CM' },
+  { to: '/achats-approvisionnement', label: 'Achats et approvisionnement', icon: 'AA' },
   { to: '/projets', label: 'Projets', icon: 'PJ' },
   { to: '/parametres', label: 'Parametrage', icon: 'PR' }
 ];
 
 const menuByRole = {
-  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/processus', '/parametres'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
+  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres'],
-  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/achats-approvisionnement', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres']
 };
 
 const titles = {
@@ -38,6 +40,7 @@ const titles = {
   '/devis': 'Devis',
   '/commandes': 'Commandes',
   '/projets': 'Projets',
+  '/achats-approvisionnement': 'Achats et approvisionnement',
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
@@ -47,6 +50,7 @@ const titles = {
   '/non-conformites': 'Gestion des non-conformités',
   '/reclamations': 'Gestion des réclamations',
   '/personnel': 'Gestion du personnel',
+  '/satisfaction-clients': 'Satisfaction client',
   '/processus': 'Processus ISO 17025',
   '/parametres': 'Parametrage'
 };
@@ -139,8 +143,8 @@ function Layout({ publicMode = false }) {
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
   const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/documents-qualite', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits'].includes(item.to));
-  const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/projets', '/parametres'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/documents-qualite', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits', '/satisfaction-clients'].includes(item.to));
+  const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/achats-approvisionnement', '/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

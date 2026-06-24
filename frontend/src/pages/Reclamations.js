@@ -37,6 +37,21 @@ const columns = [
 ];
 
 export default function Reclamations() {
+  const summaryCards = (records) => {
+    const opened = records.filter((item) => item.statut === 'ouverte').length;
+    const processing = records.filter((item) => item.statut === 'en_traitement').length;
+    const closed = records.filter((item) => item.statut === 'cloturee').length;
+    const whatsapp = records.filter((item) => item.canal === 'whatsapp').length;
+
+    return [
+      { label: 'Reclamations', value: records.length, tone: 'blue' },
+      { label: 'Ouvertes', value: opened, tone: 'red' },
+      { label: 'En traitement', value: processing, tone: 'amber' },
+      { label: 'Cloturees', value: closed, tone: 'green' },
+      { label: 'Canal WhatsApp', value: whatsapp, tone: 'blue' }
+    ];
+  };
+
   return (
     <ResourcePage
       title="Gestion des réclamations"
@@ -45,6 +60,7 @@ export default function Reclamations() {
       fields={fields}
       columns={columns}
       primaryLabel="Nouvelle reclamation"
+      summaryCards={summaryCards}
     />
   );
 }
