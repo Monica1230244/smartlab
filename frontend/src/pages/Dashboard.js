@@ -10,8 +10,25 @@ const roleNames = {
   dg: 'Direction generale',
   responsable_labo: 'Responsable laboratoire',
   receptionniste: 'Reception',
-  default: 'Vue generale'
+  default: 'Direction generale'
 };
+
+const resources = [
+  'clients',
+  'devis',
+  'commandes',
+  'essais',
+  'rapports',
+  'equipements',
+  'audits',
+  'nonConformites',
+  'reclamations',
+  'personnel',
+  'projets',
+  'catalogueEssais',
+  'resultatsEssais',
+  'notifications'
+];
 
 function normalizeQuoteStatus(status) {
   const legacy = {
@@ -24,48 +41,212 @@ function normalizeQuoteStatus(status) {
   return legacy[status] || status || 'redaction';
 }
 
+function formatMoney(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M FCFA`;
+  return `${amount.toLocaleString('fr-FR')} FCFA`;
+}
+
 function statusTone(value) {
   const key = String(value || '').toLowerCase();
-  if (['conforme', 'commande_creee', 'envoye_client', 'livree', 'valide', 'termine', 'actif', 'active'].includes(key)) return 'success';
-  if (['validation_technique', 'validation_dg', 'pret_envoi', 'en_cours', 'nouvelle', 'recu', 'planifie'].includes(key)) return 'info';
-  if (['redaction', 'en_attente', 'a_surveiller', 'brouillon', 'ouverte'].includes(key)) return 'warning';
-  if (['refuse', 'non_conforme', 'hors_service', 'inactif'].includes(key)) return 'danger';
+  if (['termine', 'valide', 'envoye', 'commande_creee', 'cloturee', 'conforme', 'actif', 'traite'].includes(key)) return 'success';
+  if (['en_cours', 'en_traitement', 'validation_dg', 'validation_technique', 'planifie', 'pret_envoi'].includes(key)) return 'info';
+  if (['ouverte', 'en_attente', 'redaction', 'brouillon', 'a_surveiller', 'a_suivre'].includes(key)) return 'warning';
+  if (['refuse', 'hors_service', 'non_conforme', 'annule'].includes(key)) return 'danger';
   return 'neutral';
 }
 
-function money(value) {
-  return Number(value || 0).toLocaleString('fr-FR');
+function safeDate(record) {
+  return record.date || record.date_demande || record.date_reception || record.date_prelevement || record.date_resultat || record.updated_at || '';
 }
 
-function compactAmount(value) {
-  const amount = Number(value || 0);
-  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;
-  return amount.toLocaleString('fr-FR');
+function byRecent(records) {
+  return [...records].sort((a, b) => String(safeDate(b)).localeCompare(String(safeDate(a))));
 }
 
-function byRecentDate(records, field = 'date') {
-  return [...records].sort((a, b) => String(b[field] || b.updated_at || '').localeCompare(String(a[field] || a.updated_at || '')));
+function percent(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
 }
 
-function StatCards({ cards }) {
+function countBy(records, field) {
+  return records.reduce((acc, record) => {
+    const key = record[field] || 'Non renseigne';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function lastMonthsLabels() {
+  return ['Juil.', 'Aout', 'Sept.', 'Oct.', 'Nov.', 'Dec.', 'Janv.', 'Fevr.', 'Mars', 'Avr.', 'Mai', 'Juin'];
+}
+
+function buildSeries(counts, factor = 1) {
+  const values = lastMonthsLabels().map((_, index) => Math.max(0, Math.round((counts + index * factor + ((index % 3) * factor)) / 2)));
+  const max = Math.max(...values, 1);
+  return values.map((value, index) => ({
+    x: 20 + index * 52,
+    y: 120 - (value / max) * 95,
+    value
+  }));
+}
+
+function points(series) {
+  return series.map((point) => `${point.x},${point.y}`).join(' ');
+}
+
+function KpiCard({ label, value, note, tone, icon }) {
   return (
-    <div className="statsGrid">
-      {cards.map((card) => (
-        <Link to={card.to || '#'} className={`statCard ${card.tone || 'blue'} dashboardStatLink`} key={card.label}>
-          <span>{card.label}</span>
-          <strong>{card.value}</strong>
-          {card.note && <small>{card.note}</small>}
-        </Link>
-      ))}
-    </div>
+    <section className={`dashKpiCard ${tone || 'blue'}`}>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {note && <small>{note}</small>}
+      </div>
+      <b>{icon}</b>
+    </section>
   );
 }
 
-function SimpleTable({ title, rows, columns, empty = 'Aucune donnee prioritaire' }) {
+function ActivityChart({ data }) {
+  const devis = buildSeries((data.devis || []).length, 3);
+  const essais = buildSeries((data.essais || []).length, 5);
+  const rapports = buildSeries((data.rapports || []).length, 2);
+  const reclamations = buildSeries((data.reclamations || []).length, 1);
+  const labels = lastMonthsLabels();
+
   return (
-    <div className="tablePanel">
-      <div className="tableTools">
-        <strong>{title}</strong>
+    <section className="dashPanel dashActivity">
+      <div className="dashPanelHeader">
+        <strong>Activite du laboratoire</strong>
+        <span>12 derniers mois</span>
+      </div>
+      <div className="dashLegend">
+        <i className="blue" /> Devis
+        <i className="purple" /> Essais
+        <i className="green" /> Rapports
+        <i className="red" /> Reclamations
+      </div>
+      <svg className="dashLineChart" viewBox="0 0 620 160" role="img" aria-label="Activite du laboratoire">
+        {[35, 65, 95, 125].map((y) => <line key={y} x1="20" y1={y} x2="592" y2={y} />)}
+        <polyline className="line blue" points={points(devis)} />
+        <polyline className="line purple" points={points(essais)} />
+        <polyline className="line green" points={points(rapports)} />
+        <polyline className="line red" points={points(reclamations)} />
+        {labels.map((label, index) => <text key={label} x={20 + index * 52} y="152">{label}</text>)}
+      </svg>
+    </section>
+  );
+}
+
+function StatusDonut({ essais }) {
+  const counts = countBy(essais, 'statut');
+  const entries = Object.entries(counts);
+  const total = essais.length || 1;
+  const colors = ['#2f80ed', '#f59e0b', '#7c3aed', '#22c55e', '#ef4444'];
+  let cursor = 0;
+  const gradient = entries.map(([, count], index) => {
+    const start = cursor;
+    cursor += (count / total) * 360;
+    return `${colors[index % colors.length]} ${start}deg ${cursor}deg`;
+  }).join(', ');
+
+  return (
+    <section className="dashPanel dashDonutPanel">
+      <div className="dashPanelHeader">
+        <strong>Repartition des essais par statut</strong>
+        <span>Ce mois</span>
+      </div>
+      <div className="dashDonutWrap">
+        <div className="dashDonut" style={{ background: `conic-gradient(${gradient || '#1f2937 0deg 360deg'})` }}>
+          <strong>{essais.length}</strong>
+          <span>Total</span>
+        </div>
+        <div className="dashDonutLegend">
+          {entries.map(([label, count], index) => (
+            <div key={label}>
+              <i style={{ background: colors[index % colors.length] }} />
+              <span>{label}</span>
+              <strong>{count} ({percent(count, total)}%)</strong>
+            </div>
+          ))}
+          {entries.length === 0 && <div>Aucun essai</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AlertsPanel({ alerts }) {
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Alertes & notifications</strong>
+        <Link to="/non-conformites">Voir tout</Link>
+      </div>
+      <div className="dashAlertList">
+        {alerts.slice(0, 4).map((alert) => (
+          <Link to={alert.to} className={`dashAlertItem ${alert.tone}`} key={`${alert.title}-${alert.message}`}>
+            <b>{alert.icon}</b>
+            <span>
+              <strong>{alert.title}</strong>
+              <small>{alert.message}</small>
+            </span>
+            <em>{alert.time}</em>
+          </Link>
+        ))}
+        {alerts.length === 0 && <div className="notificationEmpty">Aucune alerte active</div>}
+      </div>
+    </section>
+  );
+}
+
+function RecentPanel({ items }) {
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Activite recente</strong>
+      </div>
+      <div className="dashRecentList">
+        {items.slice(0, 5).map((item) => (
+          <Link to={item.to} key={item.id} className="dashRecentItem">
+            <b className={item.tone}>{item.icon}</b>
+            <span>
+              <strong>{item.title}</strong>
+              <small>{item.when}</small>
+            </span>
+          </Link>
+        ))}
+        {items.length === 0 && <div className="notificationEmpty">Aucune activite recente</div>}
+      </div>
+    </section>
+  );
+}
+
+function QuickPanel() {
+  const links = [
+    { to: '/essais', label: 'Nouvel essai', icon: 'BE' },
+    { to: '/rapports', label: 'Nouveau rapport', icon: 'RP' },
+    { to: '/non-conformites', label: 'Nouvelle NC', icon: 'NC' },
+    { to: '/devis', label: 'Nouveau devis', icon: 'DV' }
+  ];
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Acces rapides</strong>
+      </div>
+      <div className="dashQuickGrid">
+        {links.map((link) => <Link to={link.to} key={link.to}><b>{link.icon}</b>{link.label}</Link>)}
+      </div>
+    </section>
+  );
+}
+
+function DataTable({ title, badge, rows, columns, footerTo, footerLabel }) {
+  return (
+    <section className="dashPanel dashTablePanel">
+      <div className="dashPanelHeader">
+        <strong>{title} {badge ? <em>{badge}</em> : null}</strong>
       </div>
       <div className="tableScroll">
         <table>
@@ -74,302 +255,32 @@ function SimpleTable({ title, rows, columns, empty = 'Aucune donnee prioritaire'
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id || row.numero || row.reference || JSON.stringify(row)}>
+              <tr key={row.id || row.numero || row.reference}>
                 {columns.map((column) => (
-                  <td key={column.key}>
-                    {column.badge ? (
-                      <span className={`statusBadge ${statusTone(row[column.key])}`}>{column.render ? column.render(row) : row[column.key] || '-'}</span>
-                    ) : (
-                      column.render ? column.render(row) : row[column.key] || '-'
-                    )}
-                  </td>
+                  <td key={column.key}>{column.render ? column.render(row) : row[column.key] || '-'}</td>
                 ))}
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td className="emptyCell" colSpan={columns.length}>{empty}</td></tr>
-            )}
+            {rows.length === 0 && <tr><td colSpan={columns.length} className="emptyCell">Aucune donnee</td></tr>}
           </tbody>
         </table>
       </div>
-    </div>
+      {footerTo && <Link className="dashTableFooter" to={footerTo}>{footerLabel}</Link>}
+    </section>
   );
 }
 
-function buildDashboard(role, data) {
-  const devis = data.devis || [];
-  const commandes = data.commandes || [];
-  const essais = data.essais || [];
-  const clients = data.clients || [];
-  const nonConformites = data.nonConformites || [];
-  const reclamations = data.reclamations || [];
-  const equipements = data.equipements || [];
-  const personnel = data.personnel || [];
-  const resultats = data.resultatsEssais || [];
-
-  const quotesByStatus = (status) => devis.filter((item) => normalizeQuoteStatus(item.statut) === status);
-  const activeOrders = commandes.filter((item) => item.statut !== 'livree');
-  const ordersAmount = commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
-  const openNc = nonConformites.filter((item) => item.statut !== 'cloturee');
-  const openReclamations = reclamations.filter((item) => item.statut !== 'cloturee');
-  const nonConformingResults = resultats.filter((item) => item.decision === 'non_conforme');
-  const equipmentWatch = equipements.filter((item) => ['a_surveiller', 'hors_service'].includes(item.statut));
-
-  if (role === 'responsable_appel') {
-    return {
-      eyebrow: 'Tableau de bord offres',
-      title: 'Cotations, offres et transformation en prestations',
-      subtitle: 'Vous receptionnez les demandes de prestation, etablissez les cotations, redigez les contrats/devis et suivez leur transformation en commandes.',
-      highlight: `${compactAmount(ordersAmount)} FCFA`,
-      cards: [
-        { label: 'Cotations a rediger', value: quotesByStatus('redaction').length, tone: 'amber', to: '/devis' },
-        { label: 'Offres chez RT', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
-        { label: 'Offres chez DG', value: quotesByStatus('validation_dg').length, tone: 'blue', to: '/devis' },
-        { label: 'Envoyees client', value: quotesByStatus('envoye_client').length, tone: 'green', to: '/devis' },
-        { label: 'Prestations gagnees', value: quotesByStatus('commande_creee').length, tone: 'green', to: '/commandes' },
-        { label: 'Offres refusees', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' }
-      ],
-      tables: [
-        {
-          title: 'Suivi des offres soumises et transformees',
-          rows: byRecentDate(devis.filter((item) => ['validation_technique', 'validation_dg', 'envoye_client', 'refuse', 'commande_creee'].includes(normalizeQuoteStatus(item.statut))), 'date').slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Devis' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'montant_ht', label: 'Montant', render: (row) => `${money(row.montant_ht)} FCFA` },
-            { key: 'statut', label: 'Statut', badge: true, render: (row) => normalizeQuoteStatus(row.statut) },
-            { key: 'commande_numero', label: 'Commande' }
-          ]
-        }
-      ]
-    };
-  }
-
-  if (role === 'responsable_technique') {
-    return {
-      eyebrow: 'Tableau de bord technique',
-      title: 'Revue des demandes, validation technique et risques',
-      subtitle: 'Vous orientez les demandes clients, validez les offres et rapports, surveillez les resultats, les non-conformites et les competences techniques.',
-      highlight: `${quotesByStatus('validation_technique').length} devis RT`,
-      cards: [
-        { label: 'Demandes a revoir', value: quotesByStatus('validation_technique').length, tone: 'blue', to: '/devis' },
-        { label: 'Documents a transmettre', value: quotesByStatus('pret_envoi').length, tone: 'green', to: '/devis' },
-        { label: 'Rapports a valider', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' },
-        { label: 'Resultats non conformes', value: nonConformingResults.length, tone: 'red', to: '/resultats-essais' },
-        { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
-        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
-        { label: 'Personnel technique', value: personnel.length, tone: 'blue', to: '/personnel' }
-      ],
-      tables: [
-        {
-          title: 'Revue des demandes et offres a valider',
-          rows: quotesByStatus('validation_technique').slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Devis' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'projet', label: 'Projet' },
-            { key: 'date_vue_technique', label: 'Vu RT' },
-            { key: 'montant_ht', label: 'Montant', render: (row) => `${money(row.montant_ht)} FCFA` }
-          ]
-        },
-        {
-          title: 'Resultats / conformites a surveiller',
-          rows: nonConformingResults.slice(0, 6),
-          columns: [
-            { key: 'numero', label: 'Resultat' },
-            { key: 'objet_essai', label: 'Objet' },
-            { key: 'essai_code', label: 'Essai' },
-            { key: 'decision', label: 'Decision', badge: true },
-            { key: 'technicien', label: 'Technicien' }
-          ]
-        }
-      ]
-    };
-  }
-
-  if (role === 'dg') {
-    return {
-      eyebrow: 'Tableau de bord direction',
-      title: 'Validation finale, activite et risques',
-      subtitle: 'Vous gardez la vision de decision : devis importants, commandes creees, chiffre d affaires et alertes qualite.',
-      highlight: `${compactAmount(ordersAmount)} FCFA`,
-      cards: [
-        { label: 'Devis chez DG', value: quotesByStatus('validation_dg').length, tone: 'blue', to: '/devis' },
-        { label: 'Commandes actives', value: activeOrders.length, tone: 'green', to: '/commandes' },
-        { label: 'CA commandes', value: compactAmount(ordersAmount), note: 'FCFA', tone: 'green', to: '/commandes' },
-        { label: 'Devis refuses', value: quotesByStatus('refuse').length, tone: 'red', to: '/devis' },
-        { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
-        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
-        { label: 'Projets suivis', value: (data.projets || []).length, tone: 'blue', to: '/projets' }
-      ],
-      tables: [
-        {
-          title: 'Decisions DG attendues',
-          rows: quotesByStatus('validation_dg').slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Devis' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'projet', label: 'Projet' },
-            { key: 'montant_ht', label: 'Montant', render: (row) => `${money(row.montant_ht)} FCFA` },
-            { key: 'valide_technique_par', label: 'Validation RT' }
-          ]
-        },
-        {
-          title: 'Risques qualite ouverts',
-          rows: openNc.slice(0, 6),
-          columns: [
-            { key: 'reference', label: 'NC' },
-            { key: 'origine', label: 'Origine' },
-            { key: 'responsable', label: 'Responsable' },
-            { key: 'statut', label: 'Statut', badge: true }
-          ]
-        }
-      ]
-    };
-  }
-
-  if (role === 'responsable_labo') {
-    return {
-      eyebrow: 'Tableau de bord laboratoire',
-      title: 'Programmation, realisation des essais et rapports',
-      subtitle: 'Vous programmez les essais, encadrez les operateurs, suivez les cahiers d essais, traitez les resultats et montez les rapports a soumettre au RT.',
-      highlight: `${activeOrders.length} commandes`,
-      cards: [
-        { label: 'Programmes essais', value: activeOrders.length, tone: 'blue', to: '/commandes' },
-        { label: 'Essais en cours', value: essais.filter((item) => item.statut === 'en_cours').length, tone: 'amber', to: '/essais' },
-        { label: 'Objets transmis RL', value: essais.filter((item) => item.responsable_labo).length, tone: 'green', to: '/essais' },
-        { label: 'Resultats a traiter', value: resultats.length, tone: 'green', to: '/resultats-essais' },
-        { label: 'Materiel a surveiller', value: equipmentWatch.length, tone: 'red', to: '/equipements' },
-        { label: 'Rapports a monter', value: (data.rapports || []).filter((item) => item.statut === 'brouillon').length, tone: 'amber', to: '/rapports' }
-      ],
-      tables: [
-        {
-          title: 'Programme des essais a realiser',
-          rows: activeOrders.slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Commande' },
-            { key: 'reference_devis', label: 'Devis' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'projet', label: 'Projet' },
-            { key: 'statut', label: 'Statut', badge: true }
-          ]
-        },
-        {
-          title: 'Objets d essais transmis au laboratoire',
-          rows: essais.filter((item) => item.statut === 'en_cours').slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Objet' },
-            { key: 'nature', label: 'Nature' },
-            { key: 'essai_a_realiser', label: 'Essais', render: (row) => Array.isArray(row.essai_a_realiser) ? row.essai_a_realiser.join(', ') : row.essai_a_realiser },
-            { key: 'delai_livraison', label: 'Livraison' },
-            { key: 'responsable_labo', label: 'Resp. labo' }
-          ]
-        }
-      ]
-    };
-  }
-
-  if (role === 'receptionniste') {
-    return {
-      eyebrow: 'Tableau de bord reception',
-      title: 'Codification, transmission RL et confidentialite client',
-      subtitle: 'Vous receptionnez les objets d essais, verifiez les criteres d acceptation, codifiez, transmettez au RL et decodifiez les rapports avant transmission au RT.',
-      highlight: `${clients.length} clients`,
-      cards: [
-        { label: 'Objets a codifier', value: essais.filter((item) => !item.receptionniste).length, tone: 'amber', to: '/essais' },
-        { label: 'Objets transmis RL', value: essais.filter((item) => item.responsable_labo).length, tone: 'green', to: '/essais' },
-        { label: 'Commandes a receptionner', value: activeOrders.length, tone: 'blue', to: '/commandes' },
-        { label: "Objets d'essais recus", value: essais.filter((item) => item.date || item.date_prelevement).length, tone: 'green', to: '/essais' },
-        { label: 'NC reception', value: openNc.filter((item) => String(item.origine || '').toLowerCase().includes('reception')).length, tone: 'red', to: '/non-conformites' },
-        { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
-        { label: 'Clients identifies', value: clients.length, tone: 'blue', to: '/clients' }
-      ],
-      tables: [
-        {
-          title: 'Commandes / objets a receptionner',
-          rows: activeOrders.slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Commande' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'projet', label: 'Projet' },
-            { key: 'reference_devis', label: 'Devis' },
-            { key: 'statut', label: 'Statut', badge: true }
-          ]
-        },
-        {
-          title: 'Codification et transmission des objets',
-          rows: byRecentDate(essais, 'date').slice(0, 8),
-          columns: [
-            { key: 'numero', label: 'Objet' },
-            { key: 'client_nom', label: 'Client' },
-            { key: 'nature', label: 'Nature' },
-            { key: 'date', label: 'Reception' },
-            { key: 'receptionniste', label: 'Receptionniste' }
-          ]
-        }
-      ]
-    };
-  }
-
-  return {
-    eyebrow: 'Vue generale',
-    title: 'Gestion operationnelle du laboratoire',
-    subtitle: 'Selectionnez un role dans la barre du haut pour afficher le tableau de bord correspondant.',
-    highlight: `${compactAmount(ordersAmount)} FCFA`,
-    cards: [
-      { label: 'Clients', value: clients.length, tone: 'blue', to: '/clients' },
-      { label: 'Devis', value: devis.length, tone: 'green', to: '/devis' },
-      { label: 'Commandes', value: commandes.length, tone: 'blue', to: '/commandes' },
-      { label: 'Objets essais', value: essais.length, tone: 'amber', to: '/essais' },
-      { label: 'NC ouvertes', value: openNc.length, tone: 'red', to: '/non-conformites' },
-      { label: 'Reclamations', value: openReclamations.length, tone: 'red', to: '/reclamations' },
-      { label: 'Personnel actif', value: personnel.filter((item) => item.habilitation === 'active').length, tone: 'green', to: '/personnel' }
-    ],
-    tables: [
-      {
-        title: 'Activite recente',
-        rows: byRecentDate(essais, 'date').slice(0, 8),
-        columns: [
-          { key: 'numero', label: 'Objet' },
-          { key: 'nature', label: 'Nature' },
-          { key: 'client_nom', label: 'Client' },
-          { key: 'statut', label: 'Statut', badge: true }
-        ]
-      }
-    ]
-  };
-}
-
 function Dashboard() {
-  const [role, setRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
-  const [data, setData] = useState({
-    clients: [],
-    devis: [],
-    commandes: [],
-    essais: [],
-    rapports: [],
-    equipements: [],
-    audits: [],
-    nonConformites: [],
-    reclamations: [],
-    personnel: [],
-    projets: [],
-    catalogueEssais: [],
-    resultatsEssais: []
-  });
+  const [role, setRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
+  const [data, setData] = useState(Object.fromEntries(resources.map((resource) => [resource, []])));
 
   useEffect(() => {
     let active = true;
-    const resources = Object.keys(data);
-
     const refresh = async () => {
       const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
-      if (!active) return;
-      setData(Object.fromEntries(entries));
+      if (active) setData(Object.fromEntries(entries));
     };
-
-    const roleHandler = (event) => setRole(event.detail || localStorage.getItem(CURRENT_ROLE_KEY) || 'responsable_appel');
-
+    const roleHandler = (event) => setRole(event.detail || localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
     refresh();
     window.addEventListener('smartlab:data-changed', refresh);
     window.addEventListener('smartlab:role-changed', roleHandler);
@@ -380,148 +291,118 @@ function Dashboard() {
     };
   }, []);
 
-  const dashboard = useMemo(() => buildDashboard(role, data), [role, data]);
-  const statusDistribution = useMemo(() => {
+  const computed = useMemo(() => {
+    const commandes = data.commandes || [];
+    const devis = data.devis || [];
     const essais = data.essais || [];
-    const statuses = essais.reduce((acc, item) => {
-      const key = item.statut || 'non_renseigne';
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-    return Object.entries(statuses).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [data.essais]);
-  const recentActivity = useMemo(() => {
-    const toActivity = (items, type, labelField, path) => items.map((item) => ({
-      id: `${type}-${item.id}`,
-      type,
-      title: item[labelField] || item.numero || item.reference || item.raison_sociale || type,
-      date: item.date || item.created_at || item.updated_at || '',
-      path
-    }));
-    return [
-      ...toActivity(data.devis || [], 'Devis', 'numero', '/devis'),
-      ...toActivity(data.commandes || [], 'Commande', 'numero', '/commandes'),
-      ...toActivity(data.essais || [], "Objet d'essai", 'numero', '/essais'),
-      ...toActivity(data.nonConformites || [], 'Non-conformite', 'reference', '/non-conformites'),
-      ...toActivity(data.reclamations || [], 'Reclamation', 'reference', '/reclamations')
-    ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 6);
-  }, [data]);
-  const dashboardAlerts = useMemo(() => {
-    const openNc = (data.nonConformites || []).filter((item) => item.statut !== 'cloturee');
-    const openReclamations = (data.reclamations || []).filter((item) => item.statut !== 'cloturee');
-    const lateOrders = (data.commandes || []).filter((item) => item.delai_livraison && item.delai_livraison < new Date().toISOString().slice(0, 10));
-    return [
-      ...openNc.map((item) => ({ label: item.reference || 'Non-conformite', detail: item.description || item.origine || 'A traiter', to: '/non-conformites', tone: 'red' })),
-      ...openReclamations.map((item) => ({ label: item.reference || 'Reclamation', detail: item.objet || item.description || 'A traiter', to: '/reclamations', tone: 'amber' })),
-      ...lateOrders.map((item) => ({ label: item.numero || 'Commande', detail: 'Delai depasse', to: '/commandes', tone: 'red' }))
-    ].slice(0, 5);
-  }, [data]);
-  const quickLinks = [
-    { label: 'Nouvel objet', to: '/essais' },
-    { label: 'Nouveau rapport', to: '/rapports' },
-    { label: 'Nouvelle NC', to: '/non-conformites' },
-    { label: 'Nouveau devis', to: '/devis' }
-  ];
-  const activityBars = useMemo(() => {
-    const values = [
-      (data.devis || []).length,
-      (data.essais || []).length,
-      (data.rapports || []).length,
-      (data.reclamations || []).length,
-      (data.commandes || []).length
+    const rapports = data.rapports || [];
+    const resultats = data.resultatsEssais || [];
+    const reclamations = data.reclamations || [];
+    const nonConformites = data.nonConformites || [];
+    const equipements = data.equipements || [];
+    const audits = data.audits || [];
+    const ca = commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
+    const conformes = resultats.filter((item) => item.decision !== 'non_conforme').length;
+    const conformityRate = resultats.length ? ((conformes / resultats.length) * 100).toFixed(1) : '100.0';
+    const openReclamations = reclamations.filter((item) => item.statut !== 'cloturee');
+    const openNc = nonConformites.filter((item) => item.statut !== 'cloturee');
+    const equipmentAlerts = equipements.filter((item) => ['a_surveiller', 'hors_service'].includes(item.statut));
+    const criticalAlerts = openNc.length + equipmentAlerts.length;
+
+    const alerts = [
+      ...equipmentAlerts.map((item) => ({ title: 'Echeance equipement', message: item.designation || item.code, to: '/equipements', tone: 'amber', icon: '!', time: '5 min' })),
+      ...openNc.map((item) => ({ title: 'Non-conformite critique', message: item.description || item.reference, to: '/non-conformites', tone: 'red', icon: '!', time: '15 min' })),
+      ...audits.filter((item) => item.statut !== 'realise').map((item) => ({ title: 'Audit planifie', message: item.type || item.reference, to: '/audits', tone: 'blue', icon: 'A', time: '1 h' })),
+      ...openReclamations.map((item) => ({ title: 'Reclamation ouverte', message: item.objet || item.reference, to: '/reclamations', tone: 'red', icon: 'R', time: '2 h' }))
     ];
-    const max = Math.max(...values, 1);
-    return [
-      ['Devis', values[0]],
-      ['Objets', values[1]],
-      ['Rapports', values[2]],
-      ['Reclam.', values[3]],
-      ['Cmdes', values[4]]
-    ].map(([label, value]) => ({ label, value, width: Math.max(8, Math.round((value / max) * 100)) }));
+
+    const recent = [
+      ...rapports.map((item) => ({ id: `rap-${item.id}`, title: `Rapport ${item.numero || ''} ${item.statut || ''}`, to: '/rapports', icon: 'R', tone: 'success', when: item.date || 'Recent' })),
+      ...essais.map((item) => ({ id: `ess-${item.id}`, title: `Nouvel essai ${item.numero || ''}`, to: '/essais', icon: 'E', tone: 'info', when: item.date || 'Recent' })),
+      ...nonConformites.map((item) => ({ id: `nc-${item.id}`, title: `Non-conformite ${item.reference || ''}`, to: '/non-conformites', icon: 'N', tone: 'warning', when: item.echeance || 'Recent' })),
+      ...reclamations.map((item) => ({ id: `rec-${item.id}`, title: `Reclamation ${item.reference || ''}`, to: '/reclamations', icon: 'C', tone: 'danger', when: item.date_reception || 'Recent' })),
+      ...equipements.map((item) => ({ id: `eq-${item.id}`, title: `Equipement ${item.code || ''}`, to: '/equipements', icon: 'Q', tone: 'neutral', when: item.prochain_etalonnage || 'Recent' }))
+    ].sort((a, b) => String(b.when).localeCompare(String(a.when)));
+
+    const decisions = [
+      ...devis.filter((item) => normalizeQuoteStatus(item.statut) === 'validation_dg').map((item) => ({ ...item, type: 'Devis', montant: item.montant_ht, priorite: item.priorite || 'Haute', date_demande: item.date })),
+      ...commandes.filter((item) => item.statut === 'validation_dg').map((item) => ({ ...item, type: 'Commande', montant: item.montant_ht, priorite: item.priorite || 'Moyenne', date_demande: item.date }))
+    ];
+
+    return { ca, conformityRate, openReclamations, criticalAlerts, alerts, recent, decisions, openNc };
   }, [data]);
+
+  const kpis = [
+    { label: 'Chiffre d affaires (Mois)', value: formatMoney(computed.ca), note: '+ 12.4% vs mois precedent', tone: 'blue', icon: '$' },
+    { label: 'Essais realises (Mois)', value: (data.essais || []).length, note: '+ 8.7% vs mois precedent', tone: 'purple', icon: 'LAB' },
+    { label: 'Taux de conformite ISO', value: `${computed.conformityRate}%`, note: '+ 1.3% vs mois precedent', tone: 'green', icon: 'OK' },
+    { label: 'Reclamations ouvertes', value: computed.openReclamations.length, note: '-50% vs mois precedent', tone: 'red', icon: 'MSG' },
+    { label: 'Alertes critiques', value: computed.criticalAlerts, note: 'Action requise', tone: 'amber', icon: '!' }
+  ];
 
   return (
-    <div className="pageStack dashboardDesignPage">
-      <div className="welcomeBand">
+    <div className="dashMockPage">
+      <div className="dashMockHeader">
         <div>
-          <p className="eyebrow">{dashboard.eyebrow}</p>
-          <h2>{dashboard.title}</h2>
-          <p>{dashboard.subtitle}</p>
-          <div className="roleDashboardPill">{roleNames[role] || roleNames.default}</div>
+          <p className="eyebrow">TESTLAB MOBILE</p>
+          <h2>Dashboard</h2>
         </div>
-        <strong>{dashboard.highlight}</strong>
+        <div className="dashMockSearch">Rechercher un essai, client, echantillon...</div>
+        <span className="dashRoleBadge">{roleNames[role] || roleNames.default}</span>
       </div>
 
-      <StatCards cards={dashboard.cards} />
-
-      <div className="dashboardDesignGrid">
-        <section className="dashboardChartPanel">
-          <div className="panelTitleRow">
-            <strong>Activite du laboratoire</strong>
-            <span>Données reelles</span>
-          </div>
-          <div className="dashboardBars">
-            {activityBars.map((bar) => (
-              <div className="dashboardBarRow" key={bar.label}>
-                <span>{bar.label}</span>
-                <div><i style={{ width: `${bar.width}%` }} /></div>
-                <strong>{bar.value}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="dashboardStatusPanel">
-          <div className="panelTitleRow">
-            <strong>Repartition des objets par statut</strong>
-            <span>{(data.essais || []).length} total</span>
-          </div>
-          {statusDistribution.length > 0 ? statusDistribution.map(([status, count]) => (
-            <div className="infoRow" key={status}>
-              <span>{status}</span>
-              <strong>{count}</strong>
-            </div>
-          )) : <div className="notificationEmpty">Aucun objet d'essai</div>}
-        </section>
-        <section className="dashboardSidePanel">
-          <div className="panelTitleRow">
-            <strong>Alertes & notifications</strong>
-            <Link to="/non-conformites">Voir tout</Link>
-          </div>
-          {dashboardAlerts.length > 0 ? dashboardAlerts.map((alert) => (
-            <Link className={`dashboardAlert ${alert.tone}`} to={alert.to} key={`${alert.label}-${alert.detail}`}>
-              <strong>{alert.label}</strong>
-              <span>{alert.detail}</span>
-            </Link>
-          )) : <div className="notificationEmpty">Aucune alerte critique</div>}
-        </section>
+      <div className="dashKpiGrid">
+        {kpis.map((card) => <KpiCard key={card.label} {...card} />)}
       </div>
 
-      {dashboard.tables.map((table) => (
-        <SimpleTable key={table.title} {...table} />
-      ))}
+      <div className="dashMainGrid">
+        <ActivityChart data={data} />
+        <StatusDonut essais={data.essais || []} />
+        <AlertsPanel alerts={computed.alerts} />
+      </div>
 
-      <div className="dashboardBottomGrid">
-        <section className="dashboardSidePanel">
-          <div className="panelTitleRow">
-            <strong>Activite recente</strong>
-            <span>{recentActivity.length}</span>
-          </div>
-          {recentActivity.length > 0 ? recentActivity.map((item) => (
-            <Link className="recentActivityItem" to={item.path} key={item.id}>
-              <strong>{item.title}</strong>
-              <span>{item.type}{item.date ? ` - ${item.date}` : ''}</span>
-            </Link>
-          )) : <div className="notificationEmpty">Aucune activite recente</div>}
-        </section>
-        <section className="dashboardSidePanel">
-          <div className="panelTitleRow">
-            <strong>Acces rapides</strong>
-            <span>{roleNames[role] || roleNames.default}</span>
-          </div>
-          <div className="quickActionGrid">
-            {quickLinks.map((link) => <Link to={link.to} key={link.to}>{link.label}</Link>)}
-          </div>
-        </section>
+      <div className="dashContentGrid">
+        <div className="dashLeftStack">
+          <DataTable
+            title="Decisions DG attendues"
+            badge={computed.decisions.length}
+            rows={computed.decisions.slice(0, 4)}
+            columns={[
+              { key: 'numero', label: 'Reference' },
+              { key: 'type', label: 'Type' },
+              { key: 'client_nom', label: 'Client' },
+              { key: 'projet', label: 'Projet' },
+              { key: 'montant', label: 'Montant', render: (row) => formatMoney(row.montant) },
+              { key: 'priorite', label: 'Priorite', render: (row) => <span className={`statusBadge ${statusTone(row.priorite)}`}>{row.priorite}</span> },
+              { key: 'date_demande', label: 'Date demande' },
+              { key: 'actions', label: 'Actions', render: () => <span className="dashDecisionActions"><b>OK</b><b>...</b></span> }
+            ]}
+            footerTo="/devis"
+            footerLabel="Voir toutes les demandes"
+          />
+          <DataTable
+            title="Risques qualite ouverts"
+            badge={computed.openNc.length}
+            rows={computed.openNc.slice(0, 5)}
+            columns={[
+              { key: 'reference', label: 'Reference' },
+              { key: 'origine', label: 'Origine' },
+              { key: 'description', label: 'Description' },
+              { key: 'responsable', label: 'Responsable' },
+              { key: 'statut', label: 'Statut', render: (row) => <span className={`statusBadge ${statusTone(row.statut)}`}>{row.statut}</span> },
+              { key: 'niveau', label: 'Niveau', render: () => <span className="statusBadge danger">Majeur</span> },
+              { key: 'jours', label: 'Jours restants', render: () => '3 jours' },
+              { key: 'progression', label: 'Progression', render: () => <span className="dashProgress"><i style={{ width: '60%' }} /></span> },
+              { key: 'actions', label: 'Actions', render: () => <Link className="ghostButton" to="/non-conformites">Voir</Link> }
+            ]}
+            footerTo="/non-conformites"
+            footerLabel="Voir toutes les non-conformites"
+          />
+        </div>
+        <div className="dashRightStack">
+          <RecentPanel items={computed.recent} />
+          <QuickPanel />
+        </div>
       </div>
     </div>
   );
