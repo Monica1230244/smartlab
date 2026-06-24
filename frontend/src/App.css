@@ -194,9 +194,13 @@
 
 .essaisMainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+}
+
+.essaisMainGrid.withDetail {
+  grid-template-columns: minmax(0, 1fr) 320px;
 }
 
 .essaisCenter {

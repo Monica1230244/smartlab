@@ -45,18 +45,18 @@ const statusOptions = [
 ];
 
 const processSteps = [
-  { key: 'reception', label: 'Reception', icon: '□' },
-  { key: 'enregistrement', label: 'Enregistrement', icon: '▣' },
-  { key: 'preparation', label: 'Preparation', icon: '△' },
-  { key: 'en_analyse', label: 'Analyse', icon: '⌁' },
-  { key: 'validation', label: 'Validation', icon: '✓' },
-  { key: 'rapport', label: 'Rapport', icon: '▤' },
-  { key: 'livraison', label: 'Livraison', icon: '↗' }
+  { key: 'reception', label: 'Reception', icon: 'R' },
+  { key: 'enregistrement', label: 'Enregistrement', icon: 'E' },
+  { key: 'preparation', label: 'Preparation', icon: 'P' },
+  { key: 'en_analyse', label: 'Analyse', icon: 'A' },
+  { key: 'validation', label: 'Validation', icon: 'V' },
+  { key: 'rapport', label: 'Rapport', icon: 'RP' },
+  { key: 'livraison', label: 'Livraison', icon: 'L' }
 ];
 
 const priorityOptions = [
   { value: 'basse', label: 'Basse' },
-  { value: 'moyenne', label: 'Moyenne' },
+  { value: 'moyenne', label: 'Normale' },
   { value: 'haute', label: 'Haute' }
 ];
 
@@ -76,6 +76,10 @@ function statusLabel(value) {
   return statusOptions.find((option) => option.value === normalized)?.label || normalized;
 }
 
+function priorityLabel(value) {
+  return priorityOptions.find((option) => option.value === value)?.label || value || '-';
+}
+
 function statusTone(value) {
   const normalized = normalizeStatus(value);
   if (['livraison', 'rapport', 'validation'].includes(normalized)) return 'success';
@@ -86,7 +90,7 @@ function statusTone(value) {
 
 function priorityTone(value) {
   if (value === 'haute') return 'danger';
-  if (value === 'moyenne') return 'warning';
+  if (value === 'moyenne' || value === 'normale') return 'warning';
   return 'success';
 }
 
@@ -133,6 +137,20 @@ function isSameDay(value, day = todayIso()) {
 function isLate(record) {
   if (!record.delai_livraison) return false;
   return record.delai_livraison < todayIso() && normalizeStatus(record.statut) !== 'livraison';
+}
+
+function countBy(records, getter) {
+  return records.reduce((acc, record) => {
+    const key = getter(record) || 'Non renseigne';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function topEntries(map, limit = 5) {
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'))
+    .slice(0, limit);
 }
 
 function formFromRecord(record) {
@@ -213,7 +231,7 @@ export default function Essais() {
     setDevis(nextDevis);
     setCommandes(nextCommandes);
     setRapports(nextRapports);
-    setSelectedId((current) => current || sorted[0]?.id || '');
+    setSelectedId((current) => (sorted.some((record) => record.id === current) ? current : ''));
   };
 
   useEffect(() => {
@@ -234,20 +252,40 @@ export default function Essais() {
     }).sort(compareRecords);
   }, [records, query, statusFilter, natureFilter, clientFilter]);
 
-  const selected = records.find((record) => record.id === selectedId) || filteredRecords[0] || records[0];
+  const selected = records.find((record) => record.id === selectedId) || null;
   const uniqueNatures = Array.from(new Set(records.map((record) => record.nature).filter(Boolean))).sort();
   const uniqueClients = Array.from(new Set([
     ...clients.map((client) => client.raison_sociale),
     ...records.map((record) => record.client_nom)
   ].filter(Boolean))).sort();
 
+  const recordsToday = records.filter((item) => isSameDay(item.date));
+  const lateRecords = records.filter(isLate);
+  const provenanceRows = topEntries(countBy(records, (record) => record.provenance));
+  const laboratoryRows = topEntries(countBy(records, (record) => record.laboratoire || record.responsable_labo || record.nature), 3);
+  const upcomingDeliveries = records
+    .filter((record) => record.delai_livraison && normalizeStatus(record.statut) !== 'livraison')
+    .sort((a, b) => String(a.delai_livraison).localeCompare(String(b.delai_livraison)))
+    .slice(0, 5);
+  const realAlerts = [
+    ...lateRecords.map((record) => `${record.numero || 'Objet'} en retard de livraison`),
+    ...records
+      .filter((record) => normalizeStatus(record.statut) === 'validation')
+      .slice(0, 3)
+      .map((record) => `${record.numero || 'Objet'} en attente de validation`),
+    ...records
+      .filter((record) => !record.responsable_labo || !record.receptionniste)
+      .slice(0, 3)
+      .map((record) => `${record.numero || 'Objet'} a completer`)
+  ].slice(0, 5);
+
   const stats = [
-    { label: "Echantillons recus aujourd'hui", value: records.filter((item) => isSameDay(item.date)).length, tone: 'cyan', note: '+20% vs hier' },
-    { label: 'En analyse', value: records.filter((item) => normalizeStatus(item.statut) === 'en_analyse').length, tone: 'purple', note: '+12% vs hier' },
-    { label: 'En validation', value: records.filter((item) => normalizeStatus(item.statut) === 'validation').length, tone: 'amber', note: '+8% vs hier' },
-    { label: "Rapports generes aujourd'hui", value: rapports.filter((item) => isSameDay(item.date)).length, tone: 'green', note: '+15% vs hier' },
-    { label: "Livraisons prevues aujourd'hui", value: records.filter((item) => isSameDay(item.delai_livraison)).length, tone: 'blue', note: '+10% vs hier' },
-    { label: 'En retard', value: records.filter(isLate).length, tone: 'red', note: '-25% vs hier' }
+    { label: "Objets recus aujourd'hui", value: recordsToday.length, tone: 'cyan', note: `${recordsToday.length} enregistre(s)` },
+    { label: 'En analyse', value: records.filter((item) => normalizeStatus(item.statut) === 'en_analyse').length, tone: 'purple', note: 'Statut reel' },
+    { label: 'En validation', value: records.filter((item) => normalizeStatus(item.statut) === 'validation').length, tone: 'amber', note: 'Statut reel' },
+    { label: "Rapports generes aujourd'hui", value: rapports.filter((item) => isSameDay(item.date)).length, tone: 'green', note: 'Depuis la base' },
+    { label: "Livraisons prevues aujourd'hui", value: records.filter((item) => isSameDay(item.delai_livraison)).length, tone: 'blue', note: 'Delai reel' },
+    { label: 'En retard', value: lateRecords.length, tone: 'red', note: 'Selon delai' }
   ];
 
   const stepCounts = processSteps.map((step) => ({
@@ -360,7 +398,7 @@ export default function Essais() {
           <p>Suivi en temps reel des objets recus, analyses, valides et livres par le laboratoire.</p>
         </div>
         <div className="essaisHeroSearch">
-          <span>⌕</span>
+          <span>RE</span>
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher (N essai, client, nature, provenance...)" />
         </div>
       </section>
@@ -368,7 +406,7 @@ export default function Essais() {
       <section className="essaisStatsGrid">
         {stats.map((card) => (
           <article className={`essaisMetric ${card.tone}`} key={card.label}>
-            <span className="metricIcon">□</span>
+            <span className="metricIcon">OE</span>
             <small>{card.label}</small>
             <strong>{card.value}</strong>
             <em>{card.note}</em>
@@ -378,17 +416,17 @@ export default function Essais() {
       </section>
 
       <section className="essaisProcess">
-        {stepCounts.map((step, index) => (
+        {stepCounts.map((step) => (
           <div className={`processNode ${step.key === 'en_analyse' ? 'active' : ''}`} key={step.key}>
             <div className="processIcon">{step.icon}</div>
             <strong>{step.label}</strong>
             <span>{step.count}</span>
-            <small>{index % 2 === 0 ? '+2' : '+1'} aujourd'hui</small>
+            <small>{step.count} objet(s)</small>
           </div>
         ))}
       </section>
 
-      <section className="essaisMainGrid">
+      <section className={`essaisMainGrid ${selected ? 'withDetail' : ''}`}>
         <div className="essaisCenter">
           <div className="essaisToolbar">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un objet d'essai..." />
@@ -431,13 +469,13 @@ export default function Essais() {
                   </thead>
                   <tbody>
                     {filteredRecords.map((record) => (
-                      <tr className={selected?.id === record.id ? 'selectedRow' : ''} key={record.id} onClick={() => setSelectedId(record.id)}>
+                      <tr className={selected?.id === record.id ? 'selectedRow' : ''} key={record.id}>
                         <td><strong>{record.numero}</strong></td>
                         <td>{record.client_nom || '-'}</td>
                         <td>{record.nature || '-'}</td>
                         <td>{record.provenance || '-'}</td>
                         <td><span className={`statusBadge ${statusTone(record.statut)}`}>{statusLabel(record.statut)}</span></td>
-                        <td><span className={`statusBadge ${priorityTone(record.priorite)}`}>{record.priorite || '-'}</span></td>
+                        <td><span className={`statusBadge ${priorityTone(record.priorite)}`}>{priorityLabel(record.priorite)}</span></td>
                         <td>{record.date || '-'}</td>
                         <td>
                           <div className="progressMini"><span style={{ width: `${percentFor(record)}%` }} /></div>
@@ -446,8 +484,8 @@ export default function Essais() {
                         <td>
                           <div className="iconActions">
                             <button type="button" title="Voir" onClick={(event) => { event.stopPropagation(); setSelectedId(record.id); }}>○</button>
-                            <button type="button" title="Modifier" onClick={(event) => { event.stopPropagation(); openEdit(record); }}>✎</button>
-                            <button type="button" title="Supprimer" onClick={(event) => { event.stopPropagation(); remove(record); }}>×</button>
+                            <button type="button" title="Modifier" onClick={(event) => { event.stopPropagation(); openEdit(record); }}>M</button>
+                            <button type="button" title="Supprimer" onClick={(event) => { event.stopPropagation(); remove(record); }}>X</button>
                           </div>
                         </td>
                       </tr>
@@ -460,7 +498,7 @@ export default function Essais() {
               </div>
               <div className="essaisTableFooter">
                 <span>Affichage de {filteredRecords.length} sur {records.length} objets d'essais</span>
-                <span>10 / page</span>
+                <span>{records.length} total</span>
               </div>
             </div>
 
@@ -485,80 +523,84 @@ export default function Essais() {
           </div>
         </div>
 
-        <aside className="essaisDetailPanel">
-          {selected ? (
-            <>
-              <div className="detailHeader">
-                <div>
-                  <h3>{selected.numero}</h3>
-                  <span className={`statusBadge ${statusTone(selected.statut)}`}>{statusLabel(selected.statut)}</span>
-                </div>
-                <button type="button" className="modalClose" onClick={() => setSelectedId('')}>x</button>
+        {selected && (
+          <aside className="essaisDetailPanel">
+            <div className="detailHeader">
+              <div>
+                <h3>{selected.numero}</h3>
+                <span className={`statusBadge ${statusTone(selected.statut)}`}>{statusLabel(selected.statut)}</span>
               </div>
-              <div className="detailTabs">
-                <span className="active">Details</span>
-                <span>Analyses</span>
-                <span>Documents</span>
-                <span>Historique</span>
-              </div>
-              <dl className="detailList">
-                <dt>Client</dt><dd>{selected.client_nom || '-'}</dd>
-                <dt>Nature</dt><dd>{selected.nature || '-'}</dd>
-                <dt>Provenance</dt><dd>{selected.provenance || '-'}</dd>
-                <dt>Point de prelevement</dt><dd>{selected.point_prelevement || '-'}</dd>
-                <dt>Date prelevement</dt><dd>{selected.date_prelevement || '-'}</dd>
-                <dt>Date reception</dt><dd>{selected.date || '-'}</dd>
-                <dt>Receptionne par</dt><dd>{selected.receptionniste || '-'}</dd>
-                <dt>Responsable labo</dt><dd>{selected.responsable_labo || '-'}</dd>
-                <dt>Date livraison prevue</dt><dd>{selected.delai_livraison || '-'}</dd>
-                <dt>Essais a realiser</dt><dd>{displayEssais(selected.essai_a_realiser)}</dd>
-                <dt>Priorite</dt><dd><span className={`statusBadge ${priorityTone(selected.priorite)}`}>{selected.priorite || '-'}</span></dd>
-                <dt>Observations</dt><dd>{selected.commentaire || '-'}</dd>
-              </dl>
-              <div className="detailProgress">
-                <span>Progression globale</span>
-                <div className="progressMini"><span style={{ width: `${percentFor(selected)}%` }} /></div>
-                <strong>{percentFor(selected)}%</strong>
-              </div>
-              <div className="detailActionsGrid">
-                <button type="button" className="ghostButton" onClick={() => openEdit(selected)}>Modifier</button>
-                <button type="button" className="ghostButton" onClick={generateListPdf}>Imprimer liste</button>
-                <button type="button" className="ghostButton">Creer rapport</button>
-                <button type="button" className="dangerButton" onClick={() => remove(selected)}>Annuler</button>
-              </div>
-            </>
-          ) : (
-            <div className="emptyCell">Selectionnez un objet d'essai</div>
-          )}
-        </aside>
+              <button type="button" className="modalClose" onClick={() => setSelectedId('')}>x</button>
+            </div>
+            <div className="detailTabs">
+              <span className="active">Details</span>
+              <span>Analyses</span>
+              <span>Documents</span>
+              <span>Historique</span>
+            </div>
+            <dl className="detailList">
+              <dt>Client</dt><dd>{selected.client_nom || '-'}</dd>
+              <dt>Nature</dt><dd>{selected.nature || '-'}</dd>
+              <dt>Provenance</dt><dd>{selected.provenance || '-'}</dd>
+              <dt>Point de prelevement</dt><dd>{selected.point_prelevement || '-'}</dd>
+              <dt>Date prelevement</dt><dd>{selected.date_prelevement || '-'}</dd>
+              <dt>Date reception</dt><dd>{selected.date || '-'}</dd>
+              <dt>Receptionne par</dt><dd>{selected.receptionniste || '-'}</dd>
+              <dt>Responsable labo</dt><dd>{selected.responsable_labo || '-'}</dd>
+              <dt>Date livraison prevue</dt><dd>{selected.delai_livraison || '-'}</dd>
+              <dt>Essais a realiser</dt><dd>{displayEssais(selected.essai_a_realiser)}</dd>
+              <dt>Priorite</dt><dd><span className={`statusBadge ${priorityTone(selected.priorite)}`}>{priorityLabel(selected.priorite)}</span></dd>
+              <dt>Observations</dt><dd>{selected.commentaire || '-'}</dd>
+            </dl>
+            <div className="detailProgress">
+              <span>Progression globale</span>
+              <div className="progressMini"><span style={{ width: `${percentFor(selected)}%` }} /></div>
+              <strong>{percentFor(selected)}%</strong>
+            </div>
+            <div className="detailActionsGrid">
+              <button type="button" className="ghostButton" onClick={() => openEdit(selected)}>Modifier</button>
+              <button type="button" className="ghostButton" onClick={generateListPdf}>Imprimer liste</button>
+              <button type="button" className="ghostButton">Creer rapport</button>
+              <button type="button" className="dangerButton" onClick={() => remove(selected)}>Annuler</button>
+            </div>
+          </aside>
+        )}
       </section>
 
       <section className="essaisBottomGrid">
         <article className="essaisInfoCard">
           <h3>Origine des prelevements</h3>
-          {['Djougou', 'Parakou', 'Cotonou', 'Porto-Novo', 'Abomey'].map((city, index) => (
-            <div className="infoRow" key={city}><span>{city}</span><strong>{Math.max(1, records.length - index)}</strong></div>
-          ))}
+          {provenanceRows.length > 0 ? provenanceRows.map(([provenance, count]) => (
+            <div className="infoRow" key={provenance}><span>{provenance}</span><strong>{count}</strong></div>
+          )) : <div className="notificationEmpty">Aucune provenance renseignee</div>}
         </article>
         <article className="essaisInfoCard">
           <h3>Charge des laboratoires</h3>
-          <div className="labLoads">
-            <div><strong>85%</strong><span>Chimie des eaux</span></div>
-            <div><strong>60%</strong><span>Beton & Materiaux</span></div>
-            <div><strong>40%</strong><span>Metrologie</span></div>
-          </div>
+          {laboratoryRows.length > 0 ? (
+            <div className="labLoads">
+              {laboratoryRows.map(([label, count]) => (
+                <div key={label}>
+                  <strong>{records.length ? Math.round((count / records.length) * 100) : 0}%</strong>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          ) : <div className="notificationEmpty">Aucun laboratoire renseigne</div>}
         </article>
         <article className="essaisInfoCard">
-          <h3>Calendrier du laboratoire</h3>
-          <div className="calendarMini">
-            {Array.from({ length: 21 }, (_, index) => <span className={index === 13 ? 'active' : ''} key={index}>{index + 1}</span>)}
-          </div>
+          <h3>Livraisons prevues</h3>
+          {upcomingDeliveries.length > 0 ? upcomingDeliveries.map((record) => (
+            <div className="infoRow" key={record.id}>
+              <span>{record.numero || record.nature}</span>
+              <strong>{record.delai_livraison}</strong>
+            </div>
+          )) : <div className="notificationEmpty">Aucune livraison en attente</div>}
         </article>
         <article className="essaisInfoCard">
-          <h3>Alertes intelligentes</h3>
-          <div className="alertItem">Rapport a rendre dans 24h</div>
-          <div className="alertItem">Analyse bloquee depuis 3 jours</div>
-          <div className="alertItem">Resultat non valide</div>
+          <h3>Alertes reelles</h3>
+          {realAlerts.length > 0 ? realAlerts.map((alert) => (
+            <div className="alertItem" key={alert}>{alert}</div>
+          )) : <div className="notificationEmpty">Aucune alerte active</div>}
         </article>
       </section>
 
