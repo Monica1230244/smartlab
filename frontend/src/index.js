@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const SMARTLAB_VERSION = '2026.06.22-09';
+const SMARTLAB_VERSION = '2026.06.24-10';
 window.SMARTLAB_VERSION = SMARTLAB_VERSION;
 document.documentElement.dataset.theme = localStorage.getItem('smartlab_theme') || 'dark';
 

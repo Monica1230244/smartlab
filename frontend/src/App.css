@@ -21,6 +21,601 @@
   --modal-overlay: rgba(0, 0, 0, 0.64);
 }
 
+.essaisWorkspace {
+  display: grid;
+  gap: 16px;
+}
+
+.essaisHero {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(280px, 420px);
+  gap: 18px;
+  align-items: start;
+}
+
+.essaisHero h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0;
+}
+
+.essaisHero p {
+  margin: 6px 0 0;
+  color: var(--text3);
+}
+
+.essaisHeroSearch,
+.essaisToolbar input,
+.essaisToolbar select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.essaisHeroSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.essaisHeroSearch input {
+  border: 0;
+  background: transparent;
+  min-height: 42px;
+  outline: 0;
+  color: var(--text);
+}
+
+.essaisStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.essaisMetric {
+  position: relative;
+  overflow: hidden;
+  min-height: 132px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(26, 34, 53, 0.95), rgba(17, 24, 39, 0.96));
+}
+
+.essaisMetric .metricIcon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  color: #fff;
+  background: var(--accent);
+}
+
+.essaisMetric small,
+.essaisMetric em {
+  display: block;
+  color: var(--text3);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.essaisMetric strong {
+  display: block;
+  margin: 6px 0 4px;
+  font-size: 26px;
+}
+
+.essaisMetric em {
+  color: var(--accent2);
+}
+
+.essaisMetric.red em {
+  color: var(--accent4);
+}
+
+.essaisMetric.purple .metricIcon { background: #7c3aed; }
+.essaisMetric.amber .metricIcon { background: var(--accent3); }
+.essaisMetric.green .metricIcon { background: #0f9f6e; }
+.essaisMetric.blue .metricIcon { background: #2563eb; }
+.essaisMetric.red .metricIcon { background: var(--accent4); }
+.essaisMetric.cyan .metricIcon { background: #06b6d4; }
+
+.sparkline {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  height: 20px;
+  border-bottom: 2px solid rgba(59, 158, 255, 0.8);
+  border-radius: 50%;
+  opacity: 0.65;
+}
+
+.essaisProcess {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+
+.processNode {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.processNode:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  left: calc(50% + 25px);
+  width: calc(100% - 50px);
+  border-top: 1px dashed rgba(148, 163, 184, 0.42);
+}
+
+.processIcon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.34);
+  color: var(--text);
+}
+
+.processNode.active .processIcon {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 5px rgba(59, 158, 255, 0.12);
+}
+
+.processNode strong {
+  font-size: 12px;
+}
+
+.processNode span {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.processNode small {
+  color: var(--accent2);
+  font-size: 11px;
+}
+
+.essaisMainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.essaisCenter {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.essaisToolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+
+.essaisToolbar input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.essaisToolbar input,
+.essaisToolbar select {
+  color: var(--text);
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.essaisBoard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.essaisTableCard,
+.kanbanColumn,
+.essaisDetailPanel,
+.essaisInfoCard {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+
+.essaisTableCard {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.essaisViewTabs {
+  display: flex;
+  gap: 18px;
+  padding: 12px 14px 0;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.essaisViewTabs span {
+  padding-bottom: 10px;
+}
+
+.essaisViewTabs .active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.selectedRow {
+  background: rgba(59, 158, 255, 0.08);
+}
+
+.progressMini {
+  display: inline-flex;
+  width: 86px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: rgba(59, 158, 255, 0.14);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.progressMini span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.iconActions {
+  display: flex;
+  gap: 5px;
+}
+
+.iconActions button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text2);
+}
+
+.essaisTableFooter {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  color: var(--text3);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.essaisKanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.kanbanColumn {
+  min-width: 155px;
+  padding: 12px;
+  background: rgba(26, 34, 53, 0.78);
+}
+
+.kanbanColumn > strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.kanbanCard {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(59, 158, 255, 0.32);
+  border-radius: 7px;
+  background: rgba(59, 158, 255, 0.1);
+  color: var(--text);
+}
+
+.kanbanCard span {
+  font-weight: 800;
+}
+
+.kanbanCard small {
+  color: var(--text3);
+}
+
+.kanbanAdd {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  text-align: left;
+  padding: 8px 2px;
+}
+
+.essaisDetailPanel {
+  position: sticky;
+  top: 78px;
+  padding: 18px;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+}
+
+.detailHeader h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.detailTabs {
+  display: flex;
+  gap: 14px;
+  margin: 18px 0;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.detailTabs .active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 8px;
+}
+
+.detailList {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 12px 14px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.detailList dt {
+  color: var(--text3);
+}
+
+.detailList dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.detailProgress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 18px 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.detailProgress span {
+  grid-column: 1 / -1;
+  color: var(--text2);
+}
+
+.detailProgress .progressMini {
+  width: 100%;
+}
+
+.detailActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.essaisBottomGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.essaisInfoCard {
+  min-height: 180px;
+  padding: 16px;
+}
+
+.essaisInfoCard h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  color: var(--text2);
+}
+
+.labLoads {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.labLoads div {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  border-radius: 50%;
+  border: 8px solid rgba(59, 158, 255, 0.35);
+  text-align: center;
+}
+
+.labLoads strong {
+  font-size: 20px;
+}
+
+.labLoads span {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.calendarMini {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.calendarMini span {
+  display: grid;
+  place-items: center;
+  min-height: 24px;
+  border-radius: 50%;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.calendarMini .active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.alertItem {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 7px;
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.essaisModal {
+  max-width: 920px;
+}
+
+html[data-theme="light"] .essaisMetric,
+html[data-theme="light"] .essaisProcess,
+html[data-theme="light"] .essaisTableCard,
+html[data-theme="light"] .kanbanColumn,
+html[data-theme="light"] .essaisDetailPanel,
+html[data-theme="light"] .essaisInfoCard {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+  border-color: rgba(71, 99, 130, 0.16);
+}
+
+@media (max-width: 1280px) {
+  .essaisStatsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .essaisMainGrid,
+  .essaisBoard,
+  .essaisBottomGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .essaisDetailPanel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .essaisHero,
+  .essaisStatsGrid,
+  .essaisProcess {
+    grid-template-columns: 1fr;
+  }
+
+  .processNode:not(:last-child)::after {
+    display: none;
+  }
+}
+
+.pageStack .pageHeader {
+  padding: 4px 0 2px;
+}
+
+.pageStack .pageHeader h2 {
+  font-size: 24px;
+}
+
+.pageStack .pageHeader .headerActions {
+  align-items: center;
+}
+
+.pageStack .statsGrid {
+  gap: 12px;
+}
+
+.pageStack .statCard {
+  border-radius: 8px;
+  min-height: 122px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 26, 0.96));
+}
+
+.pageStack .statCard strong {
+  font-size: 30px;
+}
+
+.pageStack .tablePanel {
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 26, 0.96));
+}
+
+.pageStack .tableTools {
+  background: rgba(26, 34, 53, 0.42);
+}
+
+.pageStack .tableTools input {
+  min-width: 260px;
+  max-width: 420px;
+}
+
+.pageStack th {
+  background: rgba(59, 158, 255, 0.04);
+}
+
+.pageStack tbody tr {
+  cursor: default;
+}
+
+.pageStack tbody tr:hover {
+  background: rgba(59, 158, 255, 0.07);
+}
+
+.pageStack .rowActions .ghostButton,
+.pageStack .rowActions .dangerButton {
+  min-height: 30px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+html[data-theme="light"] .pageStack .statCard,
+html[data-theme="light"] .pageStack .tablePanel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
 html[data-theme="light"] {
   --bg: #eef5fb;
   --surface: #ffffff;
@@ -110,6 +705,16 @@ html[data-theme="light"] th {
 
 html[data-theme="light"] tbody tr:hover {
   background: rgba(31, 127, 214, 0.055);
+}
+
+html[data-theme="light"] .essaisMetric,
+html[data-theme="light"] .essaisProcess,
+html[data-theme="light"] .essaisTableCard,
+html[data-theme="light"] .kanbanColumn,
+html[data-theme="light"] .essaisDetailPanel,
+html[data-theme="light"] .essaisInfoCard {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+  border-color: rgba(71, 99, 130, 0.16);
 }
 
 * {
