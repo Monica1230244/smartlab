@@ -4657,3 +4657,308 @@ html[data-theme="light"] .satisfactionCycleStep b {
   .satisfactionBars div,
   .satisfactionNoteDist div { grid-template-columns: 1fr; }
 }
+
+/* Parametres mockup layout */
+.settingsMockPage {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.settingsHeader {
+  align-items: start;
+}
+
+.settingsLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+}
+
+.settingsMain,
+.settingsSide {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.settingsSection {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.09);
+}
+
+.settingsSection h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settingsGrid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settingsTile {
+  min-height: 112px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(99, 179, 237, 0.13);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(10, 27, 43, 0.9));
+  color: var(--text);
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+
+.settingsTile:hover,
+.settingsTile.active {
+  border-color: rgba(59, 158, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.settingsTile b {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 158, 255, 0.14);
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.settingsTile strong,
+.settingsTile small {
+  display: block;
+}
+
+.settingsTile strong {
+  font-size: 13px;
+}
+
+.settingsTile small {
+  margin-top: 6px;
+  color: var(--text2);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.settingsTile em {
+  color: var(--text3);
+  font-size: 20px;
+  font-style: normal;
+}
+
+.settingsCompany,
+.settingsProfile,
+.settingsQuick,
+.settingsDetail,
+.settingsStorage {
+  overflow: hidden;
+}
+
+.companyIdentity {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+}
+
+.companyIdentity b {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+}
+
+.companyIdentity strong,
+.companyIdentity small {
+  display: block;
+}
+
+.companyIdentity small {
+  margin-top: 4px;
+  color: var(--text2);
+  line-height: 1.45;
+}
+
+.settingsCompany dl {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 9px 10px;
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 12px;
+}
+
+.settingsCompany dt { color: var(--text3); }
+.settingsCompany dd {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.settingsProfileBody {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.profilePhotoPreview.small {
+  width: 72px;
+  height: 72px;
+  justify-self: center;
+}
+
+.settingsProfileBody .photoUploadButton {
+  justify-self: center;
+}
+
+.settingsProfileBody input,
+.settingsQuickRows select {
+  width: 100%;
+}
+
+.settingsQuickRows {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.settingsQuickRows label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: 10px;
+  align-items: center;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.switchControl {
+  justify-self: end;
+  width: 42px;
+  height: 24px;
+  border: 1px solid rgba(99, 179, 237, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 2px;
+  cursor: pointer;
+}
+
+.switchControl i {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text2);
+  transition: transform .2s, background .2s;
+}
+
+.switchControl.on {
+  background: rgba(59, 158, 255, 0.25);
+  border-color: rgba(59, 158, 255, 0.55);
+}
+
+.switchControl.on i {
+  transform: translateX(17px);
+  background: var(--accent);
+}
+
+.settingsDetail {
+  padding: 16px;
+}
+
+.settingsDetail p,
+.settingsDetail small,
+.settingsStorage p {
+  color: var(--text2);
+  line-height: 1.55;
+  margin: 0;
+  font-size: 12px;
+}
+
+.settingsStatsMini {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.settingsStatsMini div {
+  border: 1px solid rgba(99, 179, 237, 0.11);
+  border-radius: 8px;
+  background: rgba(26, 34, 53, 0.45);
+  padding: 10px;
+}
+
+.settingsStatsMini span,
+.settingsStatsMini strong {
+  display: block;
+}
+
+.settingsStatsMini span {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.settingsStatsMini strong {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.settingsStorage {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.settingsStorage i {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(59, 158, 255, 0.12);
+  overflow: hidden;
+}
+
+.settingsStorage em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+html[data-theme="light"] .settingsTile,
+html[data-theme="light"] .settingsStatsMini div {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.96));
+}
+
+@media (max-width: 1320px) {
+  .settingsLayout { grid-template-columns: 1fr; }
+  .settingsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .settingsGrid,
+  .settingsGrid.compact,
+  .settingsQuickRows label,
+  .settingsStatsMini { grid-template-columns: 1fr; }
+  .settingsTile { grid-template-columns: 40px minmax(0, 1fr); }
+  .settingsTile em { display: none; }
+}

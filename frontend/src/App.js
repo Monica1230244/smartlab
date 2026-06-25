@@ -46,6 +46,7 @@ function App() {
           <Route path="/essais" element={<Essais />} />
           <Route path="/devis" element={<Devis />} />
           <Route path="/commandes" element={<Commandes />} />
+          <Route path="/factures" element={<Devis />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/equipements" element={<Equipements />} />
           <Route path="/audits" element={<Audits />} />
@@ -57,7 +58,9 @@ function App() {
           <Route path="/catalogue-essais" element={<CatalogueEssais />} />
           <Route path="/resultats-essais" element={<ResultatsEssais />} />
           <Route path="/achats-approvisionnement" element={<AchatsApprovisionnement />} />
+          <Route path="/fournisseurs" element={<AchatsApprovisionnement />} />
           <Route path="/satisfaction-clients" element={<SatisfactionClients />} />
+          <Route path="/indicateurs-qualite" element={<Dashboard />} />
           <Route path="/projets" element={<Projets />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />

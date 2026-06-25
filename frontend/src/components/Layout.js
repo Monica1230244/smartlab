@@ -7,29 +7,32 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: 'DB' },
   { to: '/essais', label: "Objets d'essais", icon: 'OE' },
   { to: '/rapports', label: 'Rapports', icon: 'RP' },
-  { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
-  { to: '/documents-qualite', label: 'Gestion des documents qualite', icon: 'DQ' },
   { to: '/catalogue-essais', label: 'Catalogue des essais', icon: 'CE' },
   { to: '/resultats-essais', label: 'Resultats & calculs', icon: 'RC' },
-  { to: '/equipements', label: 'Gestion des équipements', icon: 'EQ' },
-  { to: '/personnel', label: 'Gestion du personnel', icon: 'RH' },
-  { to: '/non-conformites', label: 'Gestion des non-conformités', icon: 'NC' },
-  { to: '/reclamations', label: 'Gestion des réclamations', icon: 'GR' },
-  { to: '/audits', label: 'Gestion des audits qualité', icon: 'AQ' },
-  { to: '/satisfaction-clients', label: 'Satisfaction client', icon: 'SC' },
+  { to: '/documents-qualite', label: 'Documents Qualite', icon: 'DQ' },
+  { to: '/equipements', label: 'Equipements', icon: 'EQ' },
+  { to: '/personnel', label: 'Gestion du personnel', icon: 'GP' },
   { to: '/clients', label: 'Clients', icon: 'CL' },
   { to: '/devis', label: 'Devis', icon: 'DV' },
   { to: '/commandes', label: 'Commandes', icon: 'CM' },
-  { to: '/achats-approvisionnement', label: 'Achats et approvisionnement', icon: 'AA' },
+  { to: '/factures', label: 'Factures', icon: 'FC' },
+  { to: '/achats-approvisionnement', label: 'Achats & Approvisionnements', icon: 'AA' },
+  { to: '/fournisseurs', label: 'Fournisseurs', icon: 'FR' },
+  { to: '/non-conformites', label: 'Non-conformites', icon: 'NC' },
+  { to: '/reclamations', label: 'Reclamations', icon: 'GR' },
+  { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
+  { to: '/satisfaction-clients', label: 'Satisfaction Client', icon: 'SC' },
+  { to: '/indicateurs-qualite', label: 'Indicateurs Qualite', icon: 'IQ' },
+  { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/projets', label: 'Projets', icon: 'PJ' },
-  { to: '/parametres', label: 'Parametrage', icon: 'PR' }
+  { to: '/parametres', label: 'Parametres', icon: 'PR' }
 ];
 
 const menuByRole = {
-  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
+  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/factures', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/factures', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/indicateurs-qualite', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/equipements', '/achats-approvisionnement', '/personnel', '/non-conformites', '/reclamations', '/processus', '/documents-qualite', '/parametres'],
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/achats-approvisionnement', '/fournisseurs', '/personnel', '/non-conformites', '/reclamations', '/indicateurs-qualite', '/processus', '/parametres'],
   receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres']
 };
 
@@ -39,20 +42,23 @@ const titles = {
   '/essais': "Objets d'essais",
   '/devis': 'Devis',
   '/commandes': 'Commandes',
+  '/factures': 'Factures',
   '/projets': 'Projets',
-  '/achats-approvisionnement': 'Achats et approvisionnement',
+  '/achats-approvisionnement': 'Achats & Approvisionnements',
+  '/fournisseurs': 'Fournisseurs',
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
-  '/documents-qualite': 'Gestion des documents qualite',
-  '/equipements': 'Gestion des équipements',
-  '/audits': 'Gestion des audits qualité',
-  '/non-conformites': 'Gestion des non-conformités',
-  '/reclamations': 'Gestion des réclamations',
+  '/documents-qualite': 'Documents Qualite',
+  '/equipements': 'Equipements',
+  '/audits': 'Audits Qualite',
+  '/non-conformites': 'Non-conformites',
+  '/reclamations': 'Reclamations',
+  '/satisfaction-clients': 'Satisfaction Client',
+  '/indicateurs-qualite': 'Indicateurs Qualite',
   '/personnel': 'Gestion du personnel',
-  '/satisfaction-clients': 'Satisfaction client',
   '/processus': 'Processus ISO 17025',
-  '/parametres': 'Parametrage'
+  '/parametres': 'Parametres'
 };
 
 const DISMISSED_NOTIFICATIONS_KEY = 'smartlab_dismissed_notifications';
@@ -142,9 +148,11 @@ function Layout({ publicMode = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
-  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/processus', '/documents-qualite', '/equipements', '/personnel', '/non-conformites', '/reclamations', '/audits', '/satisfaction-clients'].includes(item.to));
-  const administrationItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/achats-approvisionnement', '/projets', '/parametres'].includes(item.to));
+  const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais', '/documents-qualite', '/equipements', '/personnel'].includes(item.to));
+  const commercialItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/factures'].includes(item.to));
+  const achatsItems = allowedMenuItems.filter((item) => ['/achats-approvisionnement', '/fournisseurs'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/indicateurs-qualite', '/processus'].includes(item.to));
+  const administrationItems = allowedMenuItems.filter((item) => ['/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -367,9 +375,31 @@ function Layout({ publicMode = false }) {
           ))}
         </nav>
 
+        {commercialItems.length > 0 && (
+          <>
+            <div className="navSectionLabel">Commercial</div>
+            <nav className="navList">
+              {commercialItems.map((item) => (
+                <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
+              ))}
+            </nav>
+          </>
+        )}
+
+        {achatsItems.length > 0 && (
+          <>
+            <div className="navSectionLabel">Achats</div>
+            <nav className="navList">
+              {achatsItems.map((item) => (
+                <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
+              ))}
+            </nav>
+          </>
+        )}
+
         {qualityItems.length > 0 && (
           <>
-            <div className="navSectionLabel">Qualite ISO</div>
+            <div className="navSectionLabel">Qualite</div>
             <nav className="navList">
               {qualityItems.map((item) => (
                 <NavItem key={item.to} item={item} closeMenu={() => setOpen(false)} />
