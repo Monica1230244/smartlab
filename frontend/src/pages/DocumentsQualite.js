@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
+import { downloadCsv } from '../utils/exportCsv';
 import { authProfiles, useAuth } from '../contexts/AuthContext';
 
 const statusFolders = [
@@ -1661,6 +1662,33 @@ export default function DocumentsQualite() {
     return `${delay} jours`;
   };
 
+  const resetDocumentFilters = () => {
+    setQuery('');
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setProcessFilter('all');
+    setAuthorFilter('all');
+    setActiveTab('all');
+    toast.success('Filtres documents reinitialises');
+  };
+
+  const exportDocuments = () => {
+    if (!downloadCsv('documents-qualite.csv', filteredDocuments)) toast.error('Aucun document a exporter');
+  };
+
+  const showReviewDocuments = () => {
+    setStatusFilter('en_vigueur');
+    setActiveTab('all');
+    toast.success('Documents a reviser affiches');
+  };
+
+  const showRecentDocuments = () => {
+    setStatusFilter('all');
+    setActiveTab('all');
+    setQuery('');
+    toast.success('Historique documentaire affiche');
+  };
+
   return (
     <div className="qualityMockPage">
       <div className="dashMockHeader qualityMockHeader">
@@ -1687,17 +1715,17 @@ export default function DocumentsQualite() {
               ))}
             </div>
             <div className="quoteTableTop qualityTools">
-              <div className="quoteFilters"><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Type : Tous</option><option value="procedure">Procedure</option><option value="instruction">Instruction</option><option value="formulaire">Formulaire</option><option value="enregistrement">Enregistrement</option><option value="politique">Politique</option></select><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Statut : Tous</option><option value="en_vigueur">En vigueur</option><option value="perime">Obsolete</option></select><select value={processFilter} onChange={(event) => setProcessFilter(event.target.value)}><option value="all">Processus : Tous</option>{processOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><select value={authorFilter} onChange={(event) => setAuthorFilter(event.target.value)}><option value="all">Redacteur : Tous</option>{authorOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><button type="button" className="ghostButton">Filtres avances</button></div>
-              <div className="quoteTableActions"><button type="button" className="primaryButton" onClick={() => openCreateDocument('procedure')}>+ Nouveau document</button><button type="button" className="ghostButton">☷</button><button type="button" className="ghostButton">▦</button><button type="button" className="ghostButton">⇩</button></div>
+              <div className="quoteFilters"><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Type : Tous</option><option value="procedure">Procedure</option><option value="instruction">Instruction</option><option value="formulaire">Formulaire</option><option value="enregistrement">Enregistrement</option><option value="politique">Politique</option></select><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Statut : Tous</option><option value="en_vigueur">En vigueur</option><option value="perime">Obsolete</option></select><select value={processFilter} onChange={(event) => setProcessFilter(event.target.value)}><option value="all">Processus : Tous</option>{processOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><select value={authorFilter} onChange={(event) => setAuthorFilter(event.target.value)}><option value="all">Redacteur : Tous</option>{authorOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><button type="button" className="ghostButton" onClick={resetDocumentFilters}>Filtres avances</button></div>
+              <div className="quoteTableActions"><button type="button" className="primaryButton" onClick={() => openCreateDocument('procedure')}>+ Nouveau document</button><button type="button" className="ghostButton" onClick={() => setActiveTab('all')}>☷</button><button type="button" className="ghostButton" onClick={() => setActiveTab('procedure')}>▦</button><button type="button" className="ghostButton" onClick={exportDocuments}>⇩</button></div>
             </div>
             <div className="tableScroll"><table className="mockTable qualityTable"><thead><tr><th>Code</th><th>Titre du document</th><th>Type</th><th>Processus</th><th>Version</th><th>Statut</th><th>Date MAJ</th><th>Actions</th></tr></thead><tbody>{filteredDocuments.map((record) => <tr key={record.id} className={`${selectedDocument?.id === record.id ? 'selectedRow' : ''} ${record.statut === 'perime' ? 'obsoleteRow' : ''}`} onClick={() => setSelectedDocId(record.id)}><td><strong>{record.reference}</strong></td><td>{record.titre || firstDocumentLine(procedureHtml(record), 'Document qualite')}</td><td><span className={`statusBadge ${documentTypeTone(record.type)}`}>{documentTypeLabel(record.type)}</span></td><td>{record.processus || '-'}</td><td>{record.version || '1.0'}</td><td><span className={`statusBadge ${documentStatusTone(record.statut)}`}>{documentStatusLabel(record.statut)}</span></td><td>{formatShortDate(record.updated_at || record.date_revision || record.date_application)}</td><td><div className="rowActions"><button type="button" onClick={(event) => { event.stopPropagation(); setSelectedDocId(record.id); }}>⊙</button>{record.type === 'procedure' && <button type="button" onClick={(event) => { event.stopPropagation(); generateProcedure(record); }}>⇩</button>}<button type="button" onClick={(event) => { event.stopPropagation(); openDocumentEdit(record); }}>✎</button><button type="button" onClick={(event) => { event.stopPropagation(); remove(record); }}>⋮</button></div></td></tr>)}{filteredDocuments.length === 0 && <tr><td colSpan="8" className="emptyCell">Aucun document trouve</td></tr>}</tbody></table></div>
-            <div className="tableFooter"><span>Affichage de 1 a {filteredDocuments.length} sur {totalDocuments} documents</span><div><button type="button" className="pageButton active">1</button><button type="button" className="pageButton">2</button><button type="button" className="pageButton">3</button><button type="button" className="pageButton">13</button></div><select><option>10 / page</option></select></div>
+            <div className="tableFooter"><span>Affichage de 1 a {filteredDocuments.length} sur {totalDocuments} documents</span><div><button type="button" className="pageButton active" onClick={() => toast.success('Page 1 affichee')}>1</button><button type="button" className="pageButton" onClick={() => toast.success('Page 2 non disponible avec le nombre actuel de lignes')}>2</button><button type="button" className="pageButton" onClick={() => toast.success('Page 3 non disponible avec le nombre actuel de lignes')}>3</button><button type="button" className="pageButton" onClick={() => toast.success('Page 13 non disponible avec le nombre actuel de lignes')}>13</button></div><select><option>10 / page</option></select></div>
           </section>
 
           <div className="qualityBottomGrid">
-            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Repartition par type</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend">{Object.entries(typeCounts).slice(0, 5).map(([label, value], index) => <div key={label}><i style={{ background: ['#7c3aed', '#22c55e', '#f59e0b', '#2f8cff', '#06b6d4'][index] }} /><span>{label}</span><strong>{value} ({Math.round((value / Math.max(totalDocuments, 1)) * 100)}%)</strong></div>)}</div></div><button type="button" className="linkButton">Voir le detail →</button></section>
-            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Statut des documents</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend"><div><i style={{ background: '#22c55e' }} /><span>En vigueur</span><strong>{activeCount} ({Math.round((activeCount / Math.max(totalDocuments, 1)) * 100)}%)</strong></div><div><i style={{ background: '#f59e0b' }} /><span>En revision</span><strong>{revisionCount}</strong></div><div><i style={{ background: '#ef4444' }} /><span>Obsoletes</span><strong>{obsoleteCount}</strong></div><div><i style={{ background: '#64748b' }} /><span>Brouillons</span><strong>{draftCount}</strong></div></div></div><button type="button" className="linkButton">Voir le detail →</button></section>
-            <section className="dashPanel qualityMiniPanel qualityEvolution"><div className="dashPanelHeader"><strong>Evolution documentaire</strong><span>12 derniers mois</span></div><div className="qualityLineChart"><svg viewBox="0 0 420 160" aria-hidden="true"><polyline className="created" points="5,130 45,100 85,112 125,78 165,62 205,78 245,58 285,50 325,70 365,64 415,46" /><polyline className="modified" points="5,142 45,132 85,124 125,116 165,98 205,116 245,92 285,82 325,72 365,86 415,70" /><polyline className="obsolete" points="5,150 45,148 85,150 125,146 165,148 205,144 245,146 285,140 325,142 365,136 415,132" /></svg></div><button type="button" className="linkButton">Voir le rapport complet →</button></section>
+            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Repartition par type</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend">{Object.entries(typeCounts).slice(0, 5).map(([label, value], index) => <div key={label}><i style={{ background: ['#7c3aed', '#22c55e', '#f59e0b', '#2f8cff', '#06b6d4'][index] }} /><span>{label}</span><strong>{value} ({Math.round((value / Math.max(totalDocuments, 1)) * 100)}%)</strong></div>)}</div></div><button type="button" className="linkButton" onClick={() => setActiveTab('all')}>Voir le detail →</button></section>
+            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Statut des documents</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend"><div><i style={{ background: '#22c55e' }} /><span>En vigueur</span><strong>{activeCount} ({Math.round((activeCount / Math.max(totalDocuments, 1)) * 100)}%)</strong></div><div><i style={{ background: '#f59e0b' }} /><span>En revision</span><strong>{revisionCount}</strong></div><div><i style={{ background: '#ef4444' }} /><span>Obsoletes</span><strong>{obsoleteCount}</strong></div><div><i style={{ background: '#64748b' }} /><span>Brouillons</span><strong>{draftCount}</strong></div></div></div><button type="button" className="linkButton" onClick={() => setActiveTab('all')}>Voir le detail →</button></section>
+            <section className="dashPanel qualityMiniPanel qualityEvolution"><div className="dashPanelHeader"><strong>Evolution documentaire</strong><span>12 derniers mois</span></div><div className="qualityLineChart"><svg viewBox="0 0 420 160" aria-hidden="true"><polyline className="created" points="5,130 45,100 85,112 125,78 165,62 205,78 245,58 285,50 325,70 365,64 415,46" /><polyline className="modified" points="5,142 45,132 85,124 125,116 165,98 205,116 245,92 285,82 325,72 365,86 415,70" /><polyline className="obsolete" points="5,150 45,148 85,150 125,146 165,148 205,144 245,146 285,140 325,142 365,136 415,132" /></svg></div><button type="button" className="linkButton" onClick={exportDocuments}>Voir le rapport complet →</button></section>
           </div>
 
           {formOpen && <div className="qualityEditorSlot">{selectedType === 'procedure' ? renderProcedureEditor() : renderFicheForm()}</div>}
@@ -1705,9 +1733,9 @@ export default function DocumentsQualite() {
 
         <aside className="qualityRightStack">
           <section className="dashPanel qualityTreePanel"><div className="dashPanelHeader"><strong>Arborescence documentaire</strong></div><div className="qualityTree"><div><span>▾</span><strong>Systeme de Management</strong><em>{totalDocuments}</em></div>{Object.entries(processCounts).slice(0, 7).map(([name, value]) => <button key={name} type="button" onClick={() => setProcessFilter(name)}><span>▹</span><b>📁</b>{name}<em>{value}</em></button>)}</div></section>
-          <section className="dashPanel qualityReviewPanel"><div className="dashPanelHeader"><strong>Documents a reviser</strong><button type="button" className="linkButton">Voir tout</button></div><div className="qualityReviewList">{reviewDocuments.map((record) => <div key={record.id}><span className={`statusBadge ${documentTypeTone(record.type)}`}>{documentTypeLabel(record.type).slice(0, 3)}</span><strong>{record.reference} - {record.titre || 'Document'}</strong><small>Echeance : {formatShortDate(record.date_revision)}</small><em>{daysBeforeRevision(record)}</em></div>)}</div></section>
-          <section className="dashPanel qualityQuickPanel"><div className="dashPanelHeader"><strong>Acces rapides</strong></div><div className="qualityQuickGrid"><button type="button">☆ Mes favoris</button><button type="button">◴ Recemment consultes</button><button type="button" onClick={() => setStatusFilter('perime')}>△ Documents obsoletes</button><button type="button">▤ Modifications recentes</button></div></section>
-          <section className="dashPanel qualityHistoryPanel"><div className="dashPanelHeader"><strong>Historique des dernieres activites</strong></div><div className="qualityHistoryList">{activityDocuments.map((record) => <div key={record.id}><b>↻</b><span><strong>{record.reference} - {record.titre || 'Document qualite'}</strong><small>Document modifie par {record.responsable || record.redige_par || 'TESTLAB'}</small></span></div>)}</div><button type="button" className="linkButton">Voir tout l'historique →</button></section>
+          <section className="dashPanel qualityReviewPanel"><div className="dashPanelHeader"><strong>Documents a reviser</strong><button type="button" className="linkButton" onClick={showReviewDocuments}>Voir tout</button></div><div className="qualityReviewList">{reviewDocuments.map((record) => <div key={record.id}><span className={`statusBadge ${documentTypeTone(record.type)}`}>{documentTypeLabel(record.type).slice(0, 3)}</span><strong>{record.reference} - {record.titre || 'Document'}</strong><small>Echeance : {formatShortDate(record.date_revision)}</small><em>{daysBeforeRevision(record)}</em></div>)}</div></section>
+          <section className="dashPanel qualityQuickPanel"><div className="dashPanelHeader"><strong>Acces rapides</strong></div><div className="qualityQuickGrid"><button type="button" onClick={() => setActiveTab('procedure')}>☆ Mes favoris</button><button type="button" onClick={showRecentDocuments}>◴ Recemment consultes</button><button type="button" onClick={() => setStatusFilter('perime')}>△ Documents obsoletes</button><button type="button" onClick={showRecentDocuments}>▤ Modifications recentes</button></div></section>
+          <section className="dashPanel qualityHistoryPanel"><div className="dashPanelHeader"><strong>Historique des dernieres activites</strong></div><div className="qualityHistoryList">{activityDocuments.map((record) => <div key={record.id}><b>↻</b><span><strong>{record.reference} - {record.titre || 'Document qualite'}</strong><small>Document modifie par {record.responsable || record.redige_par || 'TESTLAB'}</small></span></div>)}</div><button type="button" className="linkButton" onClick={showRecentDocuments}>Voir tout l'historique →</button></section>
         </aside>
       </div>
     </div>
@@ -1727,3 +1755,5 @@ function daysUntilDate(value) {
 function Sparkline({ tone = 'blue' }) {
   return <svg className={`quoteSpark ${tone}`} viewBox="0 0 120 28" aria-hidden="true"><polyline points="0,22 18,18 36,13 54,20 72,16 90,15 120,14" /></svg>;
 }
+
+

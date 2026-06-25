@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
+import { downloadCsv } from '../utils/exportCsv';
 
 const emptyEquipment = {
   code: '',
@@ -153,7 +154,7 @@ function EquipmentModal({ form, setForm, editing, onClose, onSubmit }) {
   );
 }
 
-function EquipmentDetail({ record, onEdit }) {
+function EquipmentDetail({ record, onEdit, onShowPlanning, onShowIntervention }) {
   if (!record) return <aside className="dashPanel equipDetailPanel"><div className="notificationEmpty">Selectionnez un equipement</div></aside>;
   const calibrationDelay = daysUntil(record.prochain_etalonnage);
   const docs = record.documents || [];
@@ -166,9 +167,9 @@ function EquipmentDetail({ record, onEdit }) {
           <div className="equipMetrics"><div><span>Utilisation</span><strong>{record.taux_utilisation}%</strong><i><em style={{ width: `${record.taux_utilisation}%` }} /></i></div><div><span>Disponibilite</span><strong>{record.disponibilite}%</strong><i><em style={{ width: `${record.disponibilite}%` }} /></i></div><div><span>MTBF</span><strong>{record.mtbf} h</strong><i><em style={{ width: '74%' }} /></i></div><div><span>MTTR</span><strong>{record.mttr} h</strong><i><em style={{ width: '35%' }} /></i></div></div>
         </div>
       </section>
-      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Prochaine calibration</strong><button type="button" className="ghostButton">Voir planning</button></div><div className="equipCalibration"><strong>{record.prochain_etalonnage || '-'}</strong><span className={calibrationDelay !== null && calibrationDelay < 0 ? 'lateText' : ''}>{calibrationDelay !== null ? `J${calibrationDelay >= 0 ? '+' : ''}${calibrationDelay}` : 'Non planifie'}</span><i><em style={{ width: `${calibrationDelay === null ? 0 : Math.max(8, Math.min(100, 100 - Math.abs(calibrationDelay)))}%` }} /></i></div></section>
-      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Derniere intervention</strong><button type="button" className="ghostButton">Voir detail</button></div><div className="equipIntervention"><b>MT</b><span>Maintenance preventive<br /><small>Effectuee le {record.dernier_etalonnage || '-'}</small></span></div></section>
-      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Documents associes</strong><span>{docs.length}</span></div><div className="equipDocsList">{docs.slice(0, 4).map((doc) => <div key={doc.id || doc.titre}><span>{doc.titre || doc.type || 'Document'}</span><button type="button" className="ghostButton">↗</button></div>)}{docs.length === 0 && <div className="notificationEmpty">Aucun document associe</div>}</div><button type="button" className="primaryButton" onClick={() => onEdit(record)}>Modifier l'equipement</button></section>
+      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Prochaine calibration</strong><button type="button" className="ghostButton" onClick={() => onShowPlanning(record)}>Voir planning</button></div><div className="equipCalibration"><strong>{record.prochain_etalonnage || '-'}</strong><span className={calibrationDelay !== null && calibrationDelay < 0 ? 'lateText' : ''}>{calibrationDelay !== null ? `J${calibrationDelay >= 0 ? '+' : ''}${calibrationDelay}` : 'Non planifie'}</span><i><em style={{ width: `${calibrationDelay === null ? 0 : Math.max(8, Math.min(100, 100 - Math.abs(calibrationDelay)))}%` }} /></i></div></section>
+      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Derniere intervention</strong><button type="button" className="ghostButton" onClick={() => onShowIntervention(record)}>Voir detail</button></div><div className="equipIntervention"><b>MT</b><span>Maintenance preventive<br /><small>Effectuee le {record.dernier_etalonnage || '-'}</small></span></div></section>
+      <section className="dashPanel equipDetailPanel"><div className="dashPanelHeader"><strong>Documents associes</strong><span>{docs.length}</span></div><div className="equipDocsList">{docs.slice(0, 4).map((doc) => <div key={doc.id || doc.titre}><span>{doc.titre || doc.type || 'Document'}</span><button type="button" className="ghostButton" onClick={() => toast.success('Document selectionne')}>↗</button></div>)}{docs.length === 0 && <div className="notificationEmpty">Aucun document associe</div>}</div><button type="button" className="primaryButton" onClick={() => onEdit(record)}>Modifier l'equipement</button></section>
     </aside>
   );
 }
@@ -183,6 +184,7 @@ export default function Equipements() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [labFilter, setLabFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('list');
   const [selectedId, setSelectedId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -274,6 +276,29 @@ export default function Equipements() {
     toast.success('Equipement supprime');
   };
 
+  const resetFilters = () => {
+    setQuery('');
+    setStatusFilter('all');
+    setLabFilter('all');
+    setTypeFilter('all');
+    toast.success('Filtres equipements reinitialises');
+  };
+
+  const exportEquipments = () => {
+    if (!downloadCsv('equipements.csv', filtered)) toast.error('Aucun equipement a exporter');
+  };
+
+  const showPlanning = (record) => {
+    if (record?.laboratoire) setLabFilter(record.laboratoire);
+    setViewMode('calendar');
+    toast.success('Planning des calibrations filtre');
+  };
+
+  const showIntervention = (record) => {
+    if (record?.id) setSelectedId(record.id);
+    toast.success('Detail intervention affiche dans le panneau');
+  };
+
   return (
     <div className="equipMockPage">
       <div className="dashMockHeader equipHeader">
@@ -295,27 +320,29 @@ export default function Equipements() {
         <main className="equipMain">
           <section className="dashPanel equipTablePanel">
             <div className="equipTableTop">
-              <div className="achatTabs"><button className="active" type="button">Vue liste</button><button type="button">Vue par laboratoire</button><button type="button">Calendrier</button><button type="button">Vue Kanban</button></div>
-              <div className="quoteTableActions"><button type="button" className="primaryButton" onClick={openCreate}>+ Nouvel equipement</button><button type="button" className="ghostButton">☷</button><button type="button" className="ghostButton">▦</button></div>
+              <div className="achatTabs"><button className={viewMode === 'list' ? 'active' : ''} type="button" onClick={() => setViewMode('list')}>Vue liste</button><button className={viewMode === 'lab' ? 'active' : ''} type="button" onClick={() => setViewMode('lab')}>Vue par laboratoire</button><button className={viewMode === 'calendar' ? 'active' : ''} type="button" onClick={() => setViewMode('calendar')}>Calendrier</button><button className={viewMode === 'kanban' ? 'active' : ''} type="button" onClick={() => setViewMode('kanban')}>Vue Kanban</button></div>
+              <div className="quoteTableActions"><button type="button" className="primaryButton" onClick={openCreate}>+ Nouvel equipement</button><button type="button" className="ghostButton" onClick={() => setViewMode('list')}>☷</button><button type="button" className="ghostButton" onClick={exportEquipments}>⇩</button></div>
             </div>
-            <div className="quoteFilters equipFilters"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Statut : Tous</option><option value="en_service">En service</option><option value="maintenance">En maintenance</option><option value="en_panne">En panne</option><option value="hors_service">Hors service</option></select><select value={labFilter} onChange={(event) => setLabFilter(event.target.value)}><option value="all">Laboratoire : Tous</option>{labs.map((lab) => <option key={lab} value={lab}>{lab}</option>)}</select><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Type : Tous</option>{types.map((type) => <option key={type} value={type}>{type}</option>)}</select><select><option>Criticite : Tous</option></select><button type="button" className="ghostButton">Filtres avances</button></div>
+            <div className="quoteFilters equipFilters"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Statut : Tous</option><option value="en_service">En service</option><option value="maintenance">En maintenance</option><option value="en_panne">En panne</option><option value="hors_service">Hors service</option></select><select value={labFilter} onChange={(event) => setLabFilter(event.target.value)}><option value="all">Laboratoire : Tous</option>{labs.map((lab) => <option key={lab} value={lab}>{lab}</option>)}</select><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Type : Tous</option>{types.map((type) => <option key={type} value={type}>{type}</option>)}</select><select><option>Criticite : Tous</option></select><button type="button" className="ghostButton" onClick={resetFilters}>Filtres avances</button></div>
             <div className="tableScroll"><table className="mockTable equipTable"><thead><tr><th>Reference</th><th>Designation</th><th>Type</th><th>Laboratoire</th><th>Statut</th><th>Criticite</th><th>Prochaine calibration</th><th>Taux utilisation</th><th>Actions</th></tr></thead><tbody>{filtered.map((item) => {
               const delay = daysUntil(item.prochain_etalonnage);
               return <tr key={item.id} className={selected?.id === item.id ? 'selectedRow' : ''} onClick={() => setSelectedId(item.id)}><td><div className="equipReference"><span className="equipThumb">EQ</span><strong>{item.code}</strong></div></td><td><strong>{item.designation || '-'}</strong><small>S/n : {item.numero_serie || '-'}</small></td><td><span className="chip">{item.famille}</span></td><td>{item.laboratoire}</td><td><span className={`equipStatusDot ${statusTone(item.statut)}`}>{statusLabels[item.statut] || item.statut}</span></td><td><span className={`statusBadge ${criticityTone(item.criticite)}`}>{criticityLabels[item.criticite] || item.criticite}</span></td><td><strong>{item.prochain_etalonnage || '-'}</strong><small className={delay !== null && delay < 0 ? 'lateText' : ''}>{delay !== null ? `J${delay >= 0 ? '+' : ''}${delay}` : '-'}</small></td><td><div className="equipUsage"><span>{item.taux_utilisation}%</span><i><em style={{ width: `${Math.max(0, Math.min(100, item.taux_utilisation))}%` }} /></i></div></td><td><div className="rowActions"><button type="button" onClick={(event) => { event.stopPropagation(); setSelectedId(item.id); }}>⊙</button><button type="button" onClick={(event) => { event.stopPropagation(); openEdit(item); }}>✎</button><button type="button" onClick={(event) => { event.stopPropagation(); handleDelete(item); }}>⋮</button></div></td></tr>;
             })}{filtered.length === 0 && <tr><td colSpan="9" className="emptyCell">Aucun equipement trouve</td></tr>}</tbody></table></div>
-            <div className="tableFooter"><span>Affichage de 1 a {filtered.length} sur {records.length} equipements</span><div><button type="button" className="pageButton active">1</button><button type="button" className="pageButton">2</button><button type="button" className="pageButton">3</button></div><select><option>10 / page</option></select></div>
+            <div className="tableFooter"><span>Affichage de 1 a {filtered.length} sur {records.length} equipements</span><div><button type="button" className="pageButton active" onClick={() => toast.success('Page 1 affichee')}>1</button><button type="button" className="pageButton" onClick={() => toast.success('Page 2 non disponible avec le nombre actuel de lignes')}>2</button><button type="button" className="pageButton" onClick={() => toast.success('Page 3 non disponible avec le nombre actuel de lignes')}>3</button></div><select><option>10 / page</option></select></div>
           </section>
 
           <div className="equipBottomGrid">
             <MiniPanel title="Repartition par laboratoire"><div className="equipLabDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{total}</strong><span>Total</span></div><div className="chartLegend">{labDistribution.map(([lab, value], index) => <div key={lab}><i style={{ background: ['#2f8cff', '#22c55e', '#f59e0b', '#06b6d4'][index] }} /><span>{lab}</span><strong>{value} ({percent(value, total)}%)</strong></div>)}</div></div></MiniPanel>
-            <MiniPanel title="Echeances calibrations (30 jours)"><div className="equipCalBars"><span style={{ height: '36%' }}>0-7 jours</span><span style={{ height: '52%' }}>8-15 jours</span><span style={{ height: '70%' }}>16-30 jours</span><span style={{ height: '95%' }}>+30 jours</span></div><button type="button" className="linkButton">Voir calendrier complet →</button></MiniPanel>
-            <MiniPanel title="Disponibilite des equipements"><div className="equipAvailability"><div><span>Nov.</span><i style={{ height: '75%' }} /></div><div><span>Dec.</span><i style={{ height: '68%' }} /></div><div><span>Janv.</span><i style={{ height: '72%' }} /></div><div><span>Fevr.</span><i style={{ height: '90%' }} /></div><div><span>Mars</span><i style={{ height: '96%' }} /></div><div><span>Mai</span><i style={{ height: '98%' }} /></div></div><button type="button" className="linkButton">Voir le rapport complet →</button></MiniPanel>
-            <MiniPanel title="Alertes equipements"><div className="equipAlerts">{alertItems.map((item) => <div key={item.id}><span className={statusTone(item.statut)}>{item.statut === 'en_panne' ? '!' : '△'}</span><strong>{item.statut === 'en_panne' ? 'Panne critique' : 'Calibration proche'}</strong><small>{item.designation}<br />{item.prochain_etalonnage || item.laboratoire}</small></div>)}{alertItems.length === 0 && <div className="notificationEmpty">Aucune alerte active</div>}</div><button type="button" className="linkButton">Voir toutes les alertes →</button></MiniPanel>
+            <MiniPanel title="Echeances calibrations (30 jours)"><div className="equipCalBars"><span style={{ height: '36%' }}>0-7 jours</span><span style={{ height: '52%' }}>8-15 jours</span><span style={{ height: '70%' }}>16-30 jours</span><span style={{ height: '95%' }}>+30 jours</span></div><button type="button" className="linkButton" onClick={() => { setViewMode('calendar'); setStatusFilter('all'); }}>Voir calendrier complet →</button></MiniPanel>
+            <MiniPanel title="Disponibilite des equipements"><div className="equipAvailability"><div><span>Nov.</span><i style={{ height: '75%' }} /></div><div><span>Dec.</span><i style={{ height: '68%' }} /></div><div><span>Janv.</span><i style={{ height: '72%' }} /></div><div><span>Fevr.</span><i style={{ height: '90%' }} /></div><div><span>Mars</span><i style={{ height: '96%' }} /></div><div><span>Mai</span><i style={{ height: '98%' }} /></div></div><button type="button" className="linkButton" onClick={exportEquipments}>Voir le rapport complet →</button></MiniPanel>
+            <MiniPanel title="Alertes equipements"><div className="equipAlerts">{alertItems.map((item) => <div key={item.id}><span className={statusTone(item.statut)}>{item.statut === 'en_panne' ? '!' : '△'}</span><strong>{item.statut === 'en_panne' ? 'Panne critique' : 'Calibration proche'}</strong><small>{item.designation}<br />{item.prochain_etalonnage || item.laboratoire}</small></div>)}{alertItems.length === 0 && <div className="notificationEmpty">Aucune alerte active</div>}</div><button type="button" className="linkButton" onClick={() => setStatusFilter('maintenance')}>Voir toutes les alertes →</button></MiniPanel>
           </div>
         </main>
-        <EquipmentDetail record={selected} onEdit={openEdit} />
+        <EquipmentDetail record={selected} onEdit={openEdit} onShowPlanning={showPlanning} onShowIntervention={showIntervention} />
       </div>
       {modalOpen && <EquipmentModal form={form} setForm={setForm} editing={editing} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />}
     </div>
   );
 }
+
+

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
+import { downloadCsv } from '../utils/exportCsv';
 
 const emptyForm = {
   reference: '',
@@ -269,6 +270,29 @@ export default function AchatsApprovisionnement() {
     refresh();
   };
 
+  const resetFilters = () => {
+    setQuery('');
+    setStatusFilter('all');
+    toast.success('Filtres achats reinitialises');
+  };
+
+  const quickCreate = (kind) => {
+    const presets = {
+      commande: { famille: 'Equipement', objet: 'Bon de commande fournisseur', statut: 'commande' },
+      consultation: { famille: 'Service', objet: 'Consultation fournisseurs', statut: 'en_attente' },
+      reception: { famille: 'Consommables', objet: 'Reception fournisseur a enregistrer', statut: 'recu' },
+      facture: { famille: 'Service', objet: 'Facture fournisseur a controler', statut: 'commande' },
+      evaluation: { famille: 'Service', objet: 'Evaluation fournisseur', statut: 'valide' }
+    };
+    setEditing(null);
+    setForm({ ...emptyForm, reference: nextReference(records), ...(presets[kind] || {}) });
+    setModalOpen(true);
+  };
+
+  const exportPurchases = () => {
+    if (!downloadCsv('achats-approvisionnements.csv', filtered)) toast.error('Aucune ligne a exporter');
+  };
+
   return (
     <div className="dashMockPage achatsPage">
       <div className="dashMockHeader">
@@ -297,7 +321,7 @@ export default function AchatsApprovisionnement() {
             <div className="tableTools achatFilters">
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>{statusTabs.map((status) => <option value={status} key={status}>{status === 'all' ? 'Statut : Tous' : statusLabels[status]}</option>)}</select>
               <select defaultValue="all"><option value="all">Urgence : Tous</option><option value="urgente">Urgente</option><option value="normale">Normale</option><option value="basse">Basse</option></select>
-              <button type="button" className="ghostButton">Filtres avances</button>
+              <button type="button" className="ghostButton" onClick={resetFilters}>Filtres avances</button>
             </div>
             <div className="tableScroll"><table><thead><tr><th>Reference</th><th>Objet / besoin</th><th>Demandeur</th><th>Urgence</th><th>Statut</th><th>Fournisseur</th><th>Date demande</th><th>Actions</th></tr></thead><tbody>
               {filtered.map((record) => <tr key={record.id}><td><strong>{record.reference}</strong></td><td>{record.objet}<br /><small>{record.famille}</small></td><td>{record.demandeur || '-'}</td><td><span className={`statusBadge ${statusTone(record.priorite)}`}>{priorityLabels[record.priorite] || record.priorite}</span></td><td><span className={`statusBadge ${statusTone(record.statut)}`}>{statusLabels[record.statut] || record.statut}</span></td><td>{record.fournisseur || '-'}</td><td>{record.date_demande || '-'}</td><td><div className="rowActions"><button type="button" className="ghostButton iconOnlyButton" title="Modifier" onClick={() => openEdit(record)}>o</button><button type="button" className="dangerButton" onClick={() => remove(record)}>Supprimer</button></div></td></tr>)}
@@ -316,7 +340,7 @@ export default function AchatsApprovisionnement() {
         <div className="achatRightStack"><AlertsAchats records={records} /><SupplierPanel records={records} /><ExpensesPanel records={records} /></div>
       </div>
 
-      <section className="dashPanel achatQuickPanel"><div className="dashPanelHeader"><strong>Acces rapides</strong></div><div className="dashQuickGrid achatQuickGrid"><button type="button" onClick={openCreate}><b>ND</b>Nouvelle demande</button><button type="button"><b>BC</b>Nouveau bon de commande</button><button type="button"><b>CS</b>Nouvelle consultation</button><button type="button"><b>RC</b>Enregistrer reception</button><button type="button"><b>FA</b>Nouvelle facture fournisseur</button><button type="button"><b>EV</b>Evaluer un fournisseur</button></div></section>
+      <section className="dashPanel achatQuickPanel"><div className="dashPanelHeader"><strong>Acces rapides</strong></div><div className="dashQuickGrid achatQuickGrid"><button type="button" onClick={openCreate}><b>ND</b>Nouvelle demande</button><button type="button" onClick={() => quickCreate('commande')}><b>BC</b>Nouveau bon de commande</button><button type="button" onClick={() => quickCreate('consultation')}><b>CS</b>Nouvelle consultation</button><button type="button" onClick={() => quickCreate('reception')}><b>RC</b>Enregistrer reception</button><button type="button" onClick={() => quickCreate('facture')}><b>FA</b>Nouvelle facture fournisseur</button><button type="button" onClick={() => quickCreate('evaluation')}><b>EV</b>Evaluer un fournisseur</button></div></section>
 
       {modalOpen && <PurchaseModal form={form} setForm={setForm} editing={editing} onClose={closeModal} onSubmit={submit} />}
     </div>

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
+import { downloadCsv } from '../utils/exportCsv';
 
 const emptyForm = {
   reference: '',
@@ -177,7 +178,7 @@ function ScoreBars({ title, entries }) {
   );
 }
 
-function DetailPanel({ record, onEdit }) {
+function DetailPanel({ record, onEdit, onHistory }) {
   if (!record) {
     return (
       <aside className="dashPanel satisfactionDetail">
@@ -210,7 +211,7 @@ function DetailPanel({ record, onEdit }) {
         <p>{record.commentaire || 'Aucun commentaire renseigne.'}</p>
         <div className="satisfactionDetailActions">
           <button type="button" className="primaryButton" onClick={() => onEdit(record)}>Modifier</button>
-          <button type="button" className="ghostButton">Historique client</button>
+          <button type="button" className="ghostButton" onClick={() => onHistory(record)}>Historique client</button>
         </div>
       </div>
     </aside>
@@ -313,6 +314,23 @@ export default function SatisfactionClients() {
     refresh();
   };
 
+  const resetFilters = () => {
+    setQuery('');
+    setStatusFilter('all');
+    toast.success('Filtres satisfaction reinitialises');
+  };
+
+  const showClientHistory = (record) => {
+    if (!record?.client_nom) return;
+    setQuery(record.client_nom);
+    setStatusFilter('all');
+    toast.success(`Historique filtre pour ${record.client_nom}`);
+  };
+
+  const exportSurveys = () => {
+    if (!downloadCsv('satisfaction-clients.csv', filtered)) toast.error('Aucune enquete a exporter');
+  };
+
   const labScores = topEntries(countBy(records, 'projet'), 4).map(([label]) => [label, average(records.filter((item) => (item.projet || 'Non renseigne') === label), 'note_globale') || avg]);
   const scoreByType = [
     ['Qualite service', average(records, 'note_globale')],
@@ -350,7 +368,7 @@ export default function SatisfactionClients() {
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>{statusTabs.map((status) => <option value={status} key={status}>{status === 'all' ? 'Statut : Tous' : statusLabels[status]}</option>)}</select>
               <select defaultValue="month"><option value="month">Periode : Ce mois</option><option value="year">Cette annee</option></select>
               <select defaultValue="all"><option value="all">Responsable : Tous</option></select>
-              <button type="button" className="ghostButton">Filtres avances</button>
+              <button type="button" className="ghostButton" onClick={resetFilters}>Filtres avances</button>
             </div>
             <div className="tableScroll"><table><thead><tr><th>Client</th><th>Rapport / reference</th><th>Date envoi</th><th>Date reponse</th><th>Note moyenne</th><th>Statut</th><th>NPS</th><th>Actions</th></tr></thead><tbody>
               {filtered.map((record) => <tr key={record.id} className={selected?.id === record.id ? 'selectedRow' : ''} onClick={() => setSelectedId(record.id)}><td><strong>{record.client_nom}</strong></td><td>{record.rapport_reference || record.reference}<br /><small>{record.projet || '-'}</small></td><td>{record.date_envoi || '-'}</td><td>{record.date_reponse || '-'}</td><td><span className="starRating">{stars(record.note_globale)}</span> {Number(record.note_globale || 0).toFixed(1)}/5</td><td><span className={`statusBadge ${statusTone(record)}`}>{satisfactionLabel(record)}</span></td><td>{numberValue(record.note_globale) >= 4 ? `+${Math.round(numberValue(record.note_globale) * 14)}` : numberValue(record.note_globale) <= 2 ? '-45' : '-10'}</td><td><div className="rowActions"><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); setSelectedId(record.id); }}>o</button><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); openEdit(record); }}>M</button><button type="button" className="dangerButton" onClick={(event) => { event.stopPropagation(); remove(record); }}>Supprimer</button></div></td></tr>)}
@@ -366,10 +384,11 @@ export default function SatisfactionClients() {
           </div>
         </div>
 
-        <div className="satisfactionRightStack"><DetailPanel record={selected} onEdit={openEdit} /><section className="dashPanel satisfactionQuality"><div className="dashPanelHeader"><strong>Indicateur qualite lie</strong></div><div><span>Taux de satisfaction client</span><strong>{satisfactionRate}%</strong><small>{satisfactionRate >= 90 ? 'Objectif atteint' : 'Action requise'}</small></div></section></div>
+        <div className="satisfactionRightStack"><DetailPanel record={selected} onEdit={openEdit} onHistory={showClientHistory} /><section className="dashPanel satisfactionQuality"><div className="dashPanelHeader"><strong>Indicateur qualite lie</strong></div><div><span>Taux de satisfaction client</span><strong>{satisfactionRate}%</strong><small>{satisfactionRate >= 90 ? 'Objectif atteint' : 'Action requise'}</small></div></section></div>
       </div>
 
       {modalOpen && <SatisfactionModal form={form} clients={clients} setForm={setForm} editing={editing} onClose={closeModal} onSubmit={submit} />}
     </div>
   );
 }
+

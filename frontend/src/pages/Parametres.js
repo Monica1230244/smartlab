@@ -207,7 +207,7 @@ export default function Parametres() {
 
         <aside className="settingsSide">
           <section className="dashPanel settingsCompany">
-            <div className="dashPanelHeader"><strong>Informations societe</strong><button type="button" className="ghostButton">Modifier</button></div>
+            <div className="dashPanelHeader"><strong>Informations societe</strong><button type="button" className="ghostButton" onClick={() => { setSelectedKey('societe'); toast.success('Section societe ouverte'); }}>Modifier</button></div>
             <div className="companyIdentity"><b>TL</b><span><strong>TESTLAB</strong><small>Laboratoire d'Essais et d'Analyses<br />ISO 17025</small></span></div>
             <dl>
               <dt>Adresse</dt><dd>123 Avenue des Sciences</dd>
@@ -237,9 +237,9 @@ export default function Parametres() {
             <div className="settingsQuickRows">
               <label><span>Theme sombre</span><button type="button" className={`switchControl ${theme === 'dark' ? 'on' : ''}`} onClick={toggleTheme}><i /></button></label>
               <label><span>Notifications email</span><button type="button" className={`switchControl ${emailNotifications ? 'on' : ''}`} onClick={toggleEmailNotifications}><i /></button></label>
-              <label><span>Langue</span><select defaultValue="fr"><option value="fr">Francais</option><option value="en">English</option></select></label>
-              <label><span>Fuseau horaire</span><select defaultValue="porto"><option value="porto">Africa/Porto-Novo</option><option value="paris">Europe/Paris</option></select></label>
-              <label><span>Format de date</span><select defaultValue="ddmmyyyy"><option value="ddmmyyyy">DD/MM/YYYY</option><option value="yyyymmdd">YYYY-MM-DD</option></select></label>
+              <label><span>Langue</span><select defaultValue={localStorage.getItem('testlab_lang') || 'fr'} onChange={(event) => { localStorage.setItem('testlab_lang', event.target.value); toast.success('Langue enregistree'); }}><option value="fr">Francais</option><option value="en">English</option></select></label>
+              <label><span>Fuseau horaire</span><select defaultValue={localStorage.getItem('testlab_timezone') || 'porto'} onChange={(event) => { localStorage.setItem('testlab_timezone', event.target.value); toast.success('Fuseau horaire enregistre'); }}><option value="porto">Africa/Porto-Novo</option><option value="paris">Europe/Paris</option></select></label>
+              <label><span>Format de date</span><select defaultValue={localStorage.getItem('testlab_date_format') || 'ddmmyyyy'} onChange={(event) => { localStorage.setItem('testlab_date_format', event.target.value); toast.success('Format de date enregistre'); }}><option value="ddmmyyyy">DD/MM/YYYY</option><option value="yyyymmdd">YYYY-MM-DD</option></select></label>
             </div>
           </section>
 
