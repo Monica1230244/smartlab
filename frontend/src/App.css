@@ -4962,3 +4962,210 @@ html[data-theme="light"] .settingsStatsMini div {
   .settingsTile { grid-template-columns: 40px minmax(0, 1fr); }
   .settingsTile em { display: none; }
 }
+
+/* Devis mockup layout */
+.quoteMockPage {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.quoteHeader { align-items: start; }
+.quoteKpiGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+.quoteSpark {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 28px;
+  margin-top: 8px;
+}
+.quoteSpark polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.quoteSpark.green polyline { stroke: var(--accent2); }
+.quoteSpark.amber polyline { stroke: var(--accent3); }
+.quoteSpark.red polyline { stroke: var(--accent4); }
+.quoteSpark.purple polyline { stroke: #7c3aed; }
+
+.quoteTransform {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.quoteSmallDonut { width: 92px; }
+.quoteSmallDonut::after { inset: 26px; }
+.quoteSmallDonut strong { font-size: 20px; }
+.quoteSmallDonut span { margin-top: 25px; font-size: 10px; }
+
+.quoteLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+}
+.quoteMain {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.quoteTablePanel { overflow: hidden; }
+.quoteTableTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding-right: 14px;
+}
+.quoteTablePanel tbody tr { cursor: pointer; }
+.quoteTablePanel tbody tr.selectedRow { background: rgba(59, 158, 255, 0.1); }
+
+.quoteBottomGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.quoteMiniStats {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+}
+.quoteMiniStats div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.quoteMiniStats span {
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quoteMiniStats i {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(59, 158, 255, 0.12);
+  overflow: hidden;
+}
+.quoteMiniStats em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.quoteMiniStats strong { color: var(--text); text-align: right; }
+
+.quoteDetailPanel { overflow: hidden; }
+.quoteDetailBody {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+.quoteDetailTabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.13);
+}
+.quoteDetailTabs span {
+  color: var(--text3);
+  font-size: 12px;
+  padding-bottom: 10px;
+}
+.quoteDetailTabs .active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+.quoteDetailBody h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+.quoteDetailBody dl {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 9px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.quoteDetailBody dt { color: var(--text3); }
+.quoteDetailBody dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.quoteDetailLines {
+  display: grid;
+  gap: 8px;
+}
+.quoteDetailLines div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(99, 179, 237, 0.1);
+  border-radius: 8px;
+  background: rgba(26, 34, 53, 0.46);
+}
+.quoteDetailLines span { color: var(--text2); font-size: 12px; }
+.quoteDetailLines strong { color: var(--text); font-size: 12px; }
+.quoteProgress { width: 100%; height: 8px; }
+.quoteDetailActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quoteDetailActions button:nth-child(n + 3) { grid-column: 1 / -1; }
+
+.quoteModal { max-width: 780px; }
+.quoteLinesEditor {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(99, 179, 237, 0.14);
+  border-radius: 8px;
+  background: rgba(26, 34, 53, 0.42);
+  padding: 14px;
+}
+.quoteLinesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.quoteLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px 130px 130px 42px;
+  gap: 8px;
+  align-items: center;
+}
+.quoteLine strong {
+  color: var(--accent2);
+  font-size: 12px;
+  text-align: right;
+}
+.quoteTotal {
+  text-align: right;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+}
+.quoteTotal strong { color: var(--accent2); }
+
+html[data-theme="light"] .quoteDetailLines div,
+html[data-theme="light"] .quoteLinesEditor {
+  background: rgba(248, 252, 255, 0.94);
+}
+
+@media (max-width: 1500px) {
+  .quoteKpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quoteBottomGrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 1180px) {
+  .quoteLayout { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .quoteKpiGrid,
+  .quoteTableTop,
+  .quoteTransform,
+  .quoteDetailActions,
+  .quoteLine { grid-template-columns: 1fr; }
+  .quoteMiniStats div { grid-template-columns: 1fr; }
+}
