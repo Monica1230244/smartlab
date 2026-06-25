@@ -5710,3 +5710,277 @@ html[data-theme="light"] .equipDocsList div {
   .equipDetailIntro,
   .equipMetrics { grid-template-columns: 1fr; }
 }
+
+/* Documents qualite mockup layout */
+.qualityMockPage {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 22px;
+}
+
+.qualityMockHeader {
+  align-items: start;
+}
+
+.qualityKpiGrid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.qualityLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+}
+
+.qualityMain,
+.qualityRightStack {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.qualityTablePanel {
+  overflow: hidden;
+}
+
+.qualityTabs {
+  padding-bottom: 0;
+}
+
+.qualityTools {
+  padding: 10px 14px;
+  border-top: 1px solid rgba(99, 179, 237, 0.08);
+}
+
+.qualityTable tbody tr {
+  cursor: pointer;
+}
+
+.qualityTable tbody tr.selectedRow {
+  background: rgba(59, 158, 255, 0.1);
+}
+
+.qualityTable tbody tr.obsoleteRow {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.04));
+}
+
+.qualityBottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.55fr;
+  gap: 12px;
+}
+
+.qualityMiniPanel {
+  min-height: 230px;
+}
+
+.qualityDonutWrap {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px 14px 4px;
+}
+
+.qualityEvolution .dashPanelHeader span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.qualityLineChart {
+  height: 158px;
+  padding: 10px 12px 0;
+}
+
+.qualityLineChart svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.qualityLineChart polyline {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.qualityLineChart .created { stroke: var(--accent); }
+.qualityLineChart .modified { stroke: var(--accent2); }
+.qualityLineChart .obsolete { stroke: var(--accent4); }
+
+.qualityTreePanel,
+.qualityReviewPanel,
+.qualityQuickPanel,
+.qualityHistoryPanel {
+  overflow: hidden;
+}
+
+.qualityTree {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px 16px;
+}
+
+.qualityTree div,
+.qualityTree button {
+  display: grid;
+  grid-template-columns: 18px 24px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.qualityTree div {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  color: var(--text);
+}
+
+.qualityTree strong,
+.qualityTree b {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.qualityTree em {
+  justify-self: end;
+  border-radius: 999px;
+  background: rgba(59, 158, 255, 0.18);
+  color: var(--accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+
+.qualityReviewList {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 16px;
+}
+
+.qualityReviewList div {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.qualityReviewList strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.qualityReviewList small {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.qualityReviewList em {
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--accent3);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.qualityQuickGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 14px 16px;
+}
+
+.qualityQuickGrid button {
+  border: 1px solid rgba(99, 179, 237, 0.14);
+  border-radius: 8px;
+  background: rgba(26, 34, 53, 0.42);
+  color: var(--text2);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px;
+  text-align: left;
+}
+
+.qualityHistoryList {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 6px;
+}
+
+.qualityHistoryList div {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  position: relative;
+}
+
+.qualityHistoryList div:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: -12px;
+  width: 2px;
+  background: rgba(0, 212, 170, 0.16);
+}
+
+.qualityHistoryList b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--accent2);
+  color: var(--accent2);
+  font-size: 11px;
+}
+
+.qualityHistoryList strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.qualityHistoryList small {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.qualityEditorSlot {
+  display: grid;
+  gap: 12px;
+}
+
+html[data-theme="light"] .qualityQuickGrid button {
+  background: rgba(248, 252, 255, 0.96);
+}
+
+@media (max-width: 1500px) {
+  .qualityKpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .qualityBottomGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1180px) {
+  .qualityLayout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .qualityKpiGrid,
+  .qualityDonutWrap,
+  .qualityQuickGrid,
+  .qualityReviewList { grid-template-columns: 1fr; }
+}

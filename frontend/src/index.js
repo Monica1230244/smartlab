@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const SMARTLAB_VERSION = '2026.06.25-07';
+const SMARTLAB_VERSION = '2026.06.25-08';
 window.SMARTLAB_VERSION = SMARTLAB_VERSION;
 document.documentElement.dataset.theme = localStorage.getItem('smartlab_theme') || 'dark';
 
@@ -95,4 +95,5 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     }
   });
 }
+
 

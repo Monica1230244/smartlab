@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
 import { authProfiles, useAuth } from '../contexts/AuthContext';
@@ -695,6 +695,13 @@ export default function DocumentsQualite() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState({});
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [processFilter, setProcessFilter] = useState('all');
+  const [authorFilter, setAuthorFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedDocId, setSelectedDocId] = useState('');
   const [procedureApprovers, setProcedureApprovers] = useState({});
   const [signatureTarget, setSignatureTarget] = useState(null);
   const [isSigning, setIsSigning] = useState(false);
@@ -1541,66 +1548,182 @@ export default function DocumentsQualite() {
     </form>
   );
 
+  const documentTypeLabel = (value) => {
+    const labels = {
+      procedure: 'Procedure',
+      instruction: 'Instruction',
+      fiche: 'Formulaire',
+      formulaire: 'Formulaire',
+      enregistrement: 'Enregistrement',
+      politique: 'Politique',
+      autre: 'Autre'
+    };
+    return labels[value] || typeLabel(value) || 'Document';
+  };
+
+  const documentTypeTone = (value) => {
+    if (value === 'procedure') return 'purple';
+    if (value === 'instruction') return 'success';
+    if (value === 'fiche' || value === 'formulaire') return 'info';
+    if (value === 'enregistrement') return 'warning';
+    if (value === 'politique') return 'neutral';
+    return 'neutral';
+  };
+
+  const documentStatusLabel = (value) => {
+    if (value === 'en_vigueur') return 'En vigueur';
+    if (value === 'perime') return 'Obsolete';
+    if (value === 'brouillon') return 'Brouillon';
+    return statusLabel(value);
+  };
+
+  const documentStatusTone = (value) => {
+    if (value === 'en_vigueur') return 'success';
+    if (value === 'perime') return 'danger';
+    if (value === 'brouillon') return 'neutral';
+    return 'info';
+  };
+
+  const processOptions = useMemo(() => [...new Set(records.map((record) => record.processus).filter(Boolean))], [records]);
+  const authorOptions = useMemo(() => [...new Set(records.map((record) => record.responsable || record.redige_par).filter(Boolean))], [records]);
+
+  const filteredDocuments = useMemo(() => records.filter((record) => {
+    const type = record.type || 'procedure';
+    const tabMatches = activeTab === 'all' || type === activeTab || (activeTab === 'formulaire' && type === 'fiche');
+    const text = `${record.reference} ${record.titre} ${record.processus} ${record.responsable} ${record.redige_par} ${record.contenu}`.toLowerCase();
+    const queryMatches = text.includes(query.toLowerCase());
+    const typeMatches = typeFilter === 'all' || type === typeFilter || (typeFilter === 'formulaire' && type === 'fiche');
+    const statusMatches = statusFilter === 'all' || record.statut === statusFilter;
+    const processMatches = processFilter === 'all' || record.processus === processFilter;
+    const authorMatches = authorFilter === 'all' || record.responsable === authorFilter || record.redige_par === authorFilter;
+    return tabMatches && queryMatches && typeMatches && statusMatches && processMatches && authorMatches;
+  }).sort(compareDocuments), [records, activeTab, query, typeFilter, statusFilter, processFilter, authorFilter]);
+
+  const selectedDocument = records.find((record) => record.id === selectedDocId) || filteredDocuments[0] || records[0];
+  const totalDocuments = records.length;
+  const procedureCount = records.filter((record) => record.type === 'procedure').length;
+  const instructionCount = records.filter((record) => record.type === 'instruction').length;
+  const formCount = records.filter((record) => ['fiche', 'formulaire'].includes(record.type)).length;
+  const recordCount = records.filter((record) => record.type === 'enregistrement').length;
+  const obsoleteCount = records.filter((record) => record.statut === 'perime').length;
+  const revisionCount = records.filter((record) => record.workflow_status === 'soumis_validation' || (record.date_revision && record.date_revision >= today())).length;
+  const activeCount = records.filter((record) => record.statut === 'en_vigueur').length;
+  const draftCount = records.filter((record) => record.workflow_status === 'brouillon').length;
+  const processCounts = records.reduce((acc, record) => {
+    const key = record.processus || 'Autres Documents';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const typeCounts = records.reduce((acc, record) => {
+    const key = documentTypeLabel(record.type || 'procedure');
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const reviewDocuments = records
+    .filter((record) => record.statut === 'en_vigueur')
+    .sort((a, b) => String(a.date_revision || '9999-99-99').localeCompare(String(b.date_revision || '9999-99-99')))
+    .slice(0, 3);
+  const activityDocuments = records
+    .slice()
+    .sort((a, b) => String(b.updated_at || b.date_application || '').localeCompare(String(a.updated_at || a.date_application || '')))
+    .slice(0, 4);
+
+  const openCreateDocument = (type = 'procedure') => {
+    const status = 'en_vigueur';
+    const realType = type === 'formulaire' ? 'fiche' : type;
+    setSelectedStatus(status);
+    setSelectedType(realType);
+    setEditingId('');
+    setForm({
+      ...emptyForm(status, realType, records),
+      redige_par: user?.name || user?.label || '',
+      responsable: user?.name || user?.label || '',
+      redacteur_nom: user?.name || user?.label || '',
+      redacteur_modificateur: user?.name || user?.label || '',
+      redacteur_fonction: user?.fonction || user?.label || '',
+      approbateur_role: approverOptions[0]?.role || '',
+      approbateur_nom: approverOptions[0]?.label || 'OKOUNDE Joel'
+    });
+    setFormOpen(true);
+  };
+
+  const openDocumentEdit = (record) => {
+    setSelectedStatus(record.statut || 'en_vigueur');
+    setSelectedType(record.type || 'procedure');
+    openEdit(record);
+  };
+
+  const formatShortDate = (value) => value ? formatProcedureDate(value) : '-';
+  const daysBeforeRevision = (record) => {
+    const delay = daysUntilDate(record.date_revision);
+    if (delay === null) return '-';
+    if (delay < 0) return 'Expire';
+    return `${delay} jours`;
+  };
+
   return (
-    <div className="pageStack documentsQualityPage">
-      <div className="pageHeader">
-        <div>
-          <h2>Gestion des documents qualites</h2>
-          <p>Classement des procedures et fiches par etat documentaire.</p>
-        </div>
+    <div className="qualityMockPage">
+      <div className="dashMockHeader qualityMockHeader">
+        <div><span className="mockEyebrow">TESTLAB MOBILE</span><h2>Documents Qualite</h2><p>Gerez, consultez et maitrisez tous vos documents qualite</p></div>
+        <label className="dashMockSearch"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un document (titre, code, mot-cle...)" /><kbd>⌘ K</kbd></label>
+        <button type="button" className="primaryButton" onClick={() => openCreateDocument('procedure')}>+ Nouveau document</button>
       </div>
 
-      <div className="documentBreadcrumb">
-        <button type="button" className={!selectedStatus ? 'active' : ''} onClick={() => { setSelectedStatus(''); setSelectedType(''); closeForm(); }}>
-          Documents qualite
-        </button>
-        {selectedStatus && (
-          <button type="button" className={!selectedType ? 'active' : ''} onClick={() => { setSelectedType(''); closeForm(); }}>
-            {statusLabel(selectedStatus)}
-          </button>
-        )}
-        {selectedType && <span>{typeLabel(selectedType)}</span>}
+      <div className="quoteKpiGrid qualityKpiGrid">
+        <div className="mockKpiCard blue"><div><span>Documents totaux</span><strong>{totalDocuments}</strong><small>+ 12% vs mois dernier</small></div><i>⌘</i><Sparkline /></div>
+        <div className="mockKpiCard purple"><div><span>Procedures</span><strong>{procedureCount}</strong><small>+ 8% vs mois dernier</small></div><i>△</i><Sparkline tone="purple" /></div>
+        <div className="mockKpiCard green"><div><span>Instructions</span><strong>{instructionCount}</strong><small>+ 15% vs mois dernier</small></div><i>▤</i><Sparkline tone="green" /></div>
+        <div className="mockKpiCard orange"><div><span>Enregistrements</span><strong>{recordCount || formCount}</strong><small>+ 5% vs mois dernier</small></div><i>▣</i><Sparkline tone="orange" /></div>
+        <div className="mockKpiCard red"><div><span>Obsoletes</span><strong>{obsoleteCount}</strong><small>- 20% vs mois dernier</small></div><i>×</i><Sparkline tone="red" /></div>
+        <div className="mockKpiCard teal"><div><span>Revisions en cours</span><strong>{revisionCount}</strong><small>Action requise</small></div><i>↻</i><Sparkline tone="green" /></div>
       </div>
 
-      {!selectedStatus && (
-        <div className="documentFolderGrid">
-          {statusFolders.map((folder) => {
-            const count = records.filter((record) => record.statut === folder.key).length;
-            return (
-              <button type="button" className="documentFolder" key={folder.key} onClick={() => openStatusFolder(folder.key)}>
-                <span className="folderIcon" aria-hidden="true" />
-                <strong>{folder.label}</strong>
-                <small>{folder.description}</small>
-                <em>{count} document(s)</em>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="qualityLayout">
+        <main className="qualityMain">
+          <section className="dashPanel qualityTablePanel">
+            <div className="achatTabs qualityTabs">
+              {[['all', 'Tous les documents'], ['procedure', 'Procedures'], ['instruction', 'Instructions'], ['formulaire', 'Formulaires'], ['enregistrement', 'Enregistrements'], ['politique', 'Politiques'], ['autre', 'Autres']].map(([key, label]) => (
+                <button key={key} type="button" className={activeTab === key ? 'active' : ''} onClick={() => setActiveTab(key)}>{label}</button>
+              ))}
+            </div>
+            <div className="quoteTableTop qualityTools">
+              <div className="quoteFilters"><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Type : Tous</option><option value="procedure">Procedure</option><option value="instruction">Instruction</option><option value="formulaire">Formulaire</option><option value="enregistrement">Enregistrement</option><option value="politique">Politique</option></select><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Statut : Tous</option><option value="en_vigueur">En vigueur</option><option value="perime">Obsolete</option></select><select value={processFilter} onChange={(event) => setProcessFilter(event.target.value)}><option value="all">Processus : Tous</option>{processOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><select value={authorFilter} onChange={(event) => setAuthorFilter(event.target.value)}><option value="all">Redacteur : Tous</option>{authorOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select><button type="button" className="ghostButton">Filtres avances</button></div>
+              <div className="quoteTableActions"><button type="button" className="primaryButton" onClick={() => openCreateDocument('procedure')}>+ Nouveau document</button><button type="button" className="ghostButton">☷</button><button type="button" className="ghostButton">▦</button><button type="button" className="ghostButton">⇩</button></div>
+            </div>
+            <div className="tableScroll"><table className="mockTable qualityTable"><thead><tr><th>Code</th><th>Titre du document</th><th>Type</th><th>Processus</th><th>Version</th><th>Statut</th><th>Date MAJ</th><th>Actions</th></tr></thead><tbody>{filteredDocuments.map((record) => <tr key={record.id} className={`${selectedDocument?.id === record.id ? 'selectedRow' : ''} ${record.statut === 'perime' ? 'obsoleteRow' : ''}`} onClick={() => setSelectedDocId(record.id)}><td><strong>{record.reference}</strong></td><td>{record.titre || firstDocumentLine(procedureHtml(record), 'Document qualite')}</td><td><span className={`statusBadge ${documentTypeTone(record.type)}`}>{documentTypeLabel(record.type)}</span></td><td>{record.processus || '-'}</td><td>{record.version || '1.0'}</td><td><span className={`statusBadge ${documentStatusTone(record.statut)}`}>{documentStatusLabel(record.statut)}</span></td><td>{formatShortDate(record.updated_at || record.date_revision || record.date_application)}</td><td><div className="rowActions"><button type="button" onClick={(event) => { event.stopPropagation(); setSelectedDocId(record.id); }}>⊙</button>{record.type === 'procedure' && <button type="button" onClick={(event) => { event.stopPropagation(); generateProcedure(record); }}>⇩</button>}<button type="button" onClick={(event) => { event.stopPropagation(); openDocumentEdit(record); }}>✎</button><button type="button" onClick={(event) => { event.stopPropagation(); remove(record); }}>⋮</button></div></td></tr>)}{filteredDocuments.length === 0 && <tr><td colSpan="8" className="emptyCell">Aucun document trouve</td></tr>}</tbody></table></div>
+            <div className="tableFooter"><span>Affichage de 1 a {filteredDocuments.length} sur {totalDocuments} documents</span><div><button type="button" className="pageButton active">1</button><button type="button" className="pageButton">2</button><button type="button" className="pageButton">3</button><button type="button" className="pageButton">13</button></div><select><option>10 / page</option></select></div>
+          </section>
 
-      {selectedStatus && !selectedType && (
-        <div className="documentFolderGrid">
-          {typeFolders.map((folder) => {
-            const count = records.filter((record) => record.statut === selectedStatus && record.type === folder.key).length;
-            return (
-              <button type="button" className="documentFolder" key={folder.key} onClick={() => openTypeFolder(folder.key)}>
-                <span className="folderIcon" aria-hidden="true" />
-                <strong>{folder.label}</strong>
-                <small>{folder.description}</small>
-                <em>{count} document(s)</em>
-              </button>
-            );
-          })}
-        </div>
-      )}
+          <div className="qualityBottomGrid">
+            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Repartition par type</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend">{Object.entries(typeCounts).slice(0, 5).map(([label, value], index) => <div key={label}><i style={{ background: ['#7c3aed', '#22c55e', '#f59e0b', '#2f8cff', '#06b6d4'][index] }} /><span>{label}</span><strong>{value} ({Math.round((value / Math.max(totalDocuments, 1)) * 100)}%)</strong></div>)}</div></div><button type="button" className="linkButton">Voir le detail →</button></section>
+            <section className="dashPanel qualityMiniPanel"><div className="dashPanelHeader"><strong>Statut des documents</strong></div><div className="qualityDonutWrap"><div className="dashDonut quoteSmallDonut"><strong>{totalDocuments}</strong><span>Total</span></div><div className="chartLegend"><div><i style={{ background: '#22c55e' }} /><span>En vigueur</span><strong>{activeCount} ({Math.round((activeCount / Math.max(totalDocuments, 1)) * 100)}%)</strong></div><div><i style={{ background: '#f59e0b' }} /><span>En revision</span><strong>{revisionCount}</strong></div><div><i style={{ background: '#ef4444' }} /><span>Obsoletes</span><strong>{obsoleteCount}</strong></div><div><i style={{ background: '#64748b' }} /><span>Brouillons</span><strong>{draftCount}</strong></div></div></div><button type="button" className="linkButton">Voir le detail →</button></section>
+            <section className="dashPanel qualityMiniPanel qualityEvolution"><div className="dashPanelHeader"><strong>Evolution documentaire</strong><span>12 derniers mois</span></div><div className="qualityLineChart"><svg viewBox="0 0 420 160" aria-hidden="true"><polyline className="created" points="5,130 45,100 85,112 125,78 165,62 205,78 245,58 285,50 325,70 365,64 415,46" /><polyline className="modified" points="5,142 45,132 85,124 125,116 165,98 205,116 245,92 285,82 325,72 365,86 415,70" /><polyline className="obsolete" points="5,150 45,148 85,150 125,146 165,148 205,144 245,146 285,140 325,142 365,136 415,132" /></svg></div><button type="button" className="linkButton">Voir le rapport complet →</button></section>
+          </div>
 
-      {selectedStatus && selectedType && (
-        <>
-          {selectedType === 'procedure' ? renderProcedureLibrary() : renderFicheTable()}
+          {formOpen && <div className="qualityEditorSlot">{selectedType === 'procedure' ? renderProcedureEditor() : renderFicheForm()}</div>}
+        </main>
 
-          {formOpen && selectedType !== 'procedure' && renderFicheForm()}
-        </>
-      )}
+        <aside className="qualityRightStack">
+          <section className="dashPanel qualityTreePanel"><div className="dashPanelHeader"><strong>Arborescence documentaire</strong></div><div className="qualityTree"><div><span>▾</span><strong>Systeme de Management</strong><em>{totalDocuments}</em></div>{Object.entries(processCounts).slice(0, 7).map(([name, value]) => <button key={name} type="button" onClick={() => setProcessFilter(name)}><span>▹</span><b>📁</b>{name}<em>{value}</em></button>)}</div></section>
+          <section className="dashPanel qualityReviewPanel"><div className="dashPanelHeader"><strong>Documents a reviser</strong><button type="button" className="linkButton">Voir tout</button></div><div className="qualityReviewList">{reviewDocuments.map((record) => <div key={record.id}><span className={`statusBadge ${documentTypeTone(record.type)}`}>{documentTypeLabel(record.type).slice(0, 3)}</span><strong>{record.reference} - {record.titre || 'Document'}</strong><small>Echeance : {formatShortDate(record.date_revision)}</small><em>{daysBeforeRevision(record)}</em></div>)}</div></section>
+          <section className="dashPanel qualityQuickPanel"><div className="dashPanelHeader"><strong>Acces rapides</strong></div><div className="qualityQuickGrid"><button type="button">☆ Mes favoris</button><button type="button">◴ Recemment consultes</button><button type="button" onClick={() => setStatusFilter('perime')}>△ Documents obsoletes</button><button type="button">▤ Modifications recentes</button></div></section>
+          <section className="dashPanel qualityHistoryPanel"><div className="dashPanelHeader"><strong>Historique des dernieres activites</strong></div><div className="qualityHistoryList">{activityDocuments.map((record) => <div key={record.id}><b>↻</b><span><strong>{record.reference} - {record.titre || 'Document qualite'}</strong><small>Document modifie par {record.responsable || record.redige_par || 'TESTLAB'}</small></span></div>)}</div><button type="button" className="linkButton">Voir tout l'historique →</button></section>
+        </aside>
+      </div>
     </div>
   );
+}
+
+function daysUntilDate(value) {
+  if (!value) return null;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - todayDate) / 86400000);
+}
+
+function Sparkline({ tone = 'blue' }) {
+  return <svg className={`quoteSpark ${tone}`} viewBox="0 0 120 28" aria-hidden="true"><polyline points="0,22 18,18 36,13 54,20 72,16 90,15 120,14" /></svg>;
 }
