@@ -5169,3 +5169,136 @@ html[data-theme="light"] .quoteLinesEditor {
   .quoteLine { grid-template-columns: 1fr; }
   .quoteMiniStats div { grid-template-columns: 1fr; }
 }
+
+/* Reclamations mockup layout */
+.reclamMockPage {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.reclamHeader { align-items: start; }
+.reclamKpiGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.reclamResolveCard {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.reclamLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 14px;
+}
+
+.reclamMain,
+.reclamRightStack {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.reclamTablePanel { overflow: hidden; }
+.reclamTablePanel tbody tr { cursor: pointer; }
+.reclamTablePanel tbody tr.selectedRow { background: rgba(59, 158, 255, 0.1); }
+.lateText { color: var(--accent4) !important; font-weight: 800; }
+
+.reclamBottomGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reclamMiniPanel { min-height: 220px; }
+.reclamDonutWrap {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+}
+.reclamDonut { width: 124px; }
+.reclamDonut::after { inset: 32px; }
+
+.reclamDetailPanel { overflow: hidden; }
+.reclamTracking {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+.reclamTracking dl {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.reclamTracking dt { color: var(--text3); }
+.reclamTracking dd { margin: 0; color: var(--text); }
+
+.reclamActionPlan {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+.reclamActionPlan div {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  position: relative;
+}
+.reclamActionPlan div:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 22px;
+  bottom: -13px;
+  width: 2px;
+  background: rgba(99, 179, 237, 0.16);
+}
+.reclamActionPlan b {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--text3);
+  background: transparent;
+}
+.reclamActionPlan .done b { border-color: var(--accent2); background: var(--accent2); }
+.reclamActionPlan .current b { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59, 158, 255, 0.12); }
+.reclamActionPlan span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+.reclamActionPlan small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text3);
+  font-weight: 500;
+}
+.reclamDetailActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+html[data-theme="light"] .reclamActionPlan div:not(:last-child)::after {
+  background: rgba(30, 64, 175, 0.12);
+}
+
+@media (max-width: 1500px) {
+  .reclamKpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .reclamBottomGrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 1180px) {
+  .reclamLayout { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .reclamKpiGrid,
+  .reclamResolveCard,
+  .reclamDonutWrap,
+  .reclamDetailActions { grid-template-columns: 1fr; }
+}
