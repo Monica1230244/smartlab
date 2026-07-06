@@ -1,35 +1,35 @@
-const STORAGE_KEY = 'smartlab_mobile_records_v2';
+﻿const STORAGE_KEY = 'smartlab_mobile_records_v2';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
 const USE_TYPED_TABLES = process.env.REACT_APP_SUPABASE_TYPED_TABLES === 'true';
 const RESOURCE_TABLES = {
-  clients: 'clients',
-  essais: 'objets_essais',
-  devis: 'devis',
-  commandes: 'commandes',
-  rapports: 'rapports',
-  catalogueEssais: 'catalogue_essais',
-  resultatsEssais: 'resultats_essais',
-  documentsQualite: 'documents_qualite',
-  equipements: 'equipements',
-  personnel: 'personnel',
-  nonConformites: 'non_conformites',
-  reclamations: 'reclamations',
-  actionsQualite: 'actions_qualite',
-  risquesOpportunites: 'risques_opportunites',
-  revuesDirection: 'revues_direction',
-  achatsApprovisionnement: 'achats_approvisionnement',
-  fournisseurs: 'fournisseurs',
-  factures: 'factures',
-  consommablesStocks: 'consommables_stocks',
-  contrats: 'contrats',
-  signaturesElectroniques: 'signatures_electroniques',
-  portailClient: 'portail_client',
-  portailFournisseur: 'portail_fournisseur',
-  analyseDocumentaireIA: 'analyse_documentaire_ia',
-  auditLogs: 'audit_logs',
-  notifications: 'notifications'
+  clients: 'testlab_clients',
+  essais: 'testlab_objets_essais',
+  devis: 'testlab_devis',
+  commandes: 'testlab_commandes',
+  rapports: 'testlab_rapports',
+  catalogueEssais: 'testlab_catalogue_essais',
+  resultatsEssais: 'testlab_resultats_essais',
+  documentsQualite: 'testlab_documents_qualite',
+  equipements: 'testlab_equipements',
+  personnel: 'testlab_personnel',
+  nonConformites: 'testlab_non_conformites',
+  reclamations: 'testlab_reclamations',
+  actionsQualite: 'testlab_actions_qualite',
+  risquesOpportunites: 'testlab_risques_opportunites',
+  revuesDirection: 'testlab_revues_direction',
+  achatsApprovisionnement: 'testlab_achats_approvisionnement',
+  fournisseurs: 'testlab_fournisseurs',
+  factures: 'testlab_factures',
+  consommablesStocks: 'testlab_consommables_stocks',
+  contrats: 'testlab_contrats',
+  signaturesElectroniques: 'testlab_signatures_electroniques',
+  portailClient: 'testlab_portail_client',
+  portailFournisseur: 'testlab_portail_fournisseur',
+  analyseDocumentaireIA: 'testlab_analyse_documentaire_ia',
+  auditLogs: 'testlab_audit_logs',
+  notifications: 'testlab_notifications'
 };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -477,3 +477,4 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
