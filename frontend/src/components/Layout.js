@@ -16,8 +16,12 @@ const navItems = [
   { to: '/devis', label: 'Devis', icon: 'DV' },
   { to: '/commandes', label: 'Commandes', icon: 'CM' },
   { to: '/factures', label: 'Factures', icon: 'FC' },
+  { to: '/contrats', label: 'Contrats', icon: 'CT' },
+  { to: '/portail-client', label: 'Portail client', icon: 'PC' },
   { to: '/achats-approvisionnement', label: 'Achats & Approvisionnements', icon: 'AA' },
   { to: '/fournisseurs', label: 'Fournisseurs', icon: 'FR' },
+  { to: '/stocks-consommables', label: 'Stocks & consommables', icon: 'ST' },
+  { to: '/portail-fournisseur', label: 'Portail fournisseur', icon: 'PF' },
   { to: '/non-conformites', label: 'Non-conformites', icon: 'NC' },
   { to: '/reclamations', label: 'Reclamations', icon: 'GR' },
   { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
@@ -26,6 +30,8 @@ const navItems = [
   { to: '/risques-opportunites', label: 'Risques & opportunites', icon: 'RO' },
   { to: '/revues-direction', label: 'Revues de direction', icon: 'RD' },
   { to: '/assistant-audit-iso', label: 'Assistant audit ISO', icon: 'AI' },
+  { to: '/signatures-electroniques', label: 'Signatures electroniques', icon: 'SG' },
+  { to: '/analyse-documentaire-ia', label: 'Analyse documentaire IA', icon: 'IA' },
   { to: '/indicateurs-qualite', label: 'Indicateurs Qualite', icon: 'IQ' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/projets', label: 'Projets', icon: 'PJ' },
@@ -33,10 +39,10 @@ const navItems = [
 ];
 
 const menuByRole = {
-  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/factures', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/factures', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/indicateurs-qualite', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
+  responsable_appel: ['/', '/clients', '/devis', '/commandes', '/factures', '/contrats', '/portail-client', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/factures', '/contrats', '/portail-client', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/indicateurs-qualite', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/achats-approvisionnement', '/fournisseurs', '/personnel', '/non-conformites', '/reclamations', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/indicateurs-qualite', '/processus', '/parametres'],
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/achats-approvisionnement', '/fournisseurs', '/stocks-consommables', '/portail-fournisseur', '/personnel', '/non-conformites', '/reclamations', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/indicateurs-qualite', '/processus', '/parametres'],
   receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/actions-qualite', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres']
 };
 
@@ -47,9 +53,13 @@ const titles = {
   '/devis': 'Devis',
   '/commandes': 'Commandes',
   '/factures': 'Factures',
+  '/contrats': 'Contrats',
+  '/portail-client': 'Portail client',
   '/projets': 'Projets',
   '/achats-approvisionnement': 'Achats & Approvisionnements',
   '/fournisseurs': 'Fournisseurs',
+  '/stocks-consommables': 'Stocks & consommables',
+  '/portail-fournisseur': 'Portail fournisseur',
   '/rapports': 'Rapports',
   '/catalogue-essais': 'Catalogue des essais',
   '/resultats-essais': 'Resultats & calculs',
@@ -63,6 +73,8 @@ const titles = {
   '/risques-opportunites': 'Risques & opportunites',
   '/revues-direction': 'Revues de direction',
   '/assistant-audit-iso': 'Assistant audit ISO',
+  '/signatures-electroniques': 'Signatures electroniques',
+  '/analyse-documentaire-ia': 'Analyse documentaire IA',
   '/indicateurs-qualite': 'Indicateurs Qualite',
   '/personnel': 'Gestion du personnel',
   '/processus': 'Processus ISO 17025',
@@ -157,9 +169,9 @@ function Layout({ publicMode = false }) {
   const navigate = useNavigate();
   const allowedMenuItems = navItems.filter((item) => (menuByRole[currentRole] || menuByRole.responsable_appel).includes(item.to));
   const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais', '/documents-qualite', '/equipements', '/personnel'].includes(item.to));
-  const commercialItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/factures'].includes(item.to));
-  const achatsItems = allowedMenuItems.filter((item) => ['/achats-approvisionnement', '/fournisseurs'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/indicateurs-qualite', '/processus'].includes(item.to));
+  const commercialItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/factures', '/contrats', '/portail-client'].includes(item.to));
+  const achatsItems = allowedMenuItems.filter((item) => ['/achats-approvisionnement', '/fournisseurs', '/stocks-consommables', '/portail-fournisseur'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/indicateurs-qualite', '/processus'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {

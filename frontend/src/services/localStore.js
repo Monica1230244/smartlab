@@ -2,6 +2,35 @@ const STORAGE_KEY = 'smartlab_mobile_records_v2';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
+const USE_TYPED_TABLES = process.env.REACT_APP_SUPABASE_TYPED_TABLES === 'true';
+const RESOURCE_TABLES = {
+  clients: 'clients',
+  essais: 'objets_essais',
+  devis: 'devis',
+  commandes: 'commandes',
+  rapports: 'rapports',
+  catalogueEssais: 'catalogue_essais',
+  resultatsEssais: 'resultats_essais',
+  documentsQualite: 'documents_qualite',
+  equipements: 'equipements',
+  personnel: 'personnel',
+  nonConformites: 'non_conformites',
+  reclamations: 'reclamations',
+  actionsQualite: 'actions_qualite',
+  risquesOpportunites: 'risques_opportunites',
+  revuesDirection: 'revues_direction',
+  achatsApprovisionnement: 'achats_approvisionnement',
+  fournisseurs: 'fournisseurs',
+  factures: 'factures',
+  consommablesStocks: 'consommables_stocks',
+  contrats: 'contrats',
+  signaturesElectroniques: 'signatures_electroniques',
+  portailClient: 'portail_client',
+  portailFournisseur: 'portail_fournisseur',
+  analyseDocumentaireIA: 'analyse_documentaire_ia',
+  auditLogs: 'audit_logs',
+  notifications: 'notifications'
+};
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -102,12 +131,21 @@ function headers(extra = {}) {
   };
 }
 
-function resourceUrl(resource) {
-  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=id.asc`;
+function tableForResource(resource) {
+  return USE_TYPED_TABLES ? (RESOURCE_TABLES[resource] || resource) : SUPABASE_TABLE;
 }
 
-function rowUrl(id) {
-  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?id=eq.${encodeURIComponent(id)}`;
+function resourceUrl(resource) {
+  const table = tableForResource(resource);
+  if (USE_TYPED_TABLES) {
+    return `${SUPABASE_URL}/rest/v1/${table}?select=id,payload,updated_at&order=id.asc`;
+  }
+  return `${SUPABASE_URL}/rest/v1/${table}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=id.asc`;
+}
+
+function rowUrl(resource, id) {
+  const table = tableForResource(resource);
+  return `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
 }
 
 function loadData() {
@@ -333,10 +371,14 @@ function runWorkflowAutomations(data, resource, action, record) {
 }
 
 async function upsertRemote(resource, record) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableForResource(resource)}`, {
     method: 'POST',
     headers: headers({ Prefer: 'resolution=merge-duplicates,return=representation' }),
-    body: JSON.stringify({
+    body: JSON.stringify(USE_TYPED_TABLES ? {
+      id: record.id,
+      payload: record,
+      updated_at: new Date().toISOString()
+    } : {
       id: record.id,
       resource,
       payload: record,
@@ -410,7 +452,7 @@ export async function deleteRecord(resource, id) {
   saveData(data);
 
   try {
-    const response = await fetch(rowUrl(id), { method: 'DELETE', headers: headers() });
+    const response = await fetch(rowUrl(resource, id), { method: 'DELETE', headers: headers() });
     if (!response.ok) throw new Error(await response.text());
     emitStatus('online', 'Suppression synchronisee avec Supabase');
   } catch (error) {
@@ -420,7 +462,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite', 'actionsQualite', 'risquesOpportunites', 'revuesDirection', 'auditLogs'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'factures', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite', 'actionsQualite', 'risquesOpportunites', 'revuesDirection', 'consommablesStocks', 'contrats', 'signaturesElectroniques', 'portailClient', 'portailFournisseur', 'analyseDocumentaireIA', 'auditLogs'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

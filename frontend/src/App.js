@@ -25,6 +25,7 @@ import ResultatsEssais from './pages/ResultatsEssais';
 import AchatsApprovisionnement from './pages/AchatsApprovisionnement';
 import SatisfactionClients from './pages/SatisfactionClients';
 import { ActionsQualite, RisquesOpportunites, RevuesDirection, AssistantAuditISO } from './pages/IsoCore';
+import { StocksConsommables, Contrats, FacturesAvancees, SignaturesElectroniques, PortailClient, PortailFournisseur, AnalyseDocumentaireIA } from './pages/EmergingModules';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -47,7 +48,7 @@ function App() {
           <Route path="/essais" element={<Essais />} />
           <Route path="/devis" element={<Devis />} />
           <Route path="/commandes" element={<Commandes />} />
-          <Route path="/factures" element={<Devis />} />
+          <Route path="/factures" element={<FacturesAvancees />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/equipements" element={<Equipements />} />
           <Route path="/audits" element={<Audits />} />
@@ -60,6 +61,12 @@ function App() {
           <Route path="/resultats-essais" element={<ResultatsEssais />} />
           <Route path="/achats-approvisionnement" element={<AchatsApprovisionnement />} />
           <Route path="/fournisseurs" element={<AchatsApprovisionnement />} />
+          <Route path="/stocks-consommables" element={<StocksConsommables />} />
+          <Route path="/contrats" element={<Contrats />} />
+          <Route path="/signatures-electroniques" element={<SignaturesElectroniques />} />
+          <Route path="/portail-client" element={<PortailClient />} />
+          <Route path="/portail-fournisseur" element={<PortailFournisseur />} />
+          <Route path="/analyse-documentaire-ia" element={<AnalyseDocumentaireIA />} />
           <Route path="/satisfaction-clients" element={<SatisfactionClients />} />
           <Route path="/actions-qualite" element={<ActionsQualite />} />
           <Route path="/risques-opportunites" element={<RisquesOpportunites />} />
