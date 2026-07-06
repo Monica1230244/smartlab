@@ -24,6 +24,7 @@ import CatalogueEssais from './pages/CatalogueEssais';
 import ResultatsEssais from './pages/ResultatsEssais';
 import AchatsApprovisionnement from './pages/AchatsApprovisionnement';
 import SatisfactionClients from './pages/SatisfactionClients';
+import { ActionsQualite, RisquesOpportunites, RevuesDirection, AssistantAuditISO } from './pages/IsoCore';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -60,6 +61,10 @@ function App() {
           <Route path="/achats-approvisionnement" element={<AchatsApprovisionnement />} />
           <Route path="/fournisseurs" element={<AchatsApprovisionnement />} />
           <Route path="/satisfaction-clients" element={<SatisfactionClients />} />
+          <Route path="/actions-qualite" element={<ActionsQualite />} />
+          <Route path="/risques-opportunites" element={<RisquesOpportunites />} />
+          <Route path="/revues-direction" element={<RevuesDirection />} />
+          <Route path="/assistant-audit-iso" element={<AssistantAuditISO />} />
           <Route path="/indicateurs-qualite" element={<Dashboard />} />
           <Route path="/projets" element={<Projets />} />
           <Route path="/parametres" element={<Parametres />} />

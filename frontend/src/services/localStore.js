@@ -58,6 +58,17 @@ const seedData = {
   reclamations: [
     { id: 'rec-1', reference: 'REC-2026-001', client_nom: 'AGETUR Benin', canal: 'email', objet: 'Demande de verification rapport', description: 'Le client demande une verification des valeurs reprises dans le rapport transmis.', responsable: 'Responsable Technique', action_prevue: 'Revue du dossier et reponse client documentee.', date_reception: today, echeance: today, statut: 'en_traitement' }
   ],
+  actionsQualite: [
+    { id: 'act-1', reference: 'ACT-2026-001', origine: 'Reclamation', source: 'REC-2026-001', type: 'corrective', objet: 'Verifier les resultats contestes et documenter la reponse client', responsable: 'Responsable Technique', processus: 'Rapports', priorite: 'haute', date_ouverture: today, echeance: today, statut: 'en_cours', avancement: 55, efficacite: 'a_verifier' },
+    { id: 'act-2', reference: 'ACT-2026-002', origine: 'Audit', source: 'AUD-2026-001', type: 'amelioration', objet: 'Renforcer la revue des dossiers avant emission des rapports', responsable: 'Responsable Qualite', processus: 'Management Qualite', priorite: 'moyenne', date_ouverture: today, echeance: today, statut: 'ouverte', avancement: 20, efficacite: 'non_verifiee' }
+  ],
+  risquesOpportunites: [
+    { id: 'ris-1', reference: 'RIS-2026-001', categorie: 'Metrologie', type: 'risque', description: 'Retard d etalonnage sur un equipement critique', cause: 'Planning fournisseur non confirme', probabilite: 4, impact: 5, responsable: 'Responsable Metrologie', action_associee: 'ACT-2026-002', statut: 'ouvert', echeance: today },
+    { id: 'ris-2', reference: 'OPP-2026-001', categorie: 'Commercial', type: 'opportunite', description: 'Portail client pour accelerer les validations de devis', cause: 'Clients demandent un suivi plus direct', probabilite: 3, impact: 4, responsable: 'Responsable des offres', action_associee: '', statut: 'en_suivi', echeance: today }
+  ],
+  revuesDirection: [
+    { id: 'rev-1', reference: 'RD-2026-001', periode: 'S1 2026', responsable: 'Direction Generale', date_prevue: today, statut: 'en_preparation', decisions: 'Prioriser risques metrologie, actions en retard et satisfaction client.', participants: 'DG, RT, RQ, RL, RO', conclusion: 'Revue en preparation a partir des indicateurs TESTLAB.' }
+  ],
   achatsApprovisionnement: [
     { id: 'ach-1', reference: 'ACH-2026-001', fournisseur: 'Fournitures Labo Benin', famille: 'Consommables', objet: 'Achat sacs echantillons et etiquettes', montant_ht: 185000, date_demande: today, demandeur: 'Receptionniste', responsable: 'Responsable Labo', priorite: 'normale', statut: 'en_attente' },
     { id: 'ach-2', reference: 'ACH-2026-002', fournisseur: 'MetroLab Services', famille: 'Maintenance', objet: 'Intervention balance de precision', montant_ht: 320000, date_demande: today, demandeur: 'Responsable Metrologie', responsable: 'Responsable Technique', priorite: 'urgente', statut: 'valide' }
@@ -123,6 +134,35 @@ function emitStatus(status, message) {
   window.dispatchEvent(new CustomEvent('smartlab:sync-status', { detail: { status, message } }));
 }
 
+function getAuditActor() {
+  try {
+    const savedUser = JSON.parse(localStorage.getItem('smartlab_user') || 'null');
+    if (savedUser?.name) return savedUser.name;
+  } catch (error) {
+    // Local profile is optional.
+  }
+  return 'Utilisateur TESTLAB';
+}
+
+function appendAuditLog(data, resource, action, record, previous = null) {
+  if (resource === 'auditLogs') return;
+  const log = {
+    id: `audlog-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    reference: `LOG-${new Date().getFullYear()}-${String((data.auditLogs || []).length + 1).padStart(4, '0')}`,
+    resource,
+    action,
+    record_id: record?.id || '',
+    record_reference: record?.reference || record?.numero || record?.code || record?.id || '',
+    utilisateur: getAuditActor(),
+    ancienne_valeur: previous,
+    nouvelle_valeur: action === 'suppression' ? null : record,
+    date_action: new Date().toISOString(),
+    source: 'TESTLAB Core System'
+  };
+  data.auditLogs = [...(data.auditLogs || []), log].slice(-300);
+  upsertRemote('auditLogs', log).catch(() => {});
+}
+
 async function upsertRemote(resource, record) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
     method: 'POST',
@@ -172,10 +212,12 @@ export async function upsertRecord(resource, record) {
 
   const data = loadData();
   const records = data[resource] || [];
-  const exists = records.some((item) => item.id === nextRecord.id);
+  const previous = records.find((item) => item.id === nextRecord.id) || null;
+  const exists = Boolean(previous);
   data[resource] = exists
     ? records.map((item) => (item.id === nextRecord.id ? nextRecord : item))
     : [...records, nextRecord];
+  appendAuditLog(data, resource, exists ? 'modification' : 'creation', nextRecord, previous);
   saveData(data);
 
   try {
@@ -193,7 +235,9 @@ export async function upsertRecord(resource, record) {
 
 export async function deleteRecord(resource, id) {
   const data = loadData();
+  const previous = (data[resource] || []).find((item) => item.id === id) || null;
   data[resource] = (data[resource] || []).filter((item) => item.id !== id);
+  appendAuditLog(data, resource, 'suppression', previous || { id }, previous);
   saveData(data);
 
   try {
@@ -207,7 +251,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite', 'actionsQualite', 'risquesOpportunites', 'revuesDirection', 'auditLogs'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {

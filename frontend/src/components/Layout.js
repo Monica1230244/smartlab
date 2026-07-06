@@ -22,6 +22,10 @@ const navItems = [
   { to: '/reclamations', label: 'Reclamations', icon: 'GR' },
   { to: '/audits', label: 'Audits Qualite', icon: 'AQ' },
   { to: '/satisfaction-clients', label: 'Satisfaction Client', icon: 'SC' },
+  { to: '/actions-qualite', label: 'Gestion des actions', icon: 'AC' },
+  { to: '/risques-opportunites', label: 'Risques & opportunites', icon: 'RO' },
+  { to: '/revues-direction', label: 'Revues de direction', icon: 'RD' },
+  { to: '/assistant-audit-iso', label: 'Assistant audit ISO', icon: 'AI' },
   { to: '/indicateurs-qualite', label: 'Indicateurs Qualite', icon: 'IQ' },
   { to: '/processus', label: 'Processus ISO 17025', icon: 'IS' },
   { to: '/projets', label: 'Projets', icon: 'PJ' },
@@ -30,10 +34,10 @@ const navItems = [
 
 const menuByRole = {
   responsable_appel: ['/', '/clients', '/devis', '/commandes', '/factures', '/projets', '/satisfaction-clients', '/processus', '/parametres'],
-  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/factures', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/indicateurs-qualite', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
+  responsable_technique: ['/', '/clients', '/devis', '/commandes', '/factures', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/indicateurs-qualite', '/personnel', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'],
   dg: navItems.map((item) => item.to),
-  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/achats-approvisionnement', '/fournisseurs', '/personnel', '/non-conformites', '/reclamations', '/indicateurs-qualite', '/processus', '/parametres'],
-  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres']
+  responsable_labo: ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/achats-approvisionnement', '/fournisseurs', '/personnel', '/non-conformites', '/reclamations', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/indicateurs-qualite', '/processus', '/parametres'],
+  receptionniste: ['/', '/commandes', '/essais', '/clients', '/non-conformites', '/reclamations', '/actions-qualite', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres']
 };
 
 const titles = {
@@ -55,6 +59,10 @@ const titles = {
   '/non-conformites': 'Non-conformites',
   '/reclamations': 'Reclamations',
   '/satisfaction-clients': 'Satisfaction Client',
+  '/actions-qualite': 'Gestion des actions',
+  '/risques-opportunites': 'Risques & opportunites',
+  '/revues-direction': 'Revues de direction',
+  '/assistant-audit-iso': 'Assistant audit ISO',
   '/indicateurs-qualite': 'Indicateurs Qualite',
   '/personnel': 'Gestion du personnel',
   '/processus': 'Processus ISO 17025',
@@ -151,7 +159,7 @@ function Layout({ publicMode = false }) {
   const principalItems = allowedMenuItems.filter((item) => ['/', '/essais', '/rapports', '/catalogue-essais', '/resultats-essais', '/documents-qualite', '/equipements', '/personnel'].includes(item.to));
   const commercialItems = allowedMenuItems.filter((item) => ['/clients', '/devis', '/commandes', '/factures'].includes(item.to));
   const achatsItems = allowedMenuItems.filter((item) => ['/achats-approvisionnement', '/fournisseurs'].includes(item.to));
-  const qualityItems = allowedMenuItems.filter((item) => ['/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/indicateurs-qualite', '/processus'].includes(item.to));
+  const qualityItems = allowedMenuItems.filter((item) => ['/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/actions-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/indicateurs-qualite', '/processus'].includes(item.to));
   const administrationItems = allowedMenuItems.filter((item) => ['/projets', '/parametres'].includes(item.to));
 
   useEffect(() => {
@@ -265,7 +273,7 @@ function Layout({ publicMode = false }) {
       if (nonConformitesOuvertes > 0) {
         nextNotifications.push({
           id: `non-conformites-ouvertes-${nonConformitesOuvertes}`,
-          title: 'Gestion des non-conformités',
+          title: 'Gestion des non-conformit\u00e9s',
           message: `${nonConformitesOuvertes} non-conformite${nonConformitesOuvertes > 1 ? 's' : ''} non cloturee${nonConformitesOuvertes > 1 ? 's' : ''}.`,
           tone: 'offline',
           path: '/non-conformites'
@@ -275,7 +283,7 @@ function Layout({ publicMode = false }) {
       if (reclamationsOuvertes > 0) {
         nextNotifications.push({
           id: `reclamations-ouvertes-${reclamationsOuvertes}`,
-          title: 'Gestion des réclamations',
+          title: 'Gestion des r\u00e9clamations',
           message: `${reclamationsOuvertes} reclamation${reclamationsOuvertes > 1 ? 's' : ''} non cloturee${reclamationsOuvertes > 1 ? 's' : ''}.`,
           tone: 'offline',
           path: '/reclamations'
@@ -461,7 +469,7 @@ function Layout({ publicMode = false }) {
               aria-label="Notifications"
               aria-expanded={notificationsOpen}
             >
-              <span className="notificationIcon" aria-hidden="true">🔔</span>
+              <span className="notificationIcon" aria-hidden="true">{'\uD83D\uDD14'}</span>
               {notifications.length > 0 && <span>{notifications.length}</span>}
             </button>
             {notificationsOpen && (
