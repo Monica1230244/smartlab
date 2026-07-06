@@ -1,4 +1,4 @@
-﻿-- TESTLAB - tables metier separees compatibles avec l'application React
+-- TESTLAB - tables metier separees compatibles avec l'application React
 -- A executer dans Supabase SQL Editor avant d'activer REACT_APP_SUPABASE_TYPED_TABLES=true.
 -- Le script cree une table par module, puis recopie les donnees existantes depuis smartlab_records.
 
@@ -57,13 +57,13 @@ begin
     execute format('create index if not exists %I on public.%I (updated_at desc)', tbl || '_updated_at_idx', tbl);
     execute format('alter table public.%I enable row level security', tbl);
 
-    execute format('drop policy if exists %L on public.%I', tbl || ' anon read', tbl);
+    execute format('drop policy if exists %I on public.%I', tbl || ' anon read', tbl);
     execute format('create policy %I on public.%I for select to anon using (true)', tbl || ' anon read', tbl);
-    execute format('drop policy if exists %L on public.%I', tbl || ' anon insert', tbl);
+    execute format('drop policy if exists %I on public.%I', tbl || ' anon insert', tbl);
     execute format('create policy %I on public.%I for insert to anon with check (true)', tbl || ' anon insert', tbl);
-    execute format('drop policy if exists %L on public.%I', tbl || ' anon update', tbl);
+    execute format('drop policy if exists %I on public.%I', tbl || ' anon update', tbl);
     execute format('create policy %I on public.%I for update to anon using (true) with check (true)', tbl || ' anon update', tbl);
-    execute format('drop policy if exists %L on public.%I', tbl || ' anon delete', tbl);
+    execute format('drop policy if exists %I on public.%I', tbl || ' anon delete', tbl);
     execute format('create policy %I on public.%I for delete to anon using (true)', tbl || ' anon delete', tbl);
 
     execute format('drop trigger if exists %I on public.%I', tbl || '_touch_updated_at', tbl);
