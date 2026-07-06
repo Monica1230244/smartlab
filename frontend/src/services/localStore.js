@@ -163,6 +163,175 @@ function appendAuditLog(data, resource, action, record, previous = null) {
   upsertRemote('auditLogs', log).catch(() => {});
 }
 
+function workflowReference(data, resource, prefix) {
+  const year = new Date().getFullYear();
+  const records = data[resource] || [];
+  const max = records.reduce((highest, record) => {
+    const match = String(record.reference || '').match(new RegExp(`^${prefix}-${year}-(\\d+)$`, 'i'));
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+  return `${prefix}-${year}-${String(max + 1).padStart(3, '0')}`;
+}
+
+function pushWorkflowNotification(data, notification) {
+  const id = notification.id || `notif-${notification.source || notification.title}-${notification.path || ''}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  if ((data.notifications || []).some((item) => item.id === id && !item.read)) return;
+  data.notifications = [...(data.notifications || []), {
+    id,
+    title: notification.title,
+    message: notification.message,
+    tone: notification.tone || 'info',
+    path: notification.path || '/',
+    targetRole: notification.targetRole || 'all',
+    read: false,
+    justification: notification.justification || 'Regle metier TESTLAB appliquee automatiquement.',
+    created_at: new Date().toISOString()
+  }];
+}
+
+function pushWorkflowAction(data, action) {
+  const source = action.source || action.reference || '';
+  if ((data.actionsQualite || []).some((item) => item.source === source && item.origine === action.origine && !['terminee', 'cloturee'].includes(item.statut))) return;
+  const record = {
+    id: `act-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    reference: workflowReference(data, 'actionsQualite', 'ACT'),
+    origine: action.origine,
+    source,
+    type: action.type || 'corrective',
+    objet: action.objet,
+    responsable: action.responsable || 'Responsable Qualite',
+    processus: action.processus || 'Management Qualite',
+    priorite: action.priorite || 'moyenne',
+    date_ouverture: new Date().toISOString().slice(0, 10),
+    echeance: action.echeance || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    statut: 'ouverte',
+    avancement: 0,
+    efficacite: 'non_verifiee',
+    justification: action.justification || 'Action generee par le moteur de workflow TESTLAB.'
+  };
+  data.actionsQualite = [...(data.actionsQualite || []), record];
+  upsertRemote('actionsQualite', record).catch(() => {});
+}
+
+function daysUntil(date) {
+  if (!date) return null;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - todayDate) / 86400000);
+}
+
+function runWorkflowAutomations(data, resource, action, record) {
+  if (!record || action === 'suppression') return;
+  const ref = record.reference || record.numero || record.code || record.id;
+
+  if (resource === 'reclamations' && action === 'creation') {
+    pushWorkflowAction(data, {
+      origine: 'Reclamation',
+      source: ref,
+      type: 'corrective',
+      objet: `Traiter la reclamation ${ref} - ${record.objet || record.description || 'analyse client'}`,
+      responsable: record.responsable || 'Responsable Technique',
+      processus: 'Satisfaction client',
+      priorite: record.priorite || 'moyenne',
+      justification: 'Le TSAB prevoit qu une reclamation peut generer automatiquement une action corrective.'
+    });
+    pushWorkflowNotification(data, {
+      id: `workflow-reclamation-${record.id}`,
+      title: 'Reclamation a traiter',
+      message: `${ref} a genere une action corrective automatique.`,
+      path: '/reclamations',
+      targetRole: 'responsable_technique',
+      tone: 'offline',
+      source: ref,
+      justification: 'Reclamation client creee: information automatique du responsable concerne.'
+    });
+  }
+
+  if (resource === 'nonConformites' && action === 'creation') {
+    pushWorkflowAction(data, {
+      origine: 'Non-conformite',
+      source: ref,
+      type: 'corrective',
+      objet: `Analyser et traiter la non-conformite ${ref}`,
+      responsable: record.responsable || 'Responsable Qualite',
+      processus: record.origine || 'Management Qualite',
+      priorite: 'haute',
+      justification: 'Toute non-conformite ouverte doit etre reliee a un traitement documente.'
+    });
+  }
+
+  if (resource === 'risquesOpportunites') {
+    const score = Number(record.probabilite || 0) * Number(record.impact || 0);
+    if (score >= 16 && record.statut !== 'cloture') {
+      pushWorkflowAction(data, {
+        origine: 'Risque',
+        source: ref,
+        type: 'preventive',
+        objet: `Mettre sous controle le risque critique ${ref} (score ${score})`,
+        responsable: record.responsable || 'Responsable Qualite',
+        processus: record.categorie || 'Gestion des risques',
+        priorite: 'haute',
+        justification: 'Score criticite >= 16: action preventive obligatoire selon la matrice TESTLAB.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-risque-${record.id}`,
+        title: 'Risque critique',
+        message: `${ref} atteint un score de ${score}. Une action est requise.`,
+        path: '/risques-opportunites',
+        targetRole: 'dg',
+        tone: 'offline',
+        source: ref,
+        justification: 'Risque critique detecte automatiquement par le moteur de regles.'
+      });
+    }
+  }
+
+  if (resource === 'equipements') {
+    const remaining = daysUntil(record.prochain_etalonnage);
+    if ((remaining !== null && remaining <= 30) || ['a_surveiller', 'en_panne', 'hors_service'].includes(record.statut)) {
+      pushWorkflowAction(data, {
+        origine: 'Equipement',
+        source: ref,
+        type: 'preventive',
+        objet: `Verifier la conformite metrologique de ${record.designation || ref}`,
+        responsable: record.responsable || 'Responsable Metrologie',
+        processus: 'Metrologie',
+        priorite: remaining !== null && remaining < 0 ? 'haute' : 'moyenne',
+        justification: 'Echeance metrologique proche, depassee ou statut equipement non conforme.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-equipement-${record.id}`,
+        title: 'Alerte equipement',
+        message: `${record.designation || ref}: etalonnage/statut a verifier.`,
+        path: '/equipements',
+        targetRole: 'responsable_labo',
+        tone: remaining !== null && remaining < 0 ? 'offline' : 'info',
+        source: ref,
+        justification: 'Controle automatique des echeances metrologiques.'
+      });
+    }
+  }
+
+  if (resource === 'documentsQualite' && record.statut === 'en_vigueur') {
+    const revisionDelay = daysUntil(record.date_revision);
+    if (revisionDelay !== null && revisionDelay < 0) {
+      record.statut = 'perime';
+      pushWorkflowNotification(data, {
+        id: `workflow-document-${record.id}`,
+        title: 'Document qualite perime',
+        message: `${record.reference || record.titre} a depasse sa date de revision.`,
+        path: '/documents-qualite',
+        targetRole: 'responsable_technique',
+        tone: 'offline',
+        source: ref,
+        justification: 'Date de revision depassee: retrait automatique de la diffusion active.'
+      });
+    }
+  }
+}
+
 async function upsertRemote(resource, record) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
     method: 'POST',
