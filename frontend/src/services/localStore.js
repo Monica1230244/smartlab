@@ -28,6 +28,15 @@ const RESOURCE_TABLES = {
   portailClient: 'testlab_portail_client',
   portailFournisseur: 'testlab_portail_fournisseur',
   analyseDocumentaireIA: 'testlab_analyse_documentaire_ia',
+  gouvernance: 'testlab_gouvernance',
+  demandesPrestations: 'testlab_demandes_prestations',
+  missionsTerrain: 'testlab_missions_terrain',
+  planningProjets: 'testlab_planning_projets',
+  competencesFormations: 'testlab_competences_formations',
+  metrologieAvancee: 'testlab_metrologie_avancee',
+  financesAvancees: 'testlab_finances_avancees',
+  objectifsQualite: 'testlab_objectifs_qualite',
+  moteursSysteme: 'testlab_moteurs_systeme',
   auditLogs: 'testlab_audit_logs',
   notifications: 'testlab_notifications'
 };
@@ -106,7 +115,40 @@ const seedData = {
     { id: 'sat-1', reference: 'SAT-2026-001', client_nom: 'AGETUR Benin', projet: 'Route Nationale 1', note_globale: 4, delai: 4, qualite_rapport: 5, communication: 4, commentaire: 'Rapport clair, delai respecte.', date_reponse: today, responsable: 'Responsable des offres', statut: 'traite' },
     { id: 'sat-2', reference: 'SAT-2026-002', client_nom: 'Sogea BTP Benin', projet: 'Pont de Cotonou', note_globale: 3, delai: 3, qualite_rapport: 4, communication: 3, commentaire: 'Prevoir une meilleure information sur les delais.', date_reponse: today, responsable: 'Responsable Technique', statut: 'a_suivre' }
   ],
-  notifications: [],
+  gouvernance: [
+    { id: 'gov-1', reference: 'GOV-2026-001', entite: 'TESTLAB Groupe', type_entite: 'Organisation', responsable: 'Direction Generale', perimetre: 'Pilotage global du systeme LIMS, QMS et ERP.', statut: 'actif' },
+    { id: 'gov-2', reference: 'GOV-2026-002', entite: 'Laboratoire Geotechnique', type_entite: 'Laboratoire', responsable: 'Responsable Laboratoire', perimetre: 'Objets d essais, essais sols, beton, rapports et equipements critiques.', statut: 'actif' }
+  ],
+  demandesPrestations: [
+    { id: 'dpr-1', reference: 'DPR-2026-001', client_nom: 'Sogea BTP Benin', contact: 'M. Fonton', besoin: 'Campagne d essais beton pour ouvrage en cours.', canal: 'whatsapp', responsable: 'Responsable des offres', statut: 'ouverte' },
+    { id: 'dpr-2', reference: 'DPR-2026-002', client_nom: 'AGETUR Benin', contact: 'Mme Ahoton', besoin: 'Verification geotechnique de materiaux de couche de forme.', canal: 'email', responsable: 'Responsable Technique', statut: 'en_cours' }
+  ],
+  missionsTerrain: [
+    { id: 'mis-1', reference: 'MIS-2026-001', projet: 'Pont de Cotonou', site: 'Cotonou', mission: 'Prelevement eprouvettes beton et controle reception chantier.', equipe: 'Equipe Beton', vehicule: 'Pick-up labo 01', date_intervention: today, statut: 'planifie' }
+  ],
+  planningProjets: [
+    { id: 'pln-1', reference: 'PLN-2026-001', projet: 'Route Nationale 1', activite: 'Essais Proctor et CBR', jalon: 'Rapport intermediaire sols', responsable: 'Responsable Laboratoire', budget: 3200000, date_echeance: today, statut: 'en_cours' }
+  ],
+  competencesFormations: [
+    { id: 'cmp-1', reference: 'CMP-2026-001', personnel: 'KASSIN Harrison', competence: 'Validation rapports beton', niveau: 'expert', formation: 'ISO/IEC 17025 - revue technique', date_evaluation: today, validateur: 'Direction Generale', statut: 'actif' },
+    { id: 'cmp-2', reference: 'CMP-2026-002', personnel: 'ADOHO Cedric', competence: 'Essai RC28', niveau: 'habilite', formation: 'Pratique presse hydraulique', date_evaluation: today, validateur: 'Responsable Technique', statut: 'actif' }
+  ],
+  metrologieAvancee: [
+    { id: 'met-1', reference: 'MET-2026-001', equipement: 'Presse hydraulique 3000 kN', operation: 'etalonnage', certificat: 'CERT-EQ-001-2026', incertitude: '0,2 %', decision: 'conforme', date_operation: today, statut: 'conforme' },
+    { id: 'met-2', reference: 'MET-2026-002', equipement: 'Balance de precision', operation: 'verification_intermediaire', certificat: 'FIC-VERIF-BAL-2026', incertitude: '0,01 g', decision: 'a surveiller', date_operation: today, statut: 'en_cours' }
+  ],
+  financesAvancees: [
+    { id: 'fin-1', reference: 'FIN-2026-001', categorie: 'paiement', libelle: 'Acompte devis Pont de Cotonou', partenaire: 'Sogea BTP Benin', centre: 'Laboratoire Beton', montant: 2030000, date_operation: today, statut: 'en_cours' },
+    { id: 'fin-2', reference: 'FIN-2026-002', categorie: 'budget', libelle: 'Budget consommables geotechniques', partenaire: 'TESTLAB', centre: 'Laboratoire Sols', montant: 2000000, date_operation: today, statut: 'valide' }
+  ],
+  objectifsQualite: [
+    { id: 'obj-1', reference: 'OBJ-2026-001', objectif: 'Reduire les non-conformites ouvertes de 30 % avant la prochaine revue de direction.', processus: 'Management Qualite', indicateur: 'Nombre de NC ouvertes', cible: '-30 %', responsable: 'Responsable Qualite', echeance: today, statut: 'en_cours' },
+    { id: 'obj-2', reference: 'OBJ-2026-002', objectif: 'Maintenir 95 % des equipements critiques conformes.', processus: 'Metrologie', indicateur: 'Taux equipements conformes', cible: '95 %', responsable: 'Responsable Metrologie', echeance: today, statut: 'en_cours' }
+  ],
+  moteursSysteme: [
+    { id: 'mot-1', reference: 'MOT-2026-001', moteur: 'workflow', regle: 'Lorsqu un devis est valide par le client, creer automatiquement une commande et notifier le responsable des offres.', module_cible: 'Devis / Commandes', declencheur: 'Validation client', action: 'Creation commande + notification + audit log.', responsable: 'Administrateur TESTLAB', statut: 'actif' },
+    { id: 'mot-2', reference: 'MOT-2026-002', moteur: 'conformite', regle: 'Bloquer l affectation d un essai a un personnel non habilite.', module_cible: 'Objets d essais', declencheur: 'Affectation technicien', action: 'Verifier matrice competence et afficher alerte bloquante.', responsable: 'Responsable Qualite', statut: 'actif' }
+  ],  notifications: [],
   activityLogs: [],
   personnel: [
     { id: 'per-1', nom: 'ADOHO Cedric', role: 'Operateur technique', atelier: 'Beton', qualification: 'accepte', habilitation: 'active', prochaine_revue: today },
@@ -462,7 +504,7 @@ export async function deleteRecord(resource, id) {
 }
 
 export async function getStats() {
-  const resources = ['clients', 'essais', 'devis', 'commandes', 'factures', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite', 'actionsQualite', 'risquesOpportunites', 'revuesDirection', 'consommablesStocks', 'contrats', 'signaturesElectroniques', 'portailClient', 'portailFournisseur', 'analyseDocumentaireIA', 'auditLogs'];
+  const resources = ['clients', 'essais', 'devis', 'commandes', 'factures', 'projets', 'nonConformites', 'reclamations', 'achatsApprovisionnement', 'satisfactionClients', 'equipements', 'personnel', 'notifications', 'catalogueEssais', 'resultatsEssais', 'documentsQualite', 'actionsQualite', 'risquesOpportunites', 'revuesDirection', 'consommablesStocks', 'contrats', 'signaturesElectroniques', 'portailClient', 'portailFournisseur', 'analyseDocumentaireIA', 'gouvernance', 'demandesPrestations', 'missionsTerrain', 'planningProjets', 'competencesFormations', 'metrologieAvancee', 'financesAvancees', 'objectifsQualite', 'moteursSysteme', 'auditLogs'];
   const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
   const data = Object.fromEntries(entries);
   return {
@@ -477,4 +519,6 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
+
 

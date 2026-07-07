@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -26,6 +26,7 @@ import AchatsApprovisionnement from './pages/AchatsApprovisionnement';
 import SatisfactionClients from './pages/SatisfactionClients';
 import { ActionsQualite, RisquesOpportunites, RevuesDirection, AssistantAuditISO } from './pages/IsoCore';
 import { StocksConsommables, Contrats, FacturesAvancees, SignaturesElectroniques, PortailClient, PortailFournisseur, AnalyseDocumentaireIA } from './pages/EmergingModules';
+import { Gouvernance, DemandesPrestations, MissionsTerrain, PlanningProjets, CompetencesFormations, MetrologieAvancee, FinancesAvancees, ObjectifsQualite, MoteursSysteme } from './pages/ArchitectureModules';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -45,16 +46,20 @@ function App() {
         <Route element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/demandes-prestations" element={<DemandesPrestations />} />
           <Route path="/essais" element={<Essais />} />
           <Route path="/devis" element={<Devis />} />
           <Route path="/commandes" element={<Commandes />} />
           <Route path="/factures" element={<FacturesAvancees />} />
+          <Route path="/finances-avancees" element={<FinancesAvancees />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/equipements" element={<Equipements />} />
+          <Route path="/metrologie-avancee" element={<MetrologieAvancee />} />
           <Route path="/audits" element={<Audits />} />
           <Route path="/non-conformites" element={<NonConformites />} />
           <Route path="/reclamations" element={<Reclamations />} />
           <Route path="/personnel" element={<Personnel />} />
+          <Route path="/competences-formations" element={<CompetencesFormations />} />
           <Route path="/processus" element={<Processus />} />
           <Route path="/documents-qualite" element={<DocumentsQualite />} />
           <Route path="/catalogue-essais" element={<CatalogueEssais />} />
@@ -69,11 +74,16 @@ function App() {
           <Route path="/analyse-documentaire-ia" element={<AnalyseDocumentaireIA />} />
           <Route path="/satisfaction-clients" element={<SatisfactionClients />} />
           <Route path="/actions-qualite" element={<ActionsQualite />} />
+          <Route path="/objectifs-qualite" element={<ObjectifsQualite />} />
           <Route path="/risques-opportunites" element={<RisquesOpportunites />} />
           <Route path="/revues-direction" element={<RevuesDirection />} />
           <Route path="/assistant-audit-iso" element={<AssistantAuditISO />} />
           <Route path="/indicateurs-qualite" element={<Dashboard />} />
           <Route path="/projets" element={<Projets />} />
+          <Route path="/planning-projets" element={<PlanningProjets />} />
+          <Route path="/missions-terrain" element={<MissionsTerrain />} />
+          <Route path="/gouvernance" element={<Gouvernance />} />
+          <Route path="/moteurs-systeme" element={<MoteursSysteme />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -84,3 +94,4 @@ function App() {
 }
 
 export default App;
+
