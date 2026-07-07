@@ -1,120 +1,411 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { listRecords } from '../services/localStore';
 
-const ROLE_KEY = 'smartlab_current_role';
-const resources = ['clients','devis','commandes','factures','essais','rapports','equipements','audits','nonConformites','reclamations','personnel','projets','catalogueEssais','resultatsEssais','documentsQualite','actionsQualite','risquesOpportunites','revuesDirection','achatsApprovisionnement','fournisseurs','consommablesStocks','contrats','satisfactionClients','notifications','parametres'];
-const choices = [
-  ['direction','Direction','dg','light'], ['commercial','Commercial','responsable_appel','light'], ['projets','Projets','dg','light'], ['echantillons','Echantillons','receptionniste','light'], ['essais','Essais','responsable_labo','light'], ['resultats','Resultats','responsable_technique','light'], ['metrologie','Metrologie','responsable_labo','dark'], ['qualite','Qualite','responsable_technique','light'], ['conformite','Conformite','responsable_technique','light'], ['finance','Finance','dg','light'], ['personnel','Personnel','dg','light'], ['rapports','Rapports','responsable_technique','dark'], ['parametres','Parametres','dg','light']
-].map(([key,label,role,theme]) => ({ key, label, role, theme }));
-const roleDefault = { responsable_appel:'commercial', responsable_technique:'qualite', dg:'direction', responsable_labo:'metrologie', receptionniste:'echantillons' };
-const ok = ['valide','validee','envoye','envoyee','termine','terminee','cloture','cloturee','conforme','actif','accepte','valide_client','commande_creee','paye','payee','traite','en_vigueur'];
-const warn = ['en_cours','en_traitement','en_attente','validation','validation_dg','validation_technique','planifie','planifiee','redaction','brouillon','a_surveiller','en_preparation','ouverte'];
-const bad = ['refuse','refusee','hors_service','non_conforme','annule','annulee','retard','en_retard','perime','perimee'];
+const CURRENT_ROLE_KEY = 'smartlab_current_role';
 
-function a(data, key) { return Array.isArray(data[key]) ? data[key] : []; }
-function n(value) { const number = Number(String(value || 0).replace(/[^0-9.-]/g, '')); return Number.isFinite(number) ? number : 0; }
-function money(value) { const amount = n(value); return amount >= 1000000 ? (amount / 1000000).toFixed(2) + 'M FCFA' : amount.toLocaleString('fr-FR') + ' FCFA'; }
-function pct(value) { return Number(value || 0).toFixed(1) + '%'; }
-function ratio(part, total) { return total ? (part / total) * 100 : 0; }
-function s(record) { return String(record.statut || record.status || record.decision || '').toLowerCase(); }
-function dateOf(record) { return record.date || record.date_demande || record.date_reception || record.date_prelevement || record.date_resultat || record.updated_at || record.created_at || ''; }
-function recent(records) { return [...records].sort((x, y) => String(dateOf(y)).localeCompare(String(dateOf(x)))); }
-function val(record, keys, fallback='-') { const key = keys.find((item) => record[item] !== undefined && record[item] !== null && record[item] !== ''); return key ? record[key] : fallback; }
-function sum(records, keys) { return records.reduce((total, record) => total + n(val(record, keys, 0)), 0); }
-function count(records, fn) { return records.filter(fn).length; }
-function closed(record) { const st = s(record); return ok.includes(st) || ['archive','archivee'].includes(st); }
-function open(record) { return !closed(record); }
-function tone(value) { const key = String(value || '').toLowerCase(); if (ok.includes(key)) return 'success'; if (warn.includes(key)) return 'warning'; if (bad.includes(key)) return 'danger'; return 'info'; }
-function statusBadge(value) { return <span className={'statusBadge ' + tone(value)}>{value || '-'}</span>; }
-function category(records, keys) { const map = {}; records.forEach((record) => { const key = val(record, keys, 'Non renseigne'); map[key] = (map[key] || 0) + 1; }); return Object.entries(map).map(([label, value]) => ({ label, value })); }
-function statusEntries(records) { const map = {}; records.forEach((record) => { const key = s(record) || 'non renseigne'; map[key] = (map[key] || 0) + 1; }); return Object.entries(map).map(([label, value]) => ({ label, value })); }
-function overdue(record) { const value = record.echeance || record.date_fin_prevue || record.prochain_etalonnage || record.date_revision || record.date; if (!value || !open(record)) return false; const date = new Date(value); if (Number.isNaN(date.getTime())) return false; const today = new Date(); today.setHours(0,0,0,0); return date < today; }
-function unique(records, keys) { return new Set(records.map((record) => val(record, keys, '')).filter(Boolean)).size; }
-function line(base, step) { const values = Array.from({ length: 6 }, (_, i) => Math.max(0, Math.round(base * (0.55 + i * 0.08) + (i % 2) * step))); const max = Math.max(...values, 1); return values.map((v, i) => ({ x: 18 + i * 74, y: 128 - (v / max) * 92 })); }
-function pts(items) { return items.map((p) => p.x + ',' + p.y).join(' '); }
-function table(title, rows, columns, linkTo) { return { title, rows: rows.slice(0, 6), columns, linkTo }; }
-function baseColumns() { return { ref:{key:'reference',label:'Reference',render:(r)=>val(r,['reference','numero','code'])}, client:{key:'client',label:'Client',render:(r)=>val(r,['client_nom','raison_sociale','client'])}, statut:{key:'statut',label:'Statut',render:(r)=>statusBadge(val(r,['statut','decision']))}, date:{key:'date',label:'Date',render:(r)=>dateOf(r)||'-'}, montant:{key:'montant',label:'Montant',render:(r)=>money(val(r,['montant_ht','montant','budget','total'],0))} }; }
-function buildStats(data) {
-  const st = Object.fromEntries(resources.map((key) => [key, a(data, key)]));
-  st.ca = sum(st.commandes, ['montant_ht','montant','total']) || sum(st.devis.filter((d) => ['commande_creee','valide_client','accepte'].includes(s(d))), ['montant_ht','montant','total']);
-  st.factureTotal = sum(st.factures, ['montant_ht','montant','total']);
-  st.charges = sum(st.achatsApprovisionnement, ['montant_ht','montant','total']);
-  st.resultatsConformes = count(st.resultatsEssais, (r) => !['non_conforme','rejete','hors_tolerance'].includes(String(r.decision || r.statut || '').toLowerCase()));
-  st.conformite = st.resultatsEssais.length ? ratio(st.resultatsConformes, st.resultatsEssais.length) : 100;
-  st.devisAcceptes = count(st.devis, (d) => ['valide_client','commande_creee','accepte'].includes(s(d)));
-  st.devisAttente = count(st.devis, (d) => ['redaction','validation_technique','validation_dg','pret_envoi','envoye_client','en_attente'].includes(s(d)));
-  st.ncOuvertes = st.nonConformites.filter(open);
-  st.reclamationsOuvertes = st.reclamations.filter(open);
-  st.equipementsAlertes = st.equipements.filter((e) => ['a_surveiller','hors_service','en_panne','en_retard'].includes(s(e)) || overdue(e));
-  st.docsActifs = st.documentsQualite.filter((d) => ['en_vigueur','actif'].includes(s(d)) || d.statut === 'en_vigueur');
-  st.alertes = [
-    ...st.ncOuvertes.map((r) => ({ title: r.reference || 'Non-conformite', text: r.description || r.origine || '', to:'/non-conformites', tone:'danger', icon:'!' })),
-    ...st.reclamationsOuvertes.map((r) => ({ title: r.reference || 'Reclamation', text: r.objet || r.description || '', to:'/reclamations', tone:'warning', icon:'R' })),
-    ...st.equipementsAlertes.map((r) => ({ title: r.code || 'Equipement', text: r.designation || '', to:'/equipements', tone:'info', icon:'EQ' }))
-  ];
-  return st;
-}
+const roleNames = {
+  responsable_appel: 'Responsable des offres',
+  responsable_technique: 'Responsable technique',
+  dg: 'Direction generale',
+  responsable_labo: 'Responsable laboratoire',
+  receptionniste: 'Reception',
+  default: 'Direction generale'
+};
 
-function commonActions() { return [{ label:'Creer devis', to:'/devis', icon:'+' }, { label:'Nouvel objet', to:'/essais', icon:'+' }, { label:'Rapport', to:'/rapports', icon:'RP' }, { label:'Exporter synthese', to:'/indicateurs-qualite', icon:'EX' }]; }
+const resources = [
+  'clients',
+  'devis',
+  'commandes',
+  'essais',
+  'rapports',
+  'equipements',
+  'audits',
+  'nonConformites',
+  'reclamations',
+  'personnel',
+  'projets',
+  'catalogueEssais',
+  'resultatsEssais',
+  'notifications'
+];
 
-function dashboardModel(kind, st) {
-  const c = baseColumns();
-  const cfg = {
-    direction: { title:'Tableau de bord Direction', subtitle:'Synthese manageriale de la performance globale du laboratoire', icon:'DG', theme:'light', search:'Rechercher projets, echantillons, rapports...', kpis:[['Chiffre d affaires du mois',money(st.ca),'Commandes enregistrees','$','blue'],['Projets actifs',st.projets.length,'Dossiers projet','PJ','blue'],['Objets en cours',count(st.essais, open),'Objets ouverts','OE','green'],['Essais termines',count(st.essais, closed),'Essais clotures','OK','purple'],['Rapports emis',st.rapports.length,'Rapports disponibles','RP','cyan'],['Taux de conformite',pct(st.conformite),'Resultats conformes','Q','green'],['NC ouvertes',st.ncOuvertes.length,'A traiter','!','amber'],['Encaissements du mois',money(st.factureTotal || st.ca),'Factures/commandes','FC','blue']], tables:[table('Projets critiques a suivre', recent(st.projets), [c.ref,c.client,{key:'nom',label:'Projet',render:(r)=>val(r,['nom','projet','description'])},c.date,c.statut], '/projets'), table('Alertes prioritaires', st.alertes, [{key:'title',label:'Alerte'},{key:'text',label:'Detail'},{key:'tone',label:'Niveau',render:(r)=>statusBadge(r.tone)}], '/non-conformites')], donuts:[['Statut des projets',st.projets.length,statusEntries(st.projets)],['Rentabilite par activite',st.commandes.length || st.devis.length,category([...st.commandes,...st.devis],['type','famille','projet'])]], actions:commonActions() },
-    commercial: { title:'Tableau de bord Commercial', subtitle:'Performance commerciale et pipeline de vente', icon:'CO', theme:'light', search:'Rechercher prospects, devis, clients, commandes...', kpis:[['Clients actifs',st.clients.length,'Portefeuille client','CL','green'],['Devis envoyes',st.devis.length,'Tous devis','DV','blue'],['Devis en attente',st.devisAttente,'Circuit validation/client','AT','amber'],['Taux de conversion',pct(ratio(st.devisAcceptes,st.devis.length)),'Devis acceptes','%','green'],['Commandes obtenues',st.commandes.length,'Commandes creees','CM','purple'],['Chiffre d affaires commercial',money(st.ca),'Commandes','$','blue'],['Relances a faire',st.devisAttente,'Devis non finalises','!','amber'],['Reclamations clients',st.reclamationsOuvertes.length,'Suivi satisfaction','RC','red']], tables:[table('Devis prioritaires a suivre', recent(st.devis), [c.ref,c.client,{key:'prestation',label:'Prestation',render:(r)=>val(r,['objet','projet'])},c.montant,c.date,c.statut], '/devis'), table('Relances et opportunites', recent(st.devis.filter(open)), [c.ref,c.client,c.statut,c.date], '/devis')], donuts:[['Repartition des devis par statut',st.devis.length,statusEntries(st.devis)],['Type de prestation',st.devis.length,category(st.devis,['type','objet','projet'])]], actions:[{label:'Creer devis',to:'/devis',icon:'+'},{label:'Creer client',to:'/clients',icon:'+'},{label:'Voir commandes',to:'/commandes',icon:'CM'},{label:'Exporter synthese',to:'/devis',icon:'EX'}] },
-    projets: { title:'Tableau de bord Projets', subtitle:'Planification, avancement et risques des projets', icon:'PJ', theme:'light', search:'Rechercher projets, clients, responsables...', kpis:[['Projets actifs',st.projets.length,'Tous projets','PJ','blue'],['Projets en retard',count(st.projets,overdue),'Echeance depassee','RT','amber'],['Projets clotures',count(st.projets,closed),'Clotures','OK','green'],['Taux avancement moyen',pct(ratio(count(st.projets,closed),st.projets.length)),'Selon statuts','%','purple'],['Rentabilite moyenne',pct(st.ca ? ratio(st.ca-st.charges,st.ca) : 0),'CA - achats','$','green'],['Objets lies',st.essais.length,'Objets d essais','OE','cyan'],['Essais planifies',count(st.essais,(r)=>['planifie','en_attente'].includes(s(r))),'A executer','ES','purple'],['Rapports a emettre',count(st.rapports,open),'Rapports ouverts','RP','amber']], tables:[table('Projets critiques a suivre',recent(st.projets),[c.ref,c.client,{key:'nom',label:'Projet',render:(r)=>val(r,['nom','projet'])},c.date,c.statut],'/projets'),table('Echeances et jalons',recent([...st.projets,...st.rapports]),[c.ref,{key:'objet',label:'Objet',render:(r)=>val(r,['nom','objet','essai'])},c.date,c.statut],'/projets')], donuts:[['Repartition par type',st.projets.length,category(st.projets,['type','description','localisation'])],['Statut des projets',st.projets.length,statusEntries(st.projets)]], actions:[{label:'Voir planning',to:'/projets',icon:'PL'},{label:'Creer projet',to:'/projets',icon:'+'},{label:'Affecter equipe',to:'/personnel',icon:'GP'},{label:'Exporter synthese',to:'/projets',icon:'EX'}] },
-    echantillons: { title:'Tableau de bord Echantillons', subtitle:'Reception, tracabilite et statut des objets', icon:'OE', theme:'light', search:'Rechercher echantillons, projets, clients...', kpis:[['Echantillons recus',st.essais.length,'Objets enregistres','IN','blue'],['En attente reception',count(st.essais,(r)=>['en_attente','recu'].includes(s(r))),'A completer','AT','amber'],['En preparation',count(st.essais,(r)=>['en_preparation','planifie'].includes(s(r))),'Affectation labo','PR','purple'],['En essai',count(st.essais,(r)=>['en_cours','en_essai'].includes(s(r))),'Execution','ES','blue'],['En quarantaine',count(st.essais,(r)=>['quarantaine','non_conforme'].includes(s(r))),'A controler','!','red'],['Echantillons clotures',count(st.essais,closed),'Termines','OK','green'],['Retards traitement',count(st.essais,overdue),'Echeances depassees','RT','amber'],['Conformite reception',pct(st.conformite),'Resultats conformes','Q','green']], tables:[table('Echantillons prioritaires a traiter',recent(st.essais.filter(open)),[c.ref,{key:'projet',label:'Projet',render:(r)=>val(r,['projet','provenance'])},c.client,{key:'type',label:'Type',render:(r)=>val(r,['nature','type'])},c.date,c.statut],'/essais'),table('Dernieres receptions',recent(st.essais),[c.ref,c.client,{key:'nature',label:'Nature'},c.date],'/essais')], flow:['Reception','Enregistrement','Affectation','Essais','Cloture'], donuts:[['Repartition par statut',st.essais.length,statusEntries(st.essais)],['Repartition par type',st.essais.length,category(st.essais,['nature','type'])]], actions:[{label:'Nouvel echantillon',to:'/essais',icon:'+'},{label:'Receptionner',to:'/essais',icon:'IN'},{label:'Planifier essais',to:'/essais',icon:'PL'},{label:'Voir tracabilite',to:'/essais',icon:'TR'}] }
+function normalizeQuoteStatus(status) {
+  const legacy = {
+    brouillon: 'redaction',
+    envoye: 'envoye_client',
+    signe: 'valide_client',
+    paye: 'commande_creee',
+    accepte: 'valide_client'
   };
-  cfg.essais = { title:'Tableau de bord Essais', subtitle:'Planification, execution et suivi des essais', icon:'ES', theme:'light', search:'Rechercher essais, methodes, echantillons...', kpis:[['Essais planifies',count(st.essais,(r)=>['planifie','en_attente'].includes(s(r))),'A executer','PL','blue'],['Essais en cours',count(st.essais,(r)=>['en_cours','en_essai'].includes(s(r))),'Execution','GO','amber'],['Essais termines',count(st.essais,closed),'Clotures','OK','green'],['En attente validation',count(st.resultatsEssais,(r)=>['en_attente','controle'].includes(s(r))),'Resultats','VA','purple'],['Retards',count(st.essais,overdue),'Delais depasses','!','red'],['Taux conformite execution',pct(st.conformite),'Resultats conformes','Q','green'],['Techniciens mobilises',unique(st.essais,['technicien','responsable_labo']),'Personnes affectees','GP','blue']], tables:[table('Essais prioritaires a traiter',recent(st.essais.filter(open)),[c.ref,{key:'projet',label:'Projet',render:(r)=>val(r,['projet','provenance'])},{key:'essai',label:'Essai',render:(r)=>val(r,['essai_a_realiser','nature'])},{key:'technicien',label:'Technicien'},c.date,c.statut],'/essais'),table('Derniers essais saisis',recent(st.essais),[c.ref,{key:'nature',label:'Nature'},c.client,c.date,{key:'technicien',label:'Technicien'}],'/essais')], flow:['Planification','Affectation','Execution','Validation','Cloture'], donuts:[['Repartition par statut',st.essais.length,statusEntries(st.essais)],['Repartition par type',st.essais.length,category(st.essais,['nature','essai_a_realiser'])]], actions:[{label:'Planifier essai',to:'/essais',icon:'PL'},{label:'Affecter technicien',to:'/personnel',icon:'GP'},{label:'Saisir resultats',to:'/resultats-essais',icon:'RS'},{label:'Exporter synthese',to:'/essais',icon:'EX'}] };
-  cfg.resultats = { title:'Tableau de bord Resultats', subtitle:'Saisie, validation et exploitation des resultats', icon:'RS', theme:'light', search:'Rechercher resultats, projets, echantillons...', kpis:[['Resultats saisis',st.resultatsEssais.length,'Tous resultats','RS','blue'],['En attente validation',count(st.resultatsEssais,open),'A valider','AT','amber'],['Valides techniquement',count(st.resultatsEssais,closed),'Exploitables','OK','green'],['Resultats rejetes',count(st.resultatsEssais,(r)=>['rejete','non_conforme'].includes(s(r))),'A reprendre','X','red'],['Hors tolerance',count(st.resultatsEssais,(r)=>['hors_tolerance','non_conforme'].includes(s(r) || String(r.decision).toLowerCase())),'Anomalies','!','red'],['Resultats exploitables',count(st.resultatsEssais,closed),'Rapportable','EX','purple'],['Taux validation',pct(ratio(count(st.resultatsEssais,closed),st.resultatsEssais.length)),'Validations','%','green'],['Delai moyen validation',st.resultatsEssais.length ? '2 j' : '0 j','Estimation','D','purple']], tables:[table('Resultats prioritaires a traiter',recent(st.resultatsEssais.filter(open)),[c.ref,{key:'parametre',label:'Parametre',render:(r)=>val(r,['essai_code','parametre'])},{key:'valeur',label:'Valeur',render:(r)=>val(r,['moyenne','valeur_1','valeur'])},{key:'unite',label:'Unite'},c.date,c.statut],'/resultats-essais'),table('Derniers resultats valides',recent(st.resultatsEssais.filter(closed)),[c.ref,{key:'essai',label:'Objet',render:(r)=>val(r,['objet_essai','essai'])},{key:'valeur',label:'Valeur',render:(r)=>val(r,['moyenne','valeur_1','valeur'])},{key:'technicien',label:'Valide par'}],'/resultats-essais')], flow:['Saisie','Controle','Validation technique','Exploitation','Archivage'], donuts:[['Repartition par statut',st.resultatsEssais.length,statusEntries(st.resultatsEssais)],['Repartition par type',st.resultatsEssais.length,category(st.resultatsEssais,['essai_code','parametre'])]], actions:[{label:'Saisir resultat',to:'/resultats-essais',icon:'+'},{label:'Controler coherence',to:'/resultats-essais',icon:'OK'},{label:'Valider resultats',to:'/resultats-essais',icon:'VA'},{label:'Voir anomalies',to:'/resultats-essais',icon:'!'}] };
-  cfg.metrologie = { title:'Metrologie & Gestion des equipements', subtitle:'Equipements, etalonnages, maintenances et conformites metrologiques', icon:'RM', theme:'dark', search:'Rechercher equipement, code, laboratoire...', kpis:[['Equipements totaux',st.equipements.length,'Parc enregistre','EQ','blue'],['Conformes',count(st.equipements,(r)=>s(r)==='conforme'),pct(ratio(count(st.equipements,(r)=>s(r)==='conforme'),st.equipements.length)) + ' du total','OK','green'],['Etalonnages a echeance',count(st.equipements,overdue)+count(st.equipements,(r)=>s(r)==='a_surveiller'),'A planifier','ET','amber'],['En retard',count(st.equipements,overdue),'Echeance depassee','RT','red'],['Hors service',count(st.equipements,(r)=>s(r)==='hors_service'),'Indisponibles','HS','purple'],['Maintenances planifiees',count(st.equipements,(r)=>Boolean(r.prochaine_maintenance)),'Planning','MT','cyan']], tables:[table('Registre des equipements',recent(st.equipements),[{key:'code',label:'Code'},{key:'designation',label:'Designation'},{key:'famille',label:'Categorie'},c.statut,{key:'prochain_etalonnage',label:'Prochain etalonnage'}],'/equipements'),table('Equipements critiques / alertes',st.equipementsAlertes,[{key:'code',label:'Code'},{key:'designation',label:'Designation'},c.statut,{key:'prochain_etalonnage',label:'Echeance'}],'/equipements')], flow:['Inventaire','Affectation','Verification','Validation','Suivi'], donuts:[['Repartition des equipements',st.equipements.length,statusEntries(st.equipements)]], actions:[{label:'Planifier etalonnage',to:'/equipements',icon:'PL'},{label:'Declarer hors service',to:'/equipements',icon:'HS'},{label:'Enregistrer maintenance',to:'/equipements',icon:'MT'},{label:'Voir certificat',to:'/equipements',icon:'PDF'}] };
-  cfg.qualite = { title:'Tableau de bord Qualite', subtitle:'Systeme de management et indicateurs ISO 17025', icon:'Q', theme:'light', search:'Rechercher document, indicateur, audit...', kpis:[['Conformite globale',pct(st.conformite),'Objectif >= 90%','Q','blue'],['Audits internes',st.audits.length,'Audits enregistres','AU','green'],['Non conformites',st.ncOuvertes.length,'Ouvertes','NC','amber'],['Actions correctives',st.actionsQualite.length,'Actions qualite','AC','purple'],['Documents qualite',st.documentsQualite.length,st.docsActifs.length + ' en vigueur','DQ','blue'],['Revue de direction',st.revuesDirection.length,'Dossiers','RD','neutral']], tables:[table('Actions prioritaires',recent(st.actionsQualite),[c.ref,{key:'type',label:'Type'},{key:'priorite',label:'Priorite',render:(r)=>statusBadge(val(r,['priorite']))},c.date,c.statut],'/actions-qualite'),table('Derniers audits internes',recent(st.audits),[c.ref,{key:'type',label:'Audit'},c.date,c.statut],'/audits')], donuts:[['Repartition des non conformites',st.nonConformites.length,category(st.nonConformites,['origine','type'])],['Documents qualite',st.documentsQualite.length,statusEntries(st.documentsQualite)]], actions:[{label:'Enregistrer NC',to:'/non-conformites',icon:'NC'},{label:'Creer action corrective',to:'/actions-qualite',icon:'AC'},{label:'Planifier audit',to:'/audits',icon:'AU'},{label:'Ajouter document',to:'/documents-qualite',icon:'DQ'}] };
-  cfg.conformite = { ...cfg.qualite, title:'Tableau de bord Conformite', subtitle:'Exigences reglementaires, normatives et internes', icon:'CF', kpis:[['Conformite globale',pct(st.conformite),'Objectif >= 90%','Q','blue'],['Exigences conformes',st.docsActifs.length,'Documents actifs','OK','green'],['Partiellement conformes',count(st.actionsQualite,open),'Actions ouvertes','P','amber'],['Non conformes',st.ncOuvertes.length,'Ecarts ouverts','!','red'],['En traitement',count([...st.actionsQualite,...st.nonConformites],(r)=>['en_traitement','en_cours'].includes(s(r))),'Dossiers','TR','purple'],['Echeances a venir',count([...st.actionsQualite,...st.audits,...st.documentsQualite],open),'A surveiller','EC','blue']] };
-  cfg.finance = { title:'Tableau de bord Finance', subtitle:'Performance financiere du laboratoire', icon:'FC', theme:'light', search:'Rechercher facture, client, paiement...', kpis:[['Chiffre d affaires',money(st.ca),'Commandes','$','blue'],['Encaissements',money(st.factureTotal || st.ca),'Factures/commandes','EN','green'],['Factures en attente',money(sum(st.factures.filter(open),['montant_ht','montant','total'])),count(st.factures,open)+' factures','FA','amber'],['Charges totales',money(st.charges),'Achats','CH','purple'],['Resultat net',money(st.ca-st.charges),'CA - charges','RN','green'],['Tresorerie disponible',money(Math.max(0,(st.factureTotal||st.ca)-st.charges)),'Estimation','TR','amber']], tables:[table('Dernieres factures',recent(st.factures.length?st.factures:st.devis),[c.ref,c.client,c.date,c.montant,c.statut],'/factures'),table('Derniers paiements recus',recent(st.commandes),[c.ref,c.client,c.date,c.montant],'/commandes')], donuts:[['Repartition des produits',st.commandes.length||st.devis.length,category([...st.commandes,...st.devis],['type','objet','projet'])],['Repartition des charges',st.achatsApprovisionnement.length,category(st.achatsApprovisionnement,['famille','objet'])]], actions:[{label:'Nouvelle facture',to:'/factures',icon:'+'},{label:'Enregistrer paiement',to:'/factures',icon:'EN'},{label:'Nouvelle depense',to:'/achats-approvisionnement',icon:'CH'},{label:'Exporter synthese',to:'/factures',icon:'EX'}] };
-  cfg.personnel = { title:'Tableau de bord Gestion du personnel', subtitle:'Ressources humaines et performances du personnel', icon:'GP', theme:'light', search:'Rechercher employe, service, competence...', kpis:[['Effectif total',st.personnel.length,'Personnel enregistre','GP','blue'],['Presents aujourd hui',st.personnel.length,'Suppose actifs','PR','green'],['Absents aujourd hui',0,'Aucune absence saisie','AB','amber'],['Formations en cours',count(st.personnel,(r)=>s(r)==='formation'),'Donnees personnel','FO','purple'],['Competences validees',count(st.personnel,(r)=>['active','accepte'].includes(String(r.habilitation||r.qualification||'').toLowerCase())),'Habilitations','OK','cyan'],['Conges en cours',0,'Aucun conge saisi','CG','amber']], tables:[table('Employes recents',recent(st.personnel),[{key:'nom',label:'Nom'},{key:'role',label:'Fonction'},{key:'atelier',label:'Service'},{key:'qualification',label:'Statut',render:(r)=>statusBadge(val(r,['qualification','habilitation']))}],'/personnel'),table('Formations a venir',st.personnel.filter((r)=>r.prochaine_revue),[{key:'nom',label:'Employe'},{key:'role',label:'Fonction'},{key:'prochaine_revue',label:'Prochaine revue'},{key:'habilitation',label:'Habilitation',render:(r)=>statusBadge(r.habilitation)}],'/personnel')], donuts:[['Repartition par service',st.personnel.length,category(st.personnel,['atelier','service'])],['Repartition par categorie',st.personnel.length,category(st.personnel,['role','fonction'])]], actions:[{label:'Ajouter employe',to:'/personnel',icon:'+'},{label:'Gerer competences',to:'/personnel',icon:'CP'},{label:'Planifier formation',to:'/personnel',icon:'FO'},{label:'Exporter rapport',to:'/personnel',icon:'EX'}] };
-  cfg.rapports = { title:'Rapports', subtitle:'Gerez, validez et diffusez les rapports d essais', icon:'RP', theme:'dark', search:'Rechercher rapport, objet d essai, client...', kpis:[['Brouillons',count(st.rapports,(r)=>['brouillon','redaction'].includes(s(r))),'A completer','BR','blue'],['En validation',count(st.rapports,(r)=>['controle','validation','en_validation'].includes(s(r))),'Circuit validation','VA','purple'],['Valides',count(st.rapports,closed),'Rapports valides','OK','green'],['Envoyes',count(st.rapports,(r)=>['envoye','transmis'].includes(s(r))),'Diffusion client','EN','cyan'],['Archives',count(st.rapports,(r)=>['archive','archivee'].includes(s(r))),'Archives','AR','blue'],['En retard',count(st.rapports,overdue),'Delais depasses','RT','red']], tables:[table('Registre des rapports',recent(st.rapports),[c.ref,{key:'essai',label:'Objet essai',render:(r)=>val(r,['essai','objet_essai'])},c.client,c.statut,c.date],'/rapports'),table('Validations en attente',recent(st.rapports.filter(open)),[c.ref,c.client,c.date,c.statut],'/rapports')], flow:['Redaction','Verification','Validation','Approbation','Diffusion'], donuts:[['Distribution des rapports',st.rapports.length,statusEntries(st.rapports)]], actions:[{label:'Nouveau rapport',to:'/rapports',icon:'+'},{label:'Telecharger PDF',to:'/rapports',icon:'PDF'},{label:'Envoyer par email',to:'/rapports',icon:'EM'},{label:'Historique versions',to:'/rapports',icon:'H'}] };
-  cfg.parametres = { title:'Tableau de bord Parametres', subtitle:'Parametres systeme et configurations', icon:'PR', theme:'light', search:'Rechercher parametre, module, configuration...', kpis:[['Parametres systeme',st.parametres.length,'Enregistres','PR','blue'],['Parametres actifs',count(st.parametres,(r)=>['actif','active'].includes(s(r))),'Actifs','OK','green'],['En configuration',count(st.parametres,(r)=>['en_cours','configuration'].includes(s(r))),'A verifier','CF','amber'],['Parametres desactives',count(st.parametres,(r)=>['desactive','inactif'].includes(s(r))),'Inactifs','!','red'],['Modifications',st.notifications.length,'Notifications/journal','LG','purple'],['Modules configures',resources.length,'Modules TESTLAB','MD','cyan']], tables:[table('Dernieres configurations',recent(st.parametres),[{key:'module',label:'Parametre'},{key:'valeur',label:'Valeur actuelle'},c.statut],'/parametres'),table('Configurations a verifier',st.parametres.filter(open),[{key:'module',label:'Parametre'},{key:'valeur',label:'Valeur'},c.statut],'/parametres')], donuts:[['Repartition par categorie',st.parametres.length,category(st.parametres,['module'])],['Statut des modules',st.parametres.length,statusEntries(st.parametres)]], actions:[{label:'Gerer systeme',to:'/parametres',icon:'PR'},{label:'Configurer methodes',to:'/catalogue-essais',icon:'CE'},{label:'Gerer utilisateurs',to:'/parametres',icon:'US'},{label:'Exporter configuration',to:'/parametres',icon:'EX'}] };
-  return cfg[kind] || cfg.direction;
+  return legacy[status] || status || 'redaction';
 }
-function Kpi({ item }) { return <section className={'labDashKpi ' + (item[4] || 'blue')}><div className="labDashIcon">{item[3]}</div><div><span>{item[0]}</span><strong>{item[1]}</strong><small>{item[2]}</small></div></section>; }
-function Chart({ data }) { const a1 = line(n(String(data[0]?.[1] || '1')),3); const a2 = line(n(String(data[1]?.[1] || '1')),2); const a3 = line(n(String(data[2]?.[1] || '1')),1); return <section className="labDashPanel labDashChartPanel"><div className="labDashPanelTitle"><strong>Evolution</strong><span>6 derniers mois</span></div><svg className="labDashLine" viewBox="0 0 420 150">{[35,65,95,125].map((y)=><line key={y} x1="16" y1={y} x2="400" y2={y}/>) }<polyline className="blue" points={pts(a1)}/><polyline className="green" points={pts(a2)}/><polyline className="purple" points={pts(a3)}/>{['Jan','Fev','Mar','Avr','Mai','Juin'].map((l,i)=><text key={l} x={18+i*74} y="145">{l}</text>)}</svg></section>; }
-function Donut({ item }) { const [title,total,entries=[]] = item; const colors = ['#1769ff','#22c55e','#f59e0b','#7c3aed','#ef4444','#06b6d4']; const safe = total || entries.reduce((x,e)=>x+e.value,0) || 1; let cursor=0; const gradient = entries.map((e,i)=>{ const start=cursor; cursor += (e.value/safe)*360; return colors[i%colors.length] + ' ' + start + 'deg ' + cursor + 'deg'; }).join(', '); return <section className="labDashPanel donutPanel"><div className="labDashPanelTitle"><strong>{title}</strong></div><div className="labDashDonutArea"><div className="labDashDonut" style={{background:'conic-gradient('+(gradient || '#d8e3f0 0deg 360deg')+')'}}><strong>{safe}</strong><span>Total</span></div><div className="labDashLegend">{entries.length===0 && <span>Aucune donnee</span>}{entries.map((e,i)=><div key={e.label}><i style={{background:colors[i%colors.length]}}/><span>{e.label}</span><b>{e.value}</b></div>)}</div></div></section>; }
-function Flow({ labels, total }) { if (!labels) return null; return <section className="labDashPanel labDashFlowPanel"><div className="labDashPanelTitle"><strong>Flux de traitement</strong></div><div className="labDashFlow">{labels.map((label,i)=><React.Fragment key={label}><div className={'labDashFlowStep '+(i<2?'done':'')}><b>{i+1}</b><span>{label}</span><strong>{i===0?total:''}</strong></div>{i<labels.length-1 && <i className="flowArrow">-</i>}</React.Fragment>)}</div></section>; }
-function Table({ table }) { return <section className="labDashPanel labDashTablePanel"><div className="labDashPanelTitle"><strong>{table.title}</strong>{table.linkTo && <Link to={table.linkTo}>Voir tout</Link>}</div><div className="labDashTableWrap"><table><thead><tr>{table.columns.map((c)=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{table.rows.map((row,i)=><tr key={row.id||row.reference||row.numero||i}>{table.columns.map((c)=><td key={c.key}>{c.render?c.render(row):val(row,[c.key])}</td>)}</tr>)}{table.rows.length===0 && <tr><td colSpan={table.columns.length} className="emptyCell">Aucune donnee enregistree</td></tr>}</tbody></table></div></section>; }
-function Alerts({ rows }) { return <section className="labDashPanel labDashListPanel"><div className="labDashPanelTitle"><strong>Alertes & notifications</strong><Link to="/non-conformites">Voir tout</Link></div><div className="labDashList">{rows.slice(0,5).map((r,i)=><Link to={r.to||'/'} className="labDashListItem" key={i}><b className={r.tone||'info'}>{r.icon||'!'}</b><span><strong>{r.title}</strong><small>{r.text}</small></span></Link>)}{rows.length===0 && <div className="emptyCell">Aucune alerte</div>}</div></section>; }
-function Quick({ actions }) { return <section className="labDashPanel labDashQuickPanel"><div className="labDashPanelTitle"><strong>Actions rapides</strong></div><div className="labDashQuickActions">{actions.map((a)=><Link to={a.to} key={a.label}><b>{a.icon}</b><span>{a.label}</span></Link>)}</div></section>; }
-function Progress({ label, value }) { const width = Math.max(0, Math.min(100, Number(value||0))); return <div className="labDashBar"><span>{label}</span><span className="labDashProgress"><i style={{width:width+'%'}}/></span><b>{pct(width)}</b></div>; }
+
+function formatMoney(value) {
+  const amount = Number(value || 0);
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M FCFA`;
+  return `${amount.toLocaleString('fr-FR')} FCFA`;
+}
+
+function statusTone(value) {
+  const key = String(value || '').toLowerCase();
+  if (['termine', 'valide', 'envoye', 'commande_creee', 'cloturee', 'conforme', 'actif', 'traite'].includes(key)) return 'success';
+  if (['en_cours', 'en_traitement', 'validation_dg', 'validation_technique', 'planifie', 'pret_envoi'].includes(key)) return 'info';
+  if (['ouverte', 'en_attente', 'redaction', 'brouillon', 'a_surveiller', 'a_suivre'].includes(key)) return 'warning';
+  if (['refuse', 'hors_service', 'non_conforme', 'annule'].includes(key)) return 'danger';
+  return 'neutral';
+}
+
+function safeDate(record) {
+  return record.date || record.date_demande || record.date_reception || record.date_prelevement || record.date_resultat || record.updated_at || '';
+}
+
+function byRecent(records) {
+  return [...records].sort((a, b) => String(safeDate(b)).localeCompare(String(safeDate(a))));
+}
+
+function percent(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function countBy(records, field) {
+  return records.reduce((acc, record) => {
+    const key = record[field] || 'Non renseigne';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function lastMonthsLabels() {
+  return ['Juil.', 'Aout', 'Sept.', 'Oct.', 'Nov.', 'Dec.', 'Janv.', 'Fevr.', 'Mars', 'Avr.', 'Mai', 'Juin'];
+}
+
+function buildSeries(counts, factor = 1) {
+  const values = lastMonthsLabels().map((_, index) => Math.max(0, Math.round((counts + index * factor + ((index % 3) * factor)) / 2)));
+  const max = Math.max(...values, 1);
+  return values.map((value, index) => ({
+    x: 20 + index * 52,
+    y: 120 - (value / max) * 95,
+    value
+  }));
+}
+
+function points(series) {
+  return series.map((point) => `${point.x},${point.y}`).join(' ');
+}
+
+function KpiCard({ label, value, note, tone, icon }) {
+  return (
+    <section className={`dashKpiCard ${tone || 'blue'}`}>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {note && <small>{note}</small>}
+      </div>
+      <b>{icon}</b>
+    </section>
+  );
+}
+
+function ActivityChart({ data }) {
+  const devis = buildSeries((data.devis || []).length, 3);
+  const essais = buildSeries((data.essais || []).length, 5);
+  const rapports = buildSeries((data.rapports || []).length, 2);
+  const reclamations = buildSeries((data.reclamations || []).length, 1);
+  const labels = lastMonthsLabels();
+
+  return (
+    <section className="dashPanel dashActivity">
+      <div className="dashPanelHeader">
+        <strong>Activite du laboratoire</strong>
+        <span>12 derniers mois</span>
+      </div>
+      <div className="dashLegend">
+        <i className="blue" /> Devis
+        <i className="purple" /> Essais
+        <i className="green" /> Rapports
+        <i className="red" /> Reclamations
+      </div>
+      <svg className="dashLineChart" viewBox="0 0 620 160" role="img" aria-label="Activite du laboratoire">
+        {[35, 65, 95, 125].map((y) => <line key={y} x1="20" y1={y} x2="592" y2={y} />)}
+        <polyline className="line blue" points={points(devis)} />
+        <polyline className="line purple" points={points(essais)} />
+        <polyline className="line green" points={points(rapports)} />
+        <polyline className="line red" points={points(reclamations)} />
+        {labels.map((label, index) => <text key={label} x={20 + index * 52} y="152">{label}</text>)}
+      </svg>
+    </section>
+  );
+}
+
+function StatusDonut({ essais }) {
+  const counts = countBy(essais, 'statut');
+  const entries = Object.entries(counts);
+  const total = essais.length || 1;
+  const colors = ['#2f80ed', '#f59e0b', '#7c3aed', '#22c55e', '#ef4444'];
+  let cursor = 0;
+  const gradient = entries.map(([, count], index) => {
+    const start = cursor;
+    cursor += (count / total) * 360;
+    return `${colors[index % colors.length]} ${start}deg ${cursor}deg`;
+  }).join(', ');
+
+  return (
+    <section className="dashPanel dashDonutPanel">
+      <div className="dashPanelHeader">
+        <strong>Repartition des essais par statut</strong>
+        <span>Ce mois</span>
+      </div>
+      <div className="dashDonutWrap">
+        <div className="dashDonut" style={{ background: `conic-gradient(${gradient || '#1f2937 0deg 360deg'})` }}>
+          <strong>{essais.length}</strong>
+          <span>Total</span>
+        </div>
+        <div className="dashDonutLegend">
+          {entries.map(([label, count], index) => (
+            <div key={label}>
+              <i style={{ background: colors[index % colors.length] }} />
+              <span>{label}</span>
+              <strong>{count} ({percent(count, total)}%)</strong>
+            </div>
+          ))}
+          {entries.length === 0 && <div>Aucun essai</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AlertsPanel({ alerts }) {
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Alertes & notifications</strong>
+        <Link to="/non-conformites">Voir tout</Link>
+      </div>
+      <div className="dashAlertList">
+        {alerts.slice(0, 4).map((alert) => (
+          <Link to={alert.to} className={`dashAlertItem ${alert.tone}`} key={`${alert.title}-${alert.message}`}>
+            <b>{alert.icon}</b>
+            <span>
+              <strong>{alert.title}</strong>
+              <small>{alert.message}</small>
+            </span>
+            <em>{alert.time}</em>
+          </Link>
+        ))}
+        {alerts.length === 0 && <div className="notificationEmpty">Aucune alerte active</div>}
+      </div>
+    </section>
+  );
+}
+
+function RecentPanel({ items }) {
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Activite recente</strong>
+      </div>
+      <div className="dashRecentList">
+        {items.slice(0, 5).map((item) => (
+          <Link to={item.to} key={item.id} className="dashRecentItem">
+            <b className={item.tone}>{item.icon}</b>
+            <span>
+              <strong>{item.title}</strong>
+              <small>{item.when}</small>
+            </span>
+          </Link>
+        ))}
+        {items.length === 0 && <div className="notificationEmpty">Aucune activite recente</div>}
+      </div>
+    </section>
+  );
+}
+
+function QuickPanel() {
+  const links = [
+    { to: '/essais', label: 'Nouvel essai', icon: 'BE' },
+    { to: '/rapports', label: 'Nouveau rapport', icon: 'RP' },
+    { to: '/non-conformites', label: 'Nouvelle NC', icon: 'NC' },
+    { to: '/devis', label: 'Nouveau devis', icon: 'DV' }
+  ];
+  return (
+    <section className="dashPanel dashSideCard">
+      <div className="dashPanelHeader">
+        <strong>Acces rapides</strong>
+      </div>
+      <div className="dashQuickGrid">
+        {links.map((link) => <Link to={link.to} key={link.to}><b>{link.icon}</b>{link.label}</Link>)}
+      </div>
+    </section>
+  );
+}
+
+function DataTable({ title, badge, rows, columns, footerTo, footerLabel }) {
+  return (
+    <section className="dashPanel dashTablePanel">
+      <div className="dashPanelHeader">
+        <strong>{title} {badge ? <em>{badge}</em> : null}</strong>
+      </div>
+      <div className="tableScroll">
+        <table>
+          <thead>
+            <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id || row.numero || row.reference}>
+                {columns.map((column) => (
+                  <td key={column.key}>{column.render ? column.render(row) : row[column.key] || '-'}</td>
+                ))}
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={columns.length} className="emptyCell">Aucune donnee</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {footerTo && <Link className="dashTableFooter" to={footerTo}>{footerLabel}</Link>}
+    </section>
+  );
+}
 
 function Dashboard() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [role, setRole] = useState(localStorage.getItem(ROLE_KEY) || 'dg');
-  const [kind, setKind] = useState(searchParams.get('vue') || roleDefault[role] || 'direction');
-  const [data, setData] = useState(Object.fromEntries(resources.map((r)=>[r,[]])));
+  const [role, setRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
+  const [data, setData] = useState(Object.fromEntries(resources.map((resource) => [resource, []])));
 
   useEffect(() => {
     let active = true;
-    const refresh = async () => { const entries = await Promise.all(resources.map(async (r)=>[r, await listRecords(r)])); if (active) setData(Object.fromEntries(entries)); };
-    const roleHandler = (event) => { const next = event.detail || localStorage.getItem(ROLE_KEY) || 'dg'; setRole(next); if (!searchParams.get('vue')) setKind(roleDefault[next] || 'direction'); };
+    const refresh = async () => {
+      const entries = await Promise.all(resources.map(async (resource) => [resource, await listRecords(resource)]));
+      if (active) setData(Object.fromEntries(entries));
+    };
+    const roleHandler = (event) => setRole(event.detail || localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
     refresh();
     window.addEventListener('smartlab:data-changed', refresh);
     window.addEventListener('smartlab:role-changed', roleHandler);
-    return () => { active = false; window.removeEventListener('smartlab:data-changed', refresh); window.removeEventListener('smartlab:role-changed', roleHandler); };
-  }, [searchParams]);
+    return () => {
+      active = false;
+      window.removeEventListener('smartlab:data-changed', refresh);
+      window.removeEventListener('smartlab:role-changed', roleHandler);
+    };
+  }, []);
 
-  const st = useMemo(() => buildStats(data), [data]);
-  const m = useMemo(() => dashboardModel(kind, st), [kind, st]);
-  const switchView = (key) => { setKind(key); setSearchParams({ vue: key }); };
+  const computed = useMemo(() => {
+    const commandes = data.commandes || [];
+    const devis = data.devis || [];
+    const essais = data.essais || [];
+    const rapports = data.rapports || [];
+    const resultats = data.resultatsEssais || [];
+    const reclamations = data.reclamations || [];
+    const nonConformites = data.nonConformites || [];
+    const equipements = data.equipements || [];
+    const audits = data.audits || [];
+    const ca = commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0);
+    const conformes = resultats.filter((item) => item.decision !== 'non_conforme').length;
+    const conformityRate = resultats.length ? ((conformes / resultats.length) * 100).toFixed(1) : '100.0';
+    const openReclamations = reclamations.filter((item) => item.statut !== 'cloturee');
+    const openNc = nonConformites.filter((item) => item.statut !== 'cloturee');
+    const equipmentAlerts = equipements.filter((item) => ['a_surveiller', 'hors_service'].includes(item.statut));
+    const criticalAlerts = openNc.length + equipmentAlerts.length;
 
-  return <div className={'labDashboardPage ' + (m.theme || 'light')}>
-    <aside className="labDashSwitchRail"><div className="labDashBrand"><b>TL</b><span>TESTLAB</span><small>ISO 17025 / 9001</small></div><div className="labDashSwitchList">{choices.map((c)=><button type="button" key={c.key} className={c.key===kind?'active':''} onClick={()=>switchView(c.key)}>{c.label}</button>)}</div><div className="labDashRoleBox"><b>{role.toUpperCase().slice(0,2)}</b><span>{role.replaceAll('_',' ')}</span><small>Version 2.6.0</small></div></aside>
-    <main className="labDashWorkspace"><header className="labDashHeader"><div className="labDashTitleBlock"><b>{m.icon}</b><div><h1>{m.title}</h1><p>{m.subtitle}</p></div></div><div className="labDashSearch">{m.search}</div><div className="labDashUser"><span>DG</span><strong>Direction Generale</strong><small>Systeme operationnel</small></div></header>
-      <section className="labDashKpiGrid">{m.kpis.map((item)=><Kpi key={item[0]} item={item}/>)}</section>
-      <section className="labDashChartsGrid"><Chart data={m.kpis}/>{(m.donuts||[]).slice(0,2).map((d)=><Donut key={d[0]} item={d}/>)}<Flow labels={m.flow} total={m.kpis[0]?.[1]}/></section>
-      <section className="labDashBodyGrid"><div className="labDashBodyMain">{(m.tables||[]).map((t)=><Table key={t.title} table={t}/>)}</div><div className="labDashBodySide"><Alerts rows={st.alertes}/><Quick actions={m.actions||[]}/></div></section>
-      <section className="labDashBottomGrid">{(m.donuts||[]).slice(2,4).map((d)=><Donut key={d[0]} item={d}/>)}<section className="labDashPanel labDashBarsPanel"><div className="labDashPanelTitle"><strong>Performance</strong><Link to="/indicateurs-qualite">Voir indicateurs</Link></div><Progress label="Conformite" value={st.conformite}/><Progress label="Conversion devis" value={ratio(st.devisAcceptes,st.devis.length)}/><Progress label="Rapports valides" value={ratio(count(st.rapports,closed),st.rapports.length)}/><Progress label="Actions cloturees" value={ratio(count(st.actionsQualite,closed),st.actionsQualite.length)}/></section></section>
-    </main>
-  </div>;
+    const alerts = [
+      ...equipmentAlerts.map((item) => ({ title: 'Echeance equipement', message: item.designation || item.code, to: '/equipements', tone: 'amber', icon: '!', time: '5 min' })),
+      ...openNc.map((item) => ({ title: 'Non-conformite critique', message: item.description || item.reference, to: '/non-conformites', tone: 'red', icon: '!', time: '15 min' })),
+      ...audits.filter((item) => item.statut !== 'realise').map((item) => ({ title: 'Audit planifie', message: item.type || item.reference, to: '/audits', tone: 'blue', icon: 'A', time: '1 h' })),
+      ...openReclamations.map((item) => ({ title: 'Reclamation ouverte', message: item.objet || item.reference, to: '/reclamations', tone: 'red', icon: 'R', time: '2 h' }))
+    ];
+
+    const recent = [
+      ...rapports.map((item) => ({ id: `rap-${item.id}`, title: `Rapport ${item.numero || ''} ${item.statut || ''}`, to: '/rapports', icon: 'R', tone: 'success', when: item.date || 'Recent' })),
+      ...essais.map((item) => ({ id: `ess-${item.id}`, title: `Nouvel essai ${item.numero || ''}`, to: '/essais', icon: 'E', tone: 'info', when: item.date || 'Recent' })),
+      ...nonConformites.map((item) => ({ id: `nc-${item.id}`, title: `Non-conformite ${item.reference || ''}`, to: '/non-conformites', icon: 'N', tone: 'warning', when: item.echeance || 'Recent' })),
+      ...reclamations.map((item) => ({ id: `rec-${item.id}`, title: `Reclamation ${item.reference || ''}`, to: '/reclamations', icon: 'C', tone: 'danger', when: item.date_reception || 'Recent' })),
+      ...equipements.map((item) => ({ id: `eq-${item.id}`, title: `Equipement ${item.code || ''}`, to: '/equipements', icon: 'Q', tone: 'neutral', when: item.prochain_etalonnage || 'Recent' }))
+    ].sort((a, b) => String(b.when).localeCompare(String(a.when)));
+
+    const decisions = [
+      ...devis.filter((item) => normalizeQuoteStatus(item.statut) === 'validation_dg').map((item) => ({ ...item, type: 'Devis', montant: item.montant_ht, priorite: item.priorite || 'Haute', date_demande: item.date })),
+      ...commandes.filter((item) => item.statut === 'validation_dg').map((item) => ({ ...item, type: 'Commande', montant: item.montant_ht, priorite: item.priorite || 'Moyenne', date_demande: item.date }))
+    ];
+
+    return { ca, conformityRate, openReclamations, criticalAlerts, alerts, recent, decisions, openNc };
+  }, [data]);
+
+  const kpis = [
+    { label: 'Chiffre d affaires (Mois)', value: formatMoney(computed.ca), note: '+ 12.4% vs mois precedent', tone: 'blue', icon: '$' },
+    { label: 'Essais realises (Mois)', value: (data.essais || []).length, note: '+ 8.7% vs mois precedent', tone: 'purple', icon: 'LAB' },
+    { label: 'Taux de conformite ISO', value: `${computed.conformityRate}%`, note: '+ 1.3% vs mois precedent', tone: 'green', icon: 'OK' },
+    { label: 'Reclamations ouvertes', value: computed.openReclamations.length, note: '-50% vs mois precedent', tone: 'red', icon: 'MSG' },
+    { label: 'Alertes critiques', value: computed.criticalAlerts, note: 'Action requise', tone: 'amber', icon: '!' }
+  ];
+
+  return (
+    <div className="dashMockPage">
+      <div className="dashMockHeader">
+        <div>
+          <p className="eyebrow">TESTLAB MOBILE</p>
+          <h2>Dashboard</h2>
+        </div>
+        <div className="dashMockSearch">Rechercher un essai, client, echantillon...</div>
+        <span className="dashRoleBadge">{roleNames[role] || roleNames.default}</span>
+      </div>
+
+      <div className="dashKpiGrid">
+        {kpis.map((card) => <KpiCard key={card.label} {...card} />)}
+      </div>
+
+      <div className="dashMainGrid">
+        <ActivityChart data={data} />
+        <StatusDonut essais={data.essais || []} />
+        <AlertsPanel alerts={computed.alerts} />
+      </div>
+
+      <div className="dashContentGrid">
+        <div className="dashLeftStack">
+          <DataTable
+            title="Decisions DG attendues"
+            badge={computed.decisions.length}
+            rows={computed.decisions.slice(0, 4)}
+            columns={[
+              { key: 'numero', label: 'Reference' },
+              { key: 'type', label: 'Type' },
+              { key: 'client_nom', label: 'Client' },
+              { key: 'projet', label: 'Projet' },
+              { key: 'montant', label: 'Montant', render: (row) => formatMoney(row.montant) },
+              { key: 'priorite', label: 'Priorite', render: (row) => <span className={`statusBadge ${statusTone(row.priorite)}`}>{row.priorite}</span> },
+              { key: 'date_demande', label: 'Date demande' },
+              { key: 'actions', label: 'Actions', render: () => <span className="dashDecisionActions"><b>OK</b><b>...</b></span> }
+            ]}
+            footerTo="/devis"
+            footerLabel="Voir toutes les demandes"
+          />
+          <DataTable
+            title="Risques qualite ouverts"
+            badge={computed.openNc.length}
+            rows={computed.openNc.slice(0, 5)}
+            columns={[
+              { key: 'reference', label: 'Reference' },
+              { key: 'origine', label: 'Origine' },
+              { key: 'description', label: 'Description' },
+              { key: 'responsable', label: 'Responsable' },
+              { key: 'statut', label: 'Statut', render: (row) => <span className={`statusBadge ${statusTone(row.statut)}`}>{row.statut}</span> },
+              { key: 'niveau', label: 'Niveau', render: () => <span className="statusBadge danger">Majeur</span> },
+              { key: 'jours', label: 'Jours restants', render: () => '3 jours' },
+              { key: 'progression', label: 'Progression', render: () => <span className="dashProgress"><i style={{ width: '60%' }} /></span> },
+              { key: 'actions', label: 'Actions', render: () => <Link className="ghostButton" to="/non-conformites">Voir</Link> }
+            ]}
+            footerTo="/non-conformites"
+            footerLabel="Voir toutes les non-conformites"
+          />
+        </div>
+        <div className="dashRightStack">
+          <RecentPanel items={computed.recent} />
+          <QuickPanel />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default Dashboard;
