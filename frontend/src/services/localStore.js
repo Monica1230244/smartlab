@@ -148,7 +148,8 @@ const seedData = {
   moteursSysteme: [
     { id: 'mot-1', reference: 'MOT-2026-001', moteur: 'workflow', regle: 'Lorsqu un devis est valide par le client, creer automatiquement une commande et notifier le responsable des offres.', module_cible: 'Devis / Commandes', declencheur: 'Validation client', action: 'Creation commande + notification + audit log.', responsable: 'Administrateur TESTLAB', statut: 'actif' },
     { id: 'mot-2', reference: 'MOT-2026-002', moteur: 'conformite', regle: 'Bloquer l affectation d un essai a un personnel non habilite.', module_cible: 'Objets d essais', declencheur: 'Affectation technicien', action: 'Verifier matrice competence et afficher alerte bloquante.', responsable: 'Responsable Qualite', statut: 'actif' }
-  ],  notifications: [],
+  ],
+  notifications: [],
   activityLogs: [],
   personnel: [
     { id: 'per-1', nom: 'ADOHO Cedric', role: 'Operateur technique', atelier: 'Beton', qualification: 'accepte', habilitation: 'active', prochaine_revue: today },
@@ -247,7 +248,7 @@ function workflowReference(data, resource, prefix) {
   const year = new Date().getFullYear();
   const records = data[resource] || [];
   const max = records.reduce((highest, record) => {
-    const match = String(record.reference || '').match(new RegExp(`^${prefix}-${year}-(\\d+)$`, 'i'));
+    const match = String(record.reference || record.numero || record.code || '').match(new RegExp(`^${prefix}-${year}-(\\d+)$`, 'i'));
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0);
   return `${prefix}-${year}-${String(max + 1).padStart(3, '0')}`;
@@ -269,6 +270,11 @@ function pushWorkflowNotification(data, notification) {
   }];
 }
 
+function syncWorkflowNotifications(data) {
+  (data.notifications || []).slice(-50).forEach((notification) => {
+    upsertRemote('notifications', notification).catch(() => {});
+  });
+}
 function pushWorkflowAction(data, action) {
   const source = action.source || action.reference || '';
   if ((data.actionsQualite || []).some((item) => item.source === source && item.origine === action.origine && !['terminee', 'cloturee'].includes(item.statut))) return;
@@ -410,6 +416,207 @@ function runWorkflowAutomations(data, resource, action, record) {
       });
     }
   }
+  if (resource === 'demandesPrestations') {
+    const key = String(record.statut || '').toLowerCase();
+    pushWorkflowNotification(data, {
+      id: `workflow-demande-${record.id}`,
+      title: 'Demande de prestation',
+      message: `${ref} - ${record.client_nom || 'Client'}: ${record.besoin || 'demande a qualifier'}`,
+      path: '/demandes-prestations',
+      targetRole: key.includes('technique') ? 'responsable_technique' : 'responsable_appel',
+      tone: 'info',
+      source: ref,
+      justification: 'Toute demande client doit etre qualifiee avant devis ou commande.'
+    });
+
+    if (['pret_devis', 'devis', 'valide', 'qualifiee'].includes(key)) {
+      const existingQuote = (data.devis || []).some((item) => item.demande_reference === ref);
+      if (!existingQuote) {
+        const quote = {
+          id: `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          numero: workflowReference(data, 'devis', 'DEV'),
+          demande_reference: ref,
+          client_nom: record.client_nom || '',
+          projet: record.projet || '',
+          objet: record.besoin || 'Demande de prestation a chiffrer',
+          prestations: [],
+          montant_ht: 0,
+          canal_envoi: record.canal || 'whatsapp',
+          statut: 'redaction',
+          date: new Date().toISOString().slice(0, 10),
+          responsable: record.responsable || 'Responsable des offres',
+          commentaire: `Devis cree automatiquement depuis ${ref}`
+        };
+        data.devis = [...(data.devis || []), quote];
+        upsertRemote('devis', quote).catch(() => {});
+        pushWorkflowNotification(data, {
+          id: `workflow-demande-devis-${record.id}`,
+          title: 'Devis a rediger',
+          message: `${quote.numero} cree depuis ${ref}.`,
+          path: '/devis',
+          targetRole: 'responsable_appel',
+          tone: 'online',
+          source: quote.numero,
+          justification: 'Demande qualifiee: creation automatique du brouillon de devis.'
+        });
+      }
+    }
+  }
+
+  if (resource === 'missionsTerrain') {
+    const key = String(record.statut || '').toLowerCase();
+    if (['termine', 'terminee', 'realise', 'realisee'].includes(key)) {
+      const existingSample = (data.essais || []).some((item) => item.source_mission === ref);
+      if (!existingSample) {
+        const sample = {
+          id: `ess-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          numero: workflowReference(data, 'essais', 'EA'),
+          source_mission: ref,
+          nature: record.mission || 'Objet issu mission terrain',
+          provenance: record.site || record.projet || '',
+          date_prelevement: record.date_intervention || new Date().toISOString().slice(0, 10),
+          essai_a_realiser: record.essais || '',
+          client_nom: record.client_nom || '',
+          commentaire: `Objet d essai cree automatiquement apres mission ${ref}`,
+          technicien: record.equipe || '',
+          statut: 'en_attente',
+          priorite: 'normale',
+          date: new Date().toISOString().slice(0, 10)
+        };
+        data.essais = [...(data.essais || []), sample];
+        upsertRemote('essais', sample).catch(() => {});
+        pushWorkflowNotification(data, {
+          id: `workflow-mission-essai-${record.id}`,
+          title: "Objet d'essai cree",
+          message: `${sample.numero} cree depuis la mission ${ref}.`,
+          path: '/essais',
+          targetRole: 'responsable_labo',
+          tone: 'online',
+          source: sample.numero,
+          justification: 'Mission terrain terminee: reception laboratoire a preparer.'
+        });
+      }
+    }
+  }
+
+  if (resource === 'competencesFormations') {
+    const level = String(record.niveau || '').toLowerCase();
+    if (['habilite', 'expert'].includes(level) && record.personnel) {
+      data.personnel = (data.personnel || []).map((person) => {
+        if (String(person.nom || '').toLowerCase() !== String(record.personnel || '').toLowerCase()) return person;
+        const competences = Array.from(new Set([...(person.competences || []), record.competence].filter(Boolean)));
+        const updated = { ...person, competences, habilitation: 'active', prochaine_revue: record.date_evaluation || person.prochaine_revue };
+        upsertRemote('personnel', updated).catch(() => {});
+        return updated;
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-competence-${record.id}`,
+        title: 'Competence validee',
+        message: `${record.personnel} est ${record.niveau} pour ${record.competence || 'une competence'}.`,
+        path: '/competences-formations',
+        targetRole: 'responsable_technique',
+        tone: 'online',
+        source: ref,
+        justification: 'La matrice de competence met a jour les habilitations du personnel.'
+      });
+    }
+  }
+
+  if (resource === 'metrologieAvancee') {
+    const decision = String(record.decision || record.statut || '').toLowerCase();
+    const isNonConforming = decision.includes('non') || decision.includes('surveiller') || ['en_retard', 'a_surveiller', 'non_conforme'].includes(record.statut);
+    if (record.equipement) {
+      data.equipements = (data.equipements || []).map((equipment) => {
+        const equipmentLabel = String(equipment.designation || equipment.code || '').toLowerCase();
+        const recordLabel = String(record.equipement || '').toLowerCase();
+        const sameEquipment = equipmentLabel.includes(recordLabel) || recordLabel.includes(equipmentLabel);
+        if (!sameEquipment) return equipment;
+        const updated = { ...equipment, statut: isNonConforming ? 'a_surveiller' : 'conforme', dernier_etalonnage: record.date_operation || equipment.dernier_etalonnage, certificat: record.certificat || equipment.certificat };
+        upsertRemote('equipements', updated).catch(() => {});
+        return updated;
+      });
+    }
+    if (isNonConforming) {
+      pushWorkflowAction(data, {
+        origine: 'Metrologie',
+        source: ref,
+        type: 'preventive',
+        objet: `Verifier la decision metrologique ${ref} pour ${record.equipement || 'equipement'}`,
+        responsable: 'Responsable Metrologie',
+        processus: 'Metrologie',
+        priorite: 'haute',
+        justification: 'Decision metrologique a surveiller ou non conforme.'
+      });
+    }
+  }
+
+  if (resource === 'objectifsQualite') {
+    const remaining = daysUntil(record.echeance);
+    if (remaining !== null && remaining <= 7 && !['atteint', 'cloture', 'cloturee'].includes(String(record.statut || '').toLowerCase())) {
+      pushWorkflowAction(data, {
+        origine: 'Objectif qualite',
+        source: ref,
+        type: 'amelioration',
+        objet: `Verifier l avancement de l objectif ${ref}: ${record.objectif || ''}`,
+        responsable: record.responsable || 'Responsable Qualite',
+        processus: record.processus || 'Objectifs qualite',
+        priorite: remaining < 0 ? 'haute' : 'moyenne',
+        justification: 'Objectif qualite proche de son echeance ou en retard.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-objectif-${record.id}`,
+        title: 'Objectif qualite a suivre',
+        message: `${ref} arrive a echeance ${remaining < 0 ? 'depuis ' + Math.abs(remaining) + ' jour(s)' : 'dans ' + remaining + ' jour(s)'}.`,
+        path: '/objectifs-qualite',
+        targetRole: 'dg',
+        tone: remaining < 0 ? 'offline' : 'info',
+        source: ref,
+        justification: 'Suivi automatique des objectifs ISO 9001.'
+      });
+    }
+  }
+
+  if (resource === 'planningProjets') {
+    const remaining = daysUntil(record.date_echeance);
+    if (remaining !== null && remaining < 0 && !['termine', 'cloture', 'cloturee'].includes(String(record.statut || '').toLowerCase())) {
+      pushWorkflowAction(data, {
+        origine: 'Projet',
+        source: ref,
+        type: 'amelioration',
+        objet: `Rattraper le jalon projet en retard ${ref}: ${record.jalon || record.activite || ''}`,
+        responsable: record.responsable || 'Chef de projet',
+        processus: 'Gestion projets',
+        priorite: 'haute',
+        justification: 'Jalon projet en retard detecte par le moteur de workflow.'
+      });
+    }
+  }
+
+  if (resource === 'financesAvancees' && ['paiement', 'recette'].includes(String(record.categorie || '').toLowerCase())) {
+    pushWorkflowNotification(data, {
+      id: `workflow-finance-${record.id}`,
+      title: 'Operation financiere',
+      message: `${ref}: ${record.libelle || 'operation'} - ${Number(record.montant || 0).toLocaleString('fr-FR')} FCFA.`,
+      path: '/finances-avancees',
+      targetRole: 'dg',
+      tone: 'online',
+      source: ref,
+      justification: 'Operation financiere tracee pour le pilotage direction.'
+    });
+  }
+
+  if (resource === 'moteursSysteme') {
+    pushWorkflowNotification(data, {
+      id: `workflow-moteur-${record.id}`,
+      title: 'Regle systeme configuree',
+      message: `${record.moteur || 'Moteur'}: ${record.regle || ref}`,
+      path: '/moteurs-systeme',
+      targetRole: 'dg',
+      tone: 'info',
+      source: ref,
+      justification: 'Nouvelle regle ou automatisation TESTLAB documentee.'
+    });
+  }
 }
 
 async function upsertRemote(resource, record) {
@@ -471,6 +678,8 @@ export async function upsertRecord(resource, record) {
     ? records.map((item) => (item.id === nextRecord.id ? nextRecord : item))
     : [...records, nextRecord];
   appendAuditLog(data, resource, exists ? 'modification' : 'creation', nextRecord, previous);
+  runWorkflowAutomations(data, resource, exists ? 'modification' : 'creation', nextRecord);
+  syncWorkflowNotifications(data);
   saveData(data);
 
   try {
@@ -519,6 +728,9 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
+
+
 
 
 
