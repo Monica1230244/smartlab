@@ -605,6 +605,213 @@ function runWorkflowAutomations(data, resource, action, record) {
     });
   }
 
+  if (resource === 'consommablesStocks') {
+    const qty = Number(record.quantite || 0);
+    const min = Number(record.stock_minimum || 0);
+    const expiryDelay = daysUntil(record.date_peremption);
+    const isLowStock = min > 0 && qty <= min;
+    const isExpired = expiryDelay !== null && expiryDelay < 0;
+    const isExpiring = expiryDelay !== null && expiryDelay <= 30;
+    if (isExpired) record.statut = 'expire';
+    if (isLowStock || isExpiring) {
+      pushWorkflowAction(data, {
+        origine: 'Stock',
+        source: ref,
+        type: isLowStock ? 'preventive' : 'corrective',
+        objet: `${record.designation || ref}: ${isLowStock ? 'stock minimum atteint' : isExpired ? 'lot perime' : 'peremption proche'}`,
+        responsable: record.responsable || 'Responsable Labo',
+        processus: 'Stocks et consommables',
+        priorite: isExpired || isLowStock ? 'haute' : 'moyenne',
+        justification: 'Le module stock surveille automatiquement les seuils minimums et les dates de peremption.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-stock-${record.id}`,
+        title: 'Alerte stock / consommable',
+        message: `${record.designation || ref}: ${isLowStock ? 'stock bas' : isExpired ? 'perime' : 'peremption proche'}.`,
+        path: '/stocks-consommables',
+        targetRole: 'responsable_labo',
+        tone: isExpired || isLowStock ? 'offline' : 'info',
+        source: ref,
+        justification: 'Seuil ou peremption controle automatiquement.'
+      });
+    }
+  }
+
+  if (resource === 'contrats') {
+    const remaining = daysUntil(record.date_fin);
+    const status = String(record.statut || '').toLowerCase();
+    if (remaining !== null && remaining < 0 && !['resilie', 'archive', 'expire'].includes(status)) record.statut = 'expire';
+    if (remaining !== null && remaining <= 30 && !['resilie', 'archive', 'cloture'].includes(status)) {
+      pushWorkflowAction(data, {
+        origine: 'Contrat',
+        source: ref,
+        type: 'preventive',
+        objet: `Revoir le contrat ${ref} - ${record.partenaire || 'partenaire'}`,
+        responsable: record.responsable || 'Direction Generale',
+        processus: 'Gestion contrats',
+        priorite: remaining < 0 ? 'haute' : 'moyenne',
+        justification: 'Contrat proche de son echeance ou expire: decision de renouvellement requise.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-contrat-${record.id}`,
+        title: 'Contrat a revoir',
+        message: `${ref} arrive a echeance ${remaining < 0 ? 'depuis ' + Math.abs(remaining) + ' jour(s)' : 'dans ' + remaining + ' jour(s)'}.`,
+        path: '/contrats',
+        targetRole: 'dg',
+        tone: remaining < 0 ? 'offline' : 'info',
+        source: ref,
+        justification: 'Surveillance automatique des echeances contractuelles.'
+      });
+    }
+  }
+
+  if (resource === 'factures') {
+    const status = String(record.statut || '').toLowerCase();
+    const remaining = daysUntil(record.date_echeance);
+    const isPaid = ['paye', 'payee', 'regle', 'reglee'].includes(status);
+    if (isPaid) {
+      const existingFinance = (data.financesAvancees || []).some((item) => item.source_facture === ref);
+      if (!existingFinance) {
+        const finance = {
+          id: `fin-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          reference: workflowReference(data, 'financesAvancees', 'FIN'),
+          source_facture: ref,
+          categorie: 'paiement',
+          libelle: `Encaissement facture ${ref}`,
+          partenaire: record.client_nom || '',
+          centre: 'Commercial',
+          montant: Number(record.montant_ht || record.montant || 0),
+          date_operation: new Date().toISOString().slice(0, 10),
+          statut: 'paye'
+        };
+        data.financesAvancees = [...(data.financesAvancees || []), finance];
+        upsertRemote('financesAvancees', finance).catch(() => {});
+      }
+    }
+    if (remaining !== null && remaining < 0 && !isPaid && !['annule', 'annulee'].includes(status)) {
+      pushWorkflowAction(data, {
+        origine: 'Facture',
+        source: ref,
+        type: 'corrective',
+        objet: `Relancer la facture en retard ${ref} - ${record.client_nom || 'client'}`,
+        responsable: record.responsable || 'Responsable des offres',
+        processus: 'Recouvrement',
+        priorite: 'haute',
+        justification: 'Facture arrivee a echeance sans statut paye.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-facture-${record.id}`,
+        title: 'Facture en retard',
+        message: `${ref} est en retard de ${Math.abs(remaining)} jour(s).`,
+        path: '/factures',
+        targetRole: 'responsable_appel',
+        tone: 'offline',
+        source: ref,
+        justification: 'Recouvrement automatique des factures echues.'
+      });
+    }
+  }
+
+  if (resource === 'signaturesElectroniques') {
+    const status = String(record.statut || '').toLowerCase();
+    if (['signe', 'signee', 'valide'].includes(status)) {
+      data.documentsQualite = (data.documentsQualite || []).map((document) => {
+        const documentLabel = String(document.reference || document.titre || '').toLowerCase();
+        const signedLabel = String(record.document || '').toLowerCase();
+        if (!documentLabel.includes(signedLabel) && !signedLabel.includes(documentLabel)) return document;
+        const updated = { ...document, signature_reference: ref, signe_par: record.signataire || document.signe_par, date_signature: record.date_signature || new Date().toISOString().slice(0, 10) };
+        upsertRemote('documentsQualite', updated).catch(() => {});
+        return updated;
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-signature-${record.id}`,
+        title: 'Signature electronique validee',
+        message: `${record.document || ref} signe par ${record.signataire || 'signataire'}.`,
+        path: '/signatures-electroniques',
+        targetRole: 'responsable_technique',
+        tone: 'online',
+        source: ref,
+        justification: 'Signature horodatee ajoutee a la piste de preuve.'
+      });
+    }
+  }
+
+  if (resource === 'portailClient') {
+    const status = String(record.statut || '').toLowerCase();
+    if (action === 'creation' && ['nouvelle', 'ouverte', 'demande', 'soumise', 'en_attente'].includes(status || 'demande')) {
+      const existingDemand = (data.demandesPrestations || []).some((item) => item.source_portail === ref);
+      if (!existingDemand) {
+        const demand = {
+          id: `dpr-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          reference: workflowReference(data, 'demandesPrestations', 'DPR'),
+          source_portail: ref,
+          client_nom: record.client_nom || '',
+          contact: record.canal || '',
+          projet: record.rapport || '',
+          besoin: record.demande || 'Demande client via portail',
+          canal: record.canal || 'portail',
+          responsable: 'Responsable des offres',
+          statut: 'ouverte'
+        };
+        data.demandesPrestations = [...(data.demandesPrestations || []), demand];
+        upsertRemote('demandesPrestations', demand).catch(() => {});
+      }
+    }
+    if (['devis_valide', 'valide', 'rapport_telecharge', 'commande_creee'].includes(status)) {
+      pushWorkflowNotification(data, {
+        id: `workflow-portail-client-${record.id}`,
+        title: 'Activite portail client',
+        message: `${record.client_nom || 'Client'}: ${record.statut || 'activite portail'}.`,
+        path: '/portail-client',
+        targetRole: 'responsable_appel',
+        tone: 'online',
+        source: ref,
+        justification: 'Activite client suivie automatiquement dans le portail.'
+      });
+    }
+  }
+
+  if (resource === 'portailFournisseur') {
+    const status = String(record.statut || '').toLowerCase();
+    if (['offre_recue', 'deposee', 'facture_recue', 'livraison_confirmee'].includes(status)) {
+      pushWorkflowNotification(data, {
+        id: `workflow-portail-fournisseur-${record.id}`,
+        title: 'Activite fournisseur',
+        message: `${record.fournisseur || 'Fournisseur'}: ${record.statut || 'nouvelle activite'}.`,
+        path: '/portail-fournisseur',
+        targetRole: 'responsable_labo',
+        tone: 'info',
+        source: ref,
+        justification: 'Reponse fournisseur centralisee pour achats et approvisionnements.'
+      });
+    }
+  }
+
+  if (resource === 'analyseDocumentaireIA') {
+    const hasFindings = Boolean(record.constats || record.actions_suggerees);
+    if (hasFindings && !['cloture', 'valide'].includes(String(record.statut || '').toLowerCase())) {
+      pushWorkflowAction(data, {
+        origine: 'Analyse documentaire IA',
+        source: ref,
+        type: 'amelioration',
+        objet: `Verifier les constats documentaires ${ref} - ${record.document || 'document'}`,
+        responsable: record.responsable || 'Responsable Qualite',
+        processus: 'Maitrise documentaire',
+        priorite: 'moyenne',
+        justification: 'L analyse documentaire propose des actions qui doivent etre validees humainement.'
+      });
+      pushWorkflowNotification(data, {
+        id: `workflow-analyse-ia-${record.id}`,
+        title: 'Analyse documentaire a valider',
+        message: `${record.document || ref}: constats/actions detectes.`,
+        path: '/analyse-documentaire-ia',
+        targetRole: 'responsable_technique',
+        tone: 'info',
+        source: ref,
+        justification: 'L assistant IA ne cloture rien seul: validation responsable requise.'
+      });
+    }
+  }
   if (resource === 'moteursSysteme') {
     pushWorkflowNotification(data, {
       id: `workflow-moteur-${record.id}`,
@@ -728,6 +935,7 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
 
 
 
