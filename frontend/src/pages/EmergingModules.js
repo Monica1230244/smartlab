@@ -132,3 +132,43 @@ export function AnalyseDocumentaireIA() {
   ];
   return <OperationalRegisterPage config={pageConfig({ resource: 'analyseDocumentaireIA', prefix: 'AIA', title: 'Analyse documentaire IA', subtitle: 'Preparation a l analyse automatique des procedures, exigences et impacts documentaires.', workflow: ['Importer', 'Analyser', 'Identifier exigences', 'Proposer actions', 'Validation humaine'], evidence: ['Document', 'Constats', 'Actions', 'Validation'], fields, columns: fields, detailFields: fields })} />;
 }
+
+export function JournalActivites() {
+  const fields = [
+    { name: 'reference', label: 'Reference', readOnly: true },
+    { name: 'resource', label: 'Module' },
+    { name: 'action', label: 'Action' },
+    { name: 'record_reference', label: 'Element concerne' },
+    { name: 'utilisateur', label: 'Utilisateur' },
+    { name: 'date_action', label: 'Date / heure' },
+    { name: 'source', label: 'Source' }
+  ];
+  const columns = fields;
+  return <OperationalRegisterPage config={{
+    ...pageConfig({
+      resource: 'auditLogs',
+      prefix: 'LOG',
+      title: 'Journal d\'activites',
+      subtitle: 'Piste d\'audit ISO : qui a cree, modifie ou supprime chaque enregistrement TESTLAB.',
+      workflow: ['Action utilisateur', 'Horodatage', 'Ancienne valeur', 'Nouvelle valeur', 'Synchronisation', 'Preuve audit'],
+      evidence: ['Utilisateur', 'Module', 'Action', 'Date', 'Valeurs avant/apres'],
+      fields,
+      columns,
+      detailFields: fields
+    }),
+    readOnly: true,
+    primaryLabel: 'Journal',
+    summary: (records) => [
+      { label: 'Actions tracees', value: records.length, tone: 'blue', icon: 'LOG' },
+      { label: 'Creations', value: records.filter((item) => item.action === 'creation').length, tone: 'green', icon: '+' },
+      { label: 'Modifications', value: records.filter((item) => item.action === 'modification').length, tone: 'amber', icon: 'M' },
+      { label: 'Suppressions', value: records.filter((item) => item.action === 'suppression').length, tone: 'red', icon: 'X' }
+    ],
+    sideTitle: 'Actions par module',
+    sideStats: (records) => Object.entries(records.reduce((acc, item) => {
+      const key = item.resource || 'Non renseigne';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {})).map(([label, value]) => ({ label, value }))
+  }} />;
+}

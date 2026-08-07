@@ -65,6 +65,7 @@ export const navItems = [
   { to: '/projets', label: 'Projets', icon: 'PJ' },
   { to: '/gouvernance', label: 'Gouvernance', icon: 'GV' },
   { to: '/moteurs-systeme', label: 'Moteurs systeme', icon: 'MS' },
+  { to: '/journal-activites', label: 'Journal d\'activites', icon: 'JA' },
   { to: '/parametres', label: 'Parametres', icon: 'PR' }
 ];
 
@@ -72,14 +73,14 @@ export const titles = Object.fromEntries(navItems.map((item) => [item.to, item.l
 
 const allPaths = navItems.map((item) => item.to);
 const commercial = ['/', '/clients', '/demandes-prestations', '/devis', '/commandes', '/factures', '/finances-avancees', '/contrats', '/portail-client', '/projets', '/satisfaction-clients', '/processus', '/parametres'];
-const technique = ['/', '/clients', '/demandes-prestations', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/indicateurs-qualite', '/personnel', '/competences-formations', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'];
+const technique = ['/', '/clients', '/demandes-prestations', '/devis', '/commandes', '/rapports', '/resultats-essais', '/non-conformites', '/reclamations', '/satisfaction-clients', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/journal-activites', '/indicateurs-qualite', '/personnel', '/competences-formations', '/processus', '/documents-qualite', '/catalogue-essais', '/parametres'];
 const labo = ['/', '/commandes', '/essais', '/catalogue-essais', '/resultats-essais', '/rapports', '/documents-qualite', '/equipements', '/metrologie-avancee', '/achats-approvisionnement', '/fournisseurs', '/stocks-consommables', '/portail-fournisseur', '/personnel', '/non-conformites', '/reclamations', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/indicateurs-qualite', '/processus', '/parametres'];
-const qualite = ['/', '/documents-qualite', '/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/indicateurs-qualite', '/processus', '/personnel', '/competences-formations', '/parametres'];
+const qualite = ['/', '/documents-qualite', '/non-conformites', '/reclamations', '/audits', '/satisfaction-clients', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/signatures-electroniques', '/analyse-documentaire-ia', '/journal-activites', '/indicateurs-qualite', '/processus', '/personnel', '/competences-formations', '/parametres'];
 const metrologie = ['/', '/equipements', '/metrologie-avancee', '/stocks-consommables', '/achats-approvisionnement', '/fournisseurs', '/non-conformites', '/actions-qualite', '/risques-opportunites', '/documents-qualite', '/processus', '/parametres'];
 const achats = ['/', '/achats-approvisionnement', '/fournisseurs', '/stocks-consommables', '/portail-fournisseur', '/contrats', '/factures', '/actions-qualite', '/risques-opportunites', '/parametres'];
 const finance = ['/', '/factures', '/finances-avancees', '/devis', '/commandes', '/contrats', '/clients', '/actions-qualite', '/parametres'];
 const reception = ['/', '/commandes', '/essais', '/clients', '/demandes-prestations', '/non-conformites', '/reclamations', '/actions-qualite', '/satisfaction-clients', '/processus', '/documents-qualite', '/parametres'];
-const audit = ['/', '/documents-qualite', '/equipements', '/metrologie-avancee', '/personnel', '/competences-formations', '/non-conformites', '/reclamations', '/audits', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/indicateurs-qualite', '/processus'];
+const audit = ['/', '/documents-qualite', '/equipements', '/metrologie-avancee', '/personnel', '/competences-formations', '/non-conformites', '/reclamations', '/audits', '/actions-qualite', '/objectifs-qualite', '/risques-opportunites', '/revues-direction', '/assistant-audit-iso', '/journal-activites', '/indicateurs-qualite', '/processus'];
 
 export const menuByRole = {
   responsable_appel: commercial,
@@ -119,3 +120,4 @@ export function canAccessPath(role, pathname) {
 export function defaultRouteForRole(role) {
   return roleHome[role] || '/';
 }
+

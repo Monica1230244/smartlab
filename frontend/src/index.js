@@ -4,7 +4,8 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const SMARTLAB_VERSION = '2026.08.07-03';
+const SMARTLAB_VERSION = '2026.08.07-04';
+const PUBLIC_BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 window.SMARTLAB_VERSION = SMARTLAB_VERSION;
 document.documentElement.dataset.theme = localStorage.getItem('smartlab_theme') || 'dark';
 
@@ -26,22 +27,21 @@ async function clearSmartlabCaches() {
 }
 
 function getCurrentMainScript() {
-  const script = Array.from(document.scripts).find((item) => item.src.includes('/static/js/main.') && item.src.endsWith('.js'));
+  const script = Array.from(document.scripts).find((item) => item.src.includes('/static/') && item.src.endsWith('.js'));
   return script ? new URL(script.src).pathname : '';
 }
 
 async function checkPublishedVersion() {
   if (document.visibilityState === 'hidden') return;
 
-  const baseUrl = process.env.PUBLIC_URL || '';
-  const response = await fetch(`${baseUrl}/index.html?smartlab_version_check=${Date.now()}`, {
+  const response = await fetch(`${PUBLIC_BASE}/index.html?smartlab_version_check=${Date.now()}`, {
     cache: 'no-store',
     headers: { 'Cache-Control': 'no-cache' }
   });
 
   if (!response.ok) return;
   const html = await response.text();
-  const match = html.match(/src="([^"]*\/static\/js\/main\.[^"]+\.js)"/);
+  const match = html.match(/src="([^"]*\/static\/[^"]+\.js)"/);
   const publishedMainScript = match ? new URL(match[1], window.location.origin).pathname : '';
   const currentMainScript = getCurrentMainScript();
 
@@ -52,10 +52,10 @@ async function checkPublishedVersion() {
   }
 }
 
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register(`${process.env.PUBLIC_URL}/sw.js?v=${SMARTLAB_VERSION}`, {
+      const registration = await navigator.serviceWorker.register(`${PUBLIC_BASE}/sw.js?v=${SMARTLAB_VERSION}`, {
         updateViaCache: 'none'
       });
 
@@ -95,8 +95,3 @@ if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     }
   });
 }
-
-
-
-
-

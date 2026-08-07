@@ -1,8 +1,8 @@
 ﻿const STORAGE_KEY = 'smartlab_mobile_records_v2';
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
-const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
-const SUPABASE_TABLE = process.env.REACT_APP_SUPABASE_TABLE || 'smartlab_records';
-const USE_TYPED_TABLES = process.env.REACT_APP_SUPABASE_TYPED_TABLES === 'true';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
+const SUPABASE_TABLE = import.meta.env.VITE_SUPABASE_TABLE || 'smartlab_records';
+const USE_TYPED_TABLES = import.meta.env.VITE_SUPABASE_TYPED_TABLES === 'true';
 const RESOURCE_TABLES = {
   clients: 'testlab_clients',
   essais: 'testlab_objets_essais',
@@ -937,6 +937,7 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
 
 
 

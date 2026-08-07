@@ -25,7 +25,7 @@ import ResultatsEssais from './pages/ResultatsEssais';
 import AchatsApprovisionnement from './pages/AchatsApprovisionnement';
 import SatisfactionClients from './pages/SatisfactionClients';
 import { ActionsQualite, RisquesOpportunites, RevuesDirection, AssistantAuditISO } from './pages/IsoCore';
-import { StocksConsommables, Contrats, FacturesAvancees, SignaturesElectroniques, PortailClient, PortailFournisseur, AnalyseDocumentaireIA } from './pages/EmergingModules';
+import { StocksConsommables, Contrats, FacturesAvancees, SignaturesElectroniques, PortailClient, PortailFournisseur, AnalyseDocumentaireIA, JournalActivites } from './pages/EmergingModules';
 import { Gouvernance, DemandesPrestations, MissionsTerrain, PlanningProjets, CompetencesFormations, MetrologieAvancee, FinancesAvancees, ObjectifsQualite, MoteursSysteme } from './pages/ArchitectureModules';
 import { canAccessPath, defaultRouteForRole } from './config/permissions';
 
@@ -88,6 +88,7 @@ function App() {
           <Route path="/missions-terrain" element={<MissionsTerrain />} />
           <Route path="/gouvernance" element={<Gouvernance />} />
           <Route path="/moteurs-systeme" element={<MoteursSysteme />} />
+          <Route path="/journal-activites" element={<JournalActivites />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

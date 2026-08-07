@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { deleteRecord, listRecords, upsertRecord } from '../services/localStore';
 
@@ -190,7 +190,7 @@ function buildValidationExpiry() {
 }
 
 function buildValidationUrl(code) {
-  const publicBase = process.env.PUBLIC_URL || '';
+  const publicBase = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
   const base = `${window.location.origin}${publicBase}`.replace(/\/$/, '');
   return `${base}/#/devis?validation=${encodeURIComponent(code || '')}`;
 }
@@ -1109,7 +1109,7 @@ function ResourcePage({
                     ))}
                     <td>
                       <div className="rowActions">
-                        <button type="button" className="ghostButton iconOnlyButton" title="Voir" onClick={() => setSelectedId(record.id)}>○</button>
+                        <button type="button" className="ghostButton iconOnlyButton" title="Voir" onClick={() => setSelectedId(record.id)}>â—‹</button>
                         {canEditRecord(record) && (
                           <button type="button" className="ghostButton" onClick={() => openEdit(record)}>Modifier</button>
                         )}
@@ -1328,3 +1328,4 @@ function ResourcePage({
 }
 
 export default ResourcePage;
+

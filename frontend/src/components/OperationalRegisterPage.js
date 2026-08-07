@@ -109,10 +109,10 @@ function RecordCard({ record, config, selected, onSelect, onEdit, onRemove }) {
           </React.Fragment>
         ))}
       </dl>
-      <footer className="rowActions">
+      {!config.readOnly && <footer className="rowActions">
         <button type="button" className="ghostButton" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Modifier</button>
         <button type="button" className="dangerButton" onClick={(event) => { event.stopPropagation(); onRemove(); }}>Suppr.</button>
-      </footer>
+      </footer>}
     </article>
   );
 }
@@ -154,6 +154,7 @@ export default function OperationalRegisterPage({ config }) {
   const tabs = config.tabs || ['Tous'];
 
   const openCreate = () => {
+    if (config.readOnly) return;
     const next = { ...(config.defaultForm || {}) };
     if (config.numberField) next[config.numberField] = nextReference(records, config);
     setEditing(null);
@@ -162,6 +163,7 @@ export default function OperationalRegisterPage({ config }) {
   };
 
   const openEdit = (record) => {
+    if (config.readOnly) return;
     setEditing(record);
     setForm({ ...(config.defaultForm || {}), ...record });
     setModalOpen(true);
@@ -177,6 +179,7 @@ export default function OperationalRegisterPage({ config }) {
   };
 
   const remove = async (record) => {
+    if (config.readOnly) { toast.error('Module consultatif'); return; }
     if (!window.confirm(`Supprimer ${recordTitle(record, config)} ?`)) return;
     await deleteRecord(config.resource, record.id);
     toast.success('Enregistrement supprime');
@@ -218,7 +221,7 @@ export default function OperationalRegisterPage({ config }) {
                   <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>Cartes</button>
                 </div>
                 <button type="button" className="ghostButton" onClick={() => downloadCsv(`${config.resource}.csv`, filtered)}>Exporter</button>
-                <button type="button" className="primaryButton" onClick={openCreate}>+ {config.primaryLabel}</button>
+                {!config.readOnly && <button type="button" className="primaryButton" onClick={openCreate}>+ {config.primaryLabel}</button>}
               </div>
             </div>
 
