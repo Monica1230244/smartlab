@@ -1,5 +1,5 @@
 -- TESTLAB - tables complementaires issues du document d architecture
--- A executer dans Supabase SQL Editor si REACT_APP_SUPABASE_TYPED_TABLES=true.
+-- A executer dans Supabase SQL Editor si VITE_SUPABASE_TYPED_TABLES=true.
 
 create extension if not exists "pgcrypto";
 

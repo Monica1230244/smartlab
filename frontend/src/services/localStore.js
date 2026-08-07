@@ -1,3 +1,4 @@
+import { getSupabaseAccessToken } from './supabaseAuth';
 const STORAGE_KEY = 'smartlab_mobile_records_v2';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
@@ -168,9 +169,10 @@ const seedData = {
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 function headers(extra = {}) {
+  const accessToken = getSupabaseAccessToken();
   return {
     apikey: SUPABASE_KEY,
-    Authorization: `Bearer ${SUPABASE_KEY}`,
+    Authorization: `Bearer ${accessToken || SUPABASE_KEY}`,
     'Content-Type': 'application/json',
     ...extra
   };

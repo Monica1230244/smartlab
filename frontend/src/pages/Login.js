@@ -4,10 +4,10 @@ import { authProfiles, useAuth } from '../contexts/AuthContext';
 
 function Login() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('testlab123');
+  const [password, setPassword] = useState(import.meta.env.VITE_SUPABASE_AUTH === 'true' ? '' : 'testlab123');
   const [role, setRole] = useState('responsable_appel');
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, useSupabaseAuth } = useAuth();
   const navigate = useNavigate();
 
   if (user) return <Navigate to="/" replace />;
@@ -28,7 +28,7 @@ function Login() {
         <div className="loginBrand">
           <div className="brandMark">TL</div>
           <h1>TEST<span>LAB</span></h1>
-          <p>Connexion par profil metier</p>
+          <p>{useSupabaseAuth ? 'Connexion securisee Supabase Auth' : 'Connexion par profil metier'}</p>
         </div>
 
         <label>
@@ -67,10 +67,10 @@ function Login() {
         </label>
 
         <button className="primaryButton" type="submit" disabled={loading}>
-          {loading ? 'Connexion...' : `Entrer comme ${selectedProfile?.label || 'utilisateur'}`}
+          {loading ? 'Connexion...' : useSupabaseAuth ? 'Se connecter' : `Entrer comme ${selectedProfile?.label || 'utilisateur'}`}
         </button>
 
-        <div className="loginProfiles">
+        {!useSupabaseAuth && <div className="loginProfiles">
           {authProfiles.map((profile) => (
             <button
               type="button"
@@ -85,7 +85,7 @@ function Login() {
               <span>{profile.label}</span>
             </button>
           ))}
-        </div>
+        </div>}
       </form>
     </div>
   );

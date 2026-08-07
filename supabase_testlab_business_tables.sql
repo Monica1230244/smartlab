@@ -1,5 +1,5 @@
 -- TESTLAB - tables metier separees compatibles avec l'application React
--- A executer dans Supabase SQL Editor avant d'activer REACT_APP_SUPABASE_TYPED_TABLES=true.
+-- A executer dans Supabase SQL Editor avant d'activer VITE_SUPABASE_TYPED_TABLES=true.
 -- Le script cree une table par module, puis recopie les donnees existantes depuis smartlab_records.
 
 create extension if not exists "pgcrypto";

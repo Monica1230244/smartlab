@@ -1,6 +1,7 @@
-﻿import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { listRecords, upsertRecord } from '../services/localStore';
+import { SUPABASE_AUTH_ENABLED, signInWithSupabasePassword, signOutSupabase } from '../services/supabaseAuth';
 import { authProfiles, roleLabels } from '../config/permissions';
 
 const AuthContext = createContext();
@@ -62,8 +63,8 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async ({ email, password, role }) => {
-    const profile = authProfiles.find((item) => item.role === role);
-    if (!profile) {
+    const selectedProfile = authProfiles.find((item) => item.role === role);
+    if (!selectedProfile) {
       toast.error('Selectionnez un role valide');
       return false;
     }
@@ -72,21 +73,47 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
+    if (SUPABASE_AUTH_ENABLED) {
+      try {
+        const session = await signInWithSupabasePassword({ email: email || selectedProfile.email, password });
+        const roleFromAuth = session.role || role;
+        const profile = authProfiles.find((item) => item.role === roleFromAuth) || selectedProfile;
+        const baseUser = {
+          ...profile,
+          email: session.user?.email || email || profile.email,
+          name: session.label || profile.label,
+          supabase_user_id: session.user?.id || '',
+          auth_provider: 'supabase'
+        };
+        const nextUser = await loadProfile(baseUser);
+        localStorage.setItem(TOKEN_KEY, session.accessToken);
+        setToken(session.accessToken);
+        applyUser(nextUser);
+        toast.success(`Connecte Supabase: ${profile.label}`);
+        return true;
+      } catch (error) {
+        toast.error(error?.message || 'Connexion Supabase impossible');
+        return false;
+      }
+    }
+
     const baseUser = {
-      ...profile,
-      email: email || profile.email,
-      name: profile.label
+      ...selectedProfile,
+      email: email || selectedProfile.email,
+      name: selectedProfile.label,
+      auth_provider: 'local_profile'
     };
     const nextUser = await loadProfile(baseUser);
     const nextToken = `smartlab-${role}-${Date.now()}`;
     localStorage.setItem(TOKEN_KEY, nextToken);
     setToken(nextToken);
     applyUser(nextUser);
-    toast.success(`Connecte: ${profile.label}`);
+    toast.success(`Connecte: ${selectedProfile.label}`);
     return true;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (SUPABASE_AUTH_ENABLED) await signOutSupabase();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
@@ -121,7 +148,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, updateProfile, roleLabels }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateProfile, roleLabels, useSupabaseAuth: SUPABASE_AUTH_ENABLED }}>
       {children}
     </AuthContext.Provider>
   );
