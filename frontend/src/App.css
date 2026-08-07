@@ -6129,3 +6129,147 @@ html[data-theme="light"] .qualityQuickGrid button {
     grid-template-columns: 1fr;
   }
 }
+
+.registerToolbar {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.registerToolbar .rowActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.viewToggle {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.viewToggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.viewToggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.achatTabs button.active {
+  color: var(--accent);
+}
+
+.achatTabs button.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.registerCardGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  padding-top: 14px;
+}
+
+.registerCard {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  min-height: 210px;
+  padding: 16px;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+
+.registerCard:hover,
+.registerCard.selected {
+  background: rgba(22, 33, 55, 0.92);
+  border-color: rgba(59, 158, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+.registerCard header {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.registerCard header strong {
+  color: var(--text);
+  display: block;
+  font-size: 15px;
+}
+
+.registerCard header small {
+  color: var(--text3);
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.registerCard dl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(90px, 0.8fr) 1fr;
+  margin: 0;
+}
+
+.registerCard dt {
+  color: var(--text3);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.registerCard dd {
+  color: var(--text2);
+  font-size: 13px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.registerCard footer {
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+[data-theme='light'] .registerCard {
+  background: #ffffff;
+}
+
+[data-theme='light'] .registerCard:hover,
+[data-theme='light'] .registerCard.selected {
+  background: #f8fbff;
+}
+
+@media (max-width: 720px) {
+  .registerToolbar,
+  .registerToolbar .rowActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .viewToggle,
+  .registerToolbar .primaryButton,
+  .registerToolbar .ghostButton {
+    width: 100%;
+  }
+
+  .viewToggle button {
+    flex: 1;
+  }
+}

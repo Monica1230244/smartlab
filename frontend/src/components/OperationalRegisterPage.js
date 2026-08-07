@@ -13,9 +13,9 @@ function formatMoney(value) {
 
 function statusTone(value) {
   const key = String(value || '').toLowerCase();
-  if (['valide', 'envoye', 'actif', 'conforme', 'cloturee', 'resolue', 'termine', 'livree'].includes(key)) return 'success';
-  if (['controle', 'en_traitement', 'en_cours', 'a_reviser', 'planifie', 'ouverte'].includes(key)) return 'warning';
-  if (['refuse', 'inactif', 'obsolete', 'perime'].includes(key)) return 'danger';
+  if (['valide', 'envoye', 'actif', 'conforme', 'cloturee', 'resolue', 'termine', 'terminee', 'livree', 'paye', 'payee', 'signe'].includes(key)) return 'success';
+  if (['controle', 'en_traitement', 'en_cours', 'a_reviser', 'a_valider', 'planifie', 'ouverte', 'en_attente', 'soumise'].includes(key)) return 'warning';
+  if (['refuse', 'inactif', 'obsolete', 'perime', 'expire', 'retard', 'bloque', 'non_conforme'].includes(key)) return 'danger';
   return 'info';
 }
 
@@ -42,23 +42,78 @@ function percent(count, total) {
   return total ? Math.round((count / total) * 100) : 0;
 }
 
+function tabMatches(record, tab) {
+  const label = String(tab || '').toLowerCase();
+  const status = String(record.statut || '').toLowerCase();
+  if (!label || label === 'tous' || label.startsWith('tous ')) return true;
+  if (label.includes('cours')) return ['en_cours', 'ouverte', 'planifie', 'preparee', 'en_attente', 'soumise', 'a_signer', 'a_analyser'].includes(status);
+  if (label.includes('valid')) return ['valide', 'conforme', 'termine', 'terminee', 'realisee', 'cloturee', 'atteint', 'paye', 'payee', 'signe', 'configure'].includes(status);
+  if (label.includes('archive')) return ['archive', 'archivee', 'cloture', 'cloturee', 'obsolete', 'perime', 'expire'].includes(status);
+  return true;
+}
+
+function recordTitle(record, config) {
+  return record?.[config.numberField] || record?.reference || record?.numero || record?.code || record?.id || config.title;
+}
+
 function RegisterModal({ config, form, setForm, editing, onClose, onSubmit }) {
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   return (
     <div className="modalOverlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form className="modalPanel" onSubmit={onSubmit}>
-        <div className="modalHeader"><strong>{editing ? config.editTitle : config.createTitle}</strong><button type="button" className="modalClose" onClick={onClose}>x</button></div>
-        <div className="modalBody"><div className="formGrid">
-          {config.fields.map((field) => {
-            const value = form[field.name] ?? '';
-            if (field.type === 'textarea') return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><textarea rows={field.rows || 3} value={value} required={field.required} onChange={(event) => update(field.name, event.target.value)} /></label>;
-            if (field.options) return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><select value={value} required={field.required} onChange={(event) => update(field.name, event.target.value)}>{field.options.map((option) => <option key={option.value || option} value={option.value || option}>{option.label || option}</option>)}</select></label>;
-            return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><input type={field.type || 'text'} readOnly={field.readOnly} required={field.required} value={value} onChange={(event) => update(field.name, field.type === 'number' ? Number(event.target.value) : event.target.value)} /></label>;
-          })}
-        </div></div>
-        <div className="modalFooter"><button type="button" className="ghostButton" onClick={onClose}>Annuler</button><button type="submit" className="primaryButton">Enregistrer</button></div>
+        <div className="modalHeader">
+          <strong>{editing ? config.editTitle : config.createTitle}</strong>
+          <button type="button" className="modalClose" onClick={onClose}>x</button>
+        </div>
+        <div className="modalBody">
+          <div className="formGrid">
+            {config.fields.map((field) => {
+              const value = form[field.name] ?? '';
+              if (field.type === 'textarea') {
+                return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><textarea rows={field.rows || 3} value={value} required={field.required} onChange={(event) => update(field.name, event.target.value)} /></label>;
+              }
+              if (field.options) {
+                return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><select value={value} required={field.required} onChange={(event) => update(field.name, event.target.value)}>{field.options.map((option) => <option key={option.value || option} value={option.value || option}>{option.label || option}</option>)}</select></label>;
+              }
+              return <label key={field.name} className={field.full ? 'full' : ''}><span>{field.label}</span><input type={field.type || 'text'} readOnly={field.readOnly} required={field.required} value={value} onChange={(event) => update(field.name, field.type === 'number' ? Number(event.target.value) : event.target.value)} /></label>;
+            })}
+          </div>
+        </div>
+        <div className="modalFooter">
+          <button type="button" className="ghostButton" onClick={onClose}>Annuler</button>
+          <button type="submit" className="primaryButton">Enregistrer</button>
+        </div>
       </form>
     </div>
+  );
+}
+
+function RecordCard({ record, config, selected, onSelect, onEdit, onRemove }) {
+  const title = recordTitle(record, config);
+  const status = record.statut || record.status || '';
+  const fields = (config.detailFields || config.columns).filter((field) => !field.readOnly).slice(0, 5);
+  return (
+    <article className={`registerCard ${selected ? 'selected' : ''}`} onClick={onSelect}>
+      <header>
+        <div>
+          <strong>{title}</strong>
+          <small>{record.client_nom || record.partenaire || record.fournisseur || record.responsable || config.title}</small>
+        </div>
+        {status && <span className={`statusBadge ${statusTone(status)}`}>{status}</span>}
+      </header>
+      <dl>
+        {fields.map((field) => (
+          <React.Fragment key={field.name}>
+            <dt>{field.label}</dt>
+            <dd>{valueOf(record, field)}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+      <footer className="rowActions">
+        <button type="button" className="ghostButton" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Modifier</button>
+        <button type="button" className="dangerButton" onClick={(event) => { event.stopPropagation(); onRemove(); }}>Suppr.</button>
+      </footer>
+    </article>
   );
 }
 
@@ -69,6 +124,8 @@ export default function OperationalRegisterPage({ config }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(config.defaultForm || {});
+  const [activeTab, setActiveTab] = useState((config.tabs || ['Tous'])[0]);
+  const [viewMode, setViewMode] = useState(localStorage.getItem(`testlab_view_${config.resource}`) || 'table');
 
   const load = async () => {
     const data = await listRecords(config.resource);
@@ -83,13 +140,18 @@ export default function OperationalRegisterPage({ config }) {
     return () => window.removeEventListener('smartlab:data-changed', load);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem(`testlab_view_${config.resource}`, viewMode);
+  }, [config.resource, viewMode]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return records.filter((record) => !needle || Object.values(record).join(' ').toLowerCase().includes(needle));
-  }, [query, records]);
+    return records.filter((record) => tabMatches(record, activeTab) && (!needle || Object.values(record).join(' ').toLowerCase().includes(needle)));
+  }, [activeTab, query, records]);
+
   const selected = records.find((record) => record.id === selectedId) || filtered[0] || null;
   const summary = config.summary(records);
-  const tabs = config.tabs || [];
+  const tabs = config.tabs || ['Tous'];
 
   const openCreate = () => {
     const next = { ...(config.defaultForm || {}) };
@@ -98,7 +160,13 @@ export default function OperationalRegisterPage({ config }) {
     setForm(next);
     setModalOpen(true);
   };
-  const openEdit = (record) => { setEditing(record); setForm({ ...(config.defaultForm || {}), ...record }); setModalOpen(true); };
+
+  const openEdit = (record) => {
+    setEditing(record);
+    setForm({ ...(config.defaultForm || {}), ...record });
+    setModalOpen(true);
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     const saved = await upsertRecord(config.resource, { ...form, id: editing?.id || form.id });
@@ -107,8 +175,9 @@ export default function OperationalRegisterPage({ config }) {
     setModalOpen(false);
     load();
   };
+
   const remove = async (record) => {
-    if (!window.confirm(`Supprimer ${record[config.numberField] || record.reference || record.numero || record.code || record.id} ?`)) return;
+    if (!window.confirm(`Supprimer ${recordTitle(record, config)} ?`)) return;
     await deleteRecord(config.resource, record.id);
     toast.success('Enregistrement supprime');
     setSelectedId('');
@@ -117,10 +186,65 @@ export default function OperationalRegisterPage({ config }) {
 
   return (
     <div className="proRegisterPage">
-      <div className="dashMockHeader reclamHeader"><div><p className="eyebrow">{config.eyebrow || 'TESTLAB'}</p><h2>{config.title}</h2><span className="achatSubtitle">{config.subtitle}</span></div><div className="dashMockSearch"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={config.searchPlaceholder || 'Rechercher...'} /></div></div>
-      <div className="dashKpiGrid reclamKpiGrid">{summary.map((card) => <section key={card.label} className={`dashKpiCard ${card.tone || 'blue'}`}><div><span>{card.label}</span><strong>{card.value}</strong><small>{card.note || 'Donnees Supabase'}</small></div><b>{card.icon || config.prefix}</b></section>)}</div>
-      <section className="isoCommandPanel proCommandPanel"><div><span>Processus module</span><strong>{config.processTitle}</strong><small>{config.processNote}</small></div><div className="isoWorkflowRail">{config.workflow.map((step, index) => <div key={step} className={index <= 1 ? 'active' : ''}><b>{index + 1}</b><span>{step}</span></div>)}</div><div className="isoEvidenceGrid">{config.evidence.map((item) => <span key={item}>{item}</span>)}</div></section>
-      <div className="reclamLayout"><main className="reclamMain"><section className="dashPanel reclamTablePanel"><div className="quoteTableTop"><div className="achatTabs">{tabs.map((tab) => <button type="button" key={tab}>{tab}</button>)}</div><div className="rowActions"><button type="button" className="ghostButton" onClick={() => downloadCsv(`${config.resource}.csv`, filtered)}>Exporter</button><button type="button" className="primaryButton" onClick={openCreate}>+ {config.primaryLabel}</button></div></div><div className="tableScroll"><table><thead><tr>{config.columns.map((column) => <th key={column.name || column.label}>{column.label}</th>)}<th>Actions</th></tr></thead><tbody>{filtered.map((record) => <tr key={record.id} className={selected?.id === record.id ? 'selectedRow' : ''} onClick={() => setSelectedId(record.id)}>{config.columns.map((column) => <td key={column.name || column.label}>{column.badge ? <span className={`statusBadge ${statusTone(valueOf(record, column))}`}>{valueOf(record, column)}</span> : valueOf(record, column)}</td>)}<td><div className="rowActions"><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); setSelectedId(record.id); }}>o</button><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); openEdit(record); }}>M</button><button type="button" className="dangerButton" onClick={(event) => { event.stopPropagation(); remove(record); }}>Suppr.</button></div></td></tr>)}{filtered.length === 0 && <tr><td colSpan={config.columns.length + 1} className="emptyCell">Aucune donnee Supabase pour ce module. Ajoutez un enregistrement pour alimenter l'interface.</td></tr>}</tbody></table></div></section></main><aside className="reclamRightStack"><section className="dashPanel reclamDetailPanel"><div className="dashPanelHeader"><strong>{selected ? (selected[config.numberField] || selected.reference || selected.numero || selected.code) : config.title}</strong>{selected?.statut && <span className={`statusBadge ${statusTone(selected.statut)}`}>{selected.statut}</span>}</div><div className="quoteDetailBody"><div className="quoteDetailTabs">{['Details', 'Documents', 'Historique'].map((tab, index) => <span key={tab} className={index === 0 ? 'active' : ''}>{tab}</span>)}</div><h4>Informations generales</h4><dl>{selected ? config.detailFields.map((field) => <React.Fragment key={field.name}><dt>{field.label}</dt><dd>{valueOf(selected, field)}</dd></React.Fragment>) : <><dt>Selection</dt><dd>Aucune donnee</dd></>}</dl></div></section><section className="dashPanel reclamMiniPanel"><div className="dashPanelHeader"><strong>{config.sideTitle}</strong></div><div className="quoteMiniStats">{config.sideStats(records).map((item) => <div key={item.label}><span>{item.label}</span><i><em style={{ width: `${item.percent || percent(item.value, Math.max(records.length, 1))}%` }} /></i><strong>{item.value}</strong></div>)}</div></section></aside></div>
+      <div className="dashMockHeader reclamHeader">
+        <div>
+          <p className="eyebrow">{config.eyebrow || 'TESTLAB'}</p>
+          <h2>{config.title}</h2>
+          <span className="achatSubtitle">{config.subtitle}</span>
+        </div>
+        <div className="dashMockSearch"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={config.searchPlaceholder || 'Rechercher...'} /></div>
+      </div>
+
+      <div className="dashKpiGrid reclamKpiGrid">
+        {summary.map((card) => <section key={card.label} className={`dashKpiCard ${card.tone || 'blue'}`}><div><span>{card.label}</span><strong>{card.value}</strong><small>{card.note || 'Donnees Supabase'}</small></div><b>{card.icon || config.prefix}</b></section>)}
+      </div>
+
+      <section className="isoCommandPanel proCommandPanel">
+        <div><span>Processus module</span><strong>{config.processTitle}</strong><small>{config.processNote}</small></div>
+        <div className="isoWorkflowRail">{config.workflow.map((step, index) => <div key={step} className={index <= 1 ? 'active' : ''}><b>{index + 1}</b><span>{step}</span></div>)}</div>
+        <div className="isoEvidenceGrid">{config.evidence.map((item) => <span key={item}>{item}</span>)}</div>
+      </section>
+
+      <div className="reclamLayout">
+        <main className="reclamMain">
+          <section className="dashPanel reclamTablePanel">
+            <div className="quoteTableTop registerToolbar">
+              <div className="achatTabs">
+                {tabs.map((tab) => <button type="button" key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+              </div>
+              <div className="rowActions">
+                <div className="viewToggle" aria-label="Mode d'affichage">
+                  <button type="button" className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>Table</button>
+                  <button type="button" className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>Cartes</button>
+                </div>
+                <button type="button" className="ghostButton" onClick={() => downloadCsv(`${config.resource}.csv`, filtered)}>Exporter</button>
+                <button type="button" className="primaryButton" onClick={openCreate}>+ {config.primaryLabel}</button>
+              </div>
+            </div>
+
+            {viewMode === 'table' ? (
+              <div className="tableScroll"><table><thead><tr>{config.columns.map((column) => <th key={column.name || column.label}>{column.label}</th>)}<th>Actions</th></tr></thead><tbody>{filtered.map((record) => <tr key={record.id} className={selected?.id === record.id ? 'selectedRow' : ''} onClick={() => setSelectedId(record.id)}>{config.columns.map((column) => <td key={column.name || column.label}>{column.badge ? <span className={`statusBadge ${statusTone(valueOf(record, column))}`}>{valueOf(record, column)}</span> : valueOf(record, column)}</td>)}<td><div className="rowActions"><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); setSelectedId(record.id); }}>o</button><button type="button" className="ghostButton iconOnlyButton" onClick={(event) => { event.stopPropagation(); openEdit(record); }}>M</button><button type="button" className="dangerButton" onClick={(event) => { event.stopPropagation(); remove(record); }}>Suppr.</button></div></td></tr>)}{filtered.length === 0 && <tr><td colSpan={config.columns.length + 1} className="emptyCell">Aucune donnee Supabase pour ce module. Ajoutez un enregistrement pour alimenter l'interface.</td></tr>}</tbody></table></div>
+            ) : (
+              <div className="registerCardGrid">
+                {filtered.map((record) => <RecordCard key={record.id} record={record} config={config} selected={selected?.id === record.id} onSelect={() => setSelectedId(record.id)} onEdit={() => openEdit(record)} onRemove={() => remove(record)} />)}
+                {filtered.length === 0 && <div className="emptyCell">Aucune donnee Supabase pour ce module.</div>}
+              </div>
+            )}
+          </section>
+        </main>
+
+        <aside className="reclamRightStack">
+          <section className="dashPanel reclamDetailPanel">
+            <div className="dashPanelHeader"><strong>{selected ? recordTitle(selected, config) : config.title}</strong>{selected?.statut && <span className={`statusBadge ${statusTone(selected.statut)}`}>{selected.statut}</span>}</div>
+            <div className="quoteDetailBody"><div className="quoteDetailTabs">{['Details', 'Documents', 'Historique'].map((tab, index) => <span key={tab} className={index === 0 ? 'active' : ''}>{tab}</span>)}</div><h4>Informations generales</h4><dl>{selected ? config.detailFields.map((field) => <React.Fragment key={field.name}><dt>{field.label}</dt><dd>{valueOf(selected, field)}</dd></React.Fragment>) : <><dt>Selection</dt><dd>Aucune donnee</dd></>}</dl></div>
+          </section>
+          <section className="dashPanel reclamMiniPanel">
+            <div className="dashPanelHeader"><strong>{config.sideTitle}</strong></div>
+            <div className="quoteMiniStats">{config.sideStats(records).map((item) => <div key={item.label}><span>{item.label}</span><i><em style={{ width: `${item.percent || percent(item.value, Math.max(records.length, 1))}%` }} /></i><strong>{item.value}</strong></div>)}</div>
+          </section>
+        </aside>
+      </div>
+
       {modalOpen && <RegisterModal config={config} form={form} setForm={setForm} editing={editing} onClose={() => setModalOpen(false)} onSubmit={submit} />}
     </div>
   );
