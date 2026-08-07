@@ -1,28 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { listRecords, upsertRecord } from '../services/localStore';
+import { authProfiles, roleLabels } from '../config/permissions';
 
 const AuthContext = createContext();
 const TOKEN_KEY = 'smartlab_token';
 const USER_KEY = 'smartlab_user';
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
 
-const roleLabels = {
-  responsable_appel: 'Responsable des offres',
-  responsable_technique: 'Responsable technique',
-  dg: 'Direction generale',
-  responsable_labo: 'Responsable laboratoire',
-  receptionniste: 'Reception'
-};
-
-export const authProfiles = [
-  { role: 'responsable_appel', label: roleLabels.responsable_appel, email: 'offres@testlab.com', initials: 'RO' },
-  { role: 'responsable_technique', label: roleLabels.responsable_technique, email: 'rt@testlab.com', initials: 'RT' },
-  { role: 'dg', label: roleLabels.dg, email: 'dg@testlab.com', initials: 'DG' },
-  { role: 'responsable_labo', label: roleLabels.responsable_labo, email: 'labo@testlab.com', initials: 'RL' },
-  { role: 'receptionniste', label: roleLabels.receptionniste, email: 'reception@testlab.com', initials: 'RC' }
-];
-
+export { authProfiles };
 export const useAuth = () => useContext(AuthContext);
 
 function profileId(role) {
@@ -140,3 +126,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+

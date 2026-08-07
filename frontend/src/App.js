@@ -27,6 +27,7 @@ import SatisfactionClients from './pages/SatisfactionClients';
 import { ActionsQualite, RisquesOpportunites, RevuesDirection, AssistantAuditISO } from './pages/IsoCore';
 import { StocksConsommables, Contrats, FacturesAvancees, SignaturesElectroniques, PortailClient, PortailFournisseur, AnalyseDocumentaireIA } from './pages/EmergingModules';
 import { Gouvernance, DemandesPrestations, MissionsTerrain, PlanningProjets, CompetencesFormations, MetrologieAvancee, FinancesAvancees, ObjectifsQualite, MoteursSysteme } from './pages/ArchitectureModules';
+import { canAccessPath, defaultRouteForRole } from './config/permissions';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -35,6 +36,9 @@ function ProtectedLayout() {
 
   if (loading) return <div className="loadingScreen">Chargement TESTLAB...</div>;
   if (!user && !isClientValidation) return <Navigate to="/login" replace />;
+  if (user && !isClientValidation && !canAccessPath(user.role, location.pathname)) {
+    return <Navigate to={defaultRouteForRole(user.role)} replace />;
+  }
   return <Layout publicMode={isClientValidation} />;
 }
 
@@ -94,4 +98,5 @@ function App() {
 }
 
 export default App;
+
 

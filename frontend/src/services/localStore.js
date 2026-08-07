@@ -38,12 +38,14 @@ const RESOURCE_TABLES = {
   objectifsQualite: 'testlab_objectifs_qualite',
   moteursSysteme: 'testlab_moteurs_systeme',
   auditLogs: 'testlab_audit_logs',
-  notifications: 'testlab_notifications'
+  notifications: 'testlab_notifications',
+  profiles: 'testlab_profiles'
 };
 
 const today = new Date().toISOString().slice(0, 10);
 
 const seedData = {
+  profiles: [],
   clients: [
     { id: 'cli-1', code: 'CLI-001', raison_sociale: 'Sogea BTP Benin', contact_nom: 'M. Fonton', telephone: '+229 97 12 34 56', secteur: 'BTP', email: 'contact@sogea.bj' },
     { id: 'cli-2', code: 'CLI-002', raison_sociale: 'AGETUR Benin', contact_nom: 'Mme Ahoton', telephone: '+229 95 67 89 01', secteur: 'Infrastructure', email: 'secretariat@agetur.bj' },
@@ -935,6 +937,7 @@ export async function getStats() {
     chiffreAffaires: data.commandes.reduce((sum, item) => sum + Number(item.montant_ht || 0), 0)
   };
 }
+
 
 
 
