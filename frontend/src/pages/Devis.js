@@ -1,4 +1,4 @@
-﻿
+
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -314,7 +314,7 @@ export default function Devis() {
 
   const validateAndSend = async (record) => {
     if (!['responsable_technique', 'dg'].includes(activeRole)) { toast.error('Seul le RT ou le DG peut envoyer au client'); return; }
-    const quote = { ...record, statut: 'envoye_client', canal_validation: 'client', code_validation: record.code_validation || buildValidationCode(record.numero), validation_expires_at: record.validation_expires_at || buildValidationExpiry(), date_envoi_client: new Date().toISOString(), envoye_par: roleLabel(activeRole, roleLabels), historique_validations: appendHistory(record, 'Validation et envoi client', roleLabel(activeRole, roleLabels), activeRole) };
+    const quote = { ...record, statut: 'envoye_client', canal_validation: 'client', code_validation: record.code_validation || buildValidationCode(record.numero), validation_expires_at: record.validation_expires_at || buildValidationExpiry(), date_envoi_client: new Date().toISOString(), envoye_par: roleLabel(activeRole, roleLabels), envoye_role: activeRole, historique_validations: appendHistory(record, 'Validation et envoi client', roleLabel(activeRole, roleLabels), activeRole) };
     const saved = await upsertRecord('devis', quote);
     if (saved.__syncError) { toast.error('Devis local seulement: lien client non synchronise avec Supabase'); return; }
     openQuotePdf(saved, true);

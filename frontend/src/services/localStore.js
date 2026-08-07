@@ -1,4 +1,4 @@
-﻿const STORAGE_KEY = 'smartlab_mobile_records_v2';
+const STORAGE_KEY = 'smartlab_mobile_records_v2';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 const SUPABASE_TABLE = import.meta.env.VITE_SUPABASE_TABLE || 'smartlab_records';
@@ -310,10 +310,171 @@ function daysUntil(date) {
   return Math.round((target - todayDate) / 86400000);
 }
 
+function workflowLineTotal(line) {
+  return Number(line?.quantite || 0) * Number(line?.prix_unitaire || 0);
+}
+
+function workflowAmount(record) {
+  const linesTotal = (Array.isArray(record?.prestations) ? record.prestations : []).reduce((sum, line) => sum + workflowLineTotal(line), 0);
+  return Number(record?.montant_ht || linesTotal || 0);
+}
+
+function workflowValidationUrl(code) {
+  if (!code || typeof window === 'undefined') return '';
+  const base = `${window.location.origin}${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}`.replace(/\/$/, '');
+  return `${base}/#/devis?validation=${encodeURIComponent(code)}`;
+}
 function runWorkflowAutomations(data, resource, action, record) {
   if (!record || action === 'suppression') return;
   const ref = record.reference || record.numero || record.code || record.id;
 
+  if (resource === 'devis') {
+    const status = String(record.statut || '').toLowerCase();
+    const validationUrl = workflowValidationUrl(record.code_validation);
+
+    if (status === 'validation_technique') {
+      pushWorkflowNotification(data, {
+        id: `workflow-devis-rt-${record.id}`,
+        title: 'Devis a valider par le RT',
+        message: `${ref} attend la validation technique avant envoi client.`,
+        path: '/devis',
+        targetRole: 'responsable_technique',
+        tone: 'info',
+        source: ref,
+        justification: 'Le responsable des offres a soumis le devis au circuit technique.'
+      });
+    }
+
+    if (status === 'validation_dg') {
+      pushWorkflowNotification(data, {
+        id: `workflow-devis-dg-${record.id}`,
+        title: 'Devis a valider par la Direction',
+        message: `${ref} attend une decision DG.`,
+        path: '/devis',
+        targetRole: 'dg',
+        tone: 'info',
+        source: ref,
+        justification: 'Circuit de validation commercial escalade vers la Direction.'
+      });
+    }
+
+    if (status === 'envoye_client') {
+      const existingPortal = (data.portailClient || []).some((item) => item.source_devis === ref || item.rapport === ref);
+      if (!existingPortal) {
+        const portalRecord = {
+          id: `pcl-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          reference: workflowReference(data, 'portailClient', 'PCL'),
+          source_devis: ref,
+          client_nom: record.client_nom || '',
+          demande: `Validation du devis ${ref}`,
+          canal: record.canal_envoi || 'whatsapp',
+          rapport: ref,
+          lien_validation: validationUrl,
+          code_validation: record.code_validation || '',
+          montant_ht: workflowAmount(record),
+          statut: 'devis_envoye',
+          commentaire_client: ''
+        };
+        data.portailClient = [...(data.portailClient || []), portalRecord];
+        upsertRemote('portailClient', portalRecord).catch(() => {});
+      }
+
+      const existingSignatureRequest = (data.signaturesElectroniques || []).some((item) => item.source_devis === ref || String(item.document || '').includes(ref));
+      if (!existingSignatureRequest) {
+        const signatureRequest = {
+          id: `sig-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          reference: workflowReference(data, 'signaturesElectroniques', 'SIG'),
+          source_devis: ref,
+          document: `Devis ${ref}`,
+          signataire: record.client_nom || 'Client',
+          role: 'client',
+          date_signature: '',
+          methode: 'qr_code',
+          empreinte: record.code_validation || ref,
+          statut: 'a_signer'
+        };
+        data.signaturesElectroniques = [...(data.signaturesElectroniques || []), signatureRequest];
+        upsertRemote('signaturesElectroniques', signatureRequest).catch(() => {});
+      }
+
+      pushWorkflowNotification(data, {
+        id: `workflow-devis-client-${record.id}`,
+        title: 'Devis envoye au client',
+        message: `${ref} a ete envoye via ${record.canal_envoi || 'canal client'} avec QR/lien de validation.`,
+        path: '/devis',
+        targetRole: 'responsable_appel',
+        tone: 'online',
+        source: ref,
+        justification: 'Envoi client trace avec preuve de validation QR.'
+      });
+    }
+
+    if (['refuse', 'rejete', 'rejet_client'].includes(status)) {
+      data.portailClient = (data.portailClient || []).map((item) => {
+        if (item.source_devis !== ref && item.rapport !== ref) return item;
+        const updated = { ...item, statut: 'devis_refuse', commentaire_client: record.motif_refus || item.commentaire_client || '' };
+        upsertRemote('portailClient', updated).catch(() => {});
+        return updated;
+      });
+
+      data.signaturesElectroniques = (data.signaturesElectroniques || []).map((item) => {
+        if (item.source_devis !== ref || item.statut !== 'a_signer') return item;
+        const rejected = { ...item, statut: 'rejete', date_signature: '', motif_rejet: record.motif_refus || '' };
+        upsertRemote('signaturesElectroniques', rejected).catch(() => {});
+        return rejected;
+      });
+
+      pushWorkflowNotification(data, {
+        id: `workflow-devis-refuse-${record.id}`,
+        title: 'Devis refuse par le client',
+        message: `${ref} a ete refuse. Motif: ${record.motif_refus || 'non renseigne'}`,
+        path: '/devis',
+        targetRole: 'responsable_appel',
+        tone: 'offline',
+        source: ref,
+        justification: 'Rejet client renvoye automatiquement au responsable concerne.'
+      });
+    }
+    if (['commande_creee', 'valide_client', 'accepte'].includes(status)) {
+      const existingOrder = (data.commandes || []).some((commande) => commande.reference_devis === ref);
+      if (!existingOrder) {
+        const order = {
+          id: `cmd-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          numero: workflowReference(data, 'commandes', 'CMD'),
+          reference_devis: ref,
+          client_nom: record.client_nom || '',
+          client_whatsapp: record.client_whatsapp || '',
+          projet: record.projet || '',
+          prestations: Array.isArray(record.prestations) ? record.prestations : [],
+          montant_ht: workflowAmount(record),
+          date: new Date().toISOString().slice(0, 10),
+          statut: 'nouvelle'
+        };
+        data.commandes = [...(data.commandes || []), order];
+        upsertRemote('commandes', order).catch(() => {});
+      }
+
+      if (record.validation_client === 'valide' || record.date_validation_client) {
+        data.signaturesElectroniques = (data.signaturesElectroniques || []).map((item) => {
+          if (item.source_devis !== ref || item.statut !== 'a_signer') return item;
+          const signed = { ...item, statut: 'signe', date_signature: record.date_validation_client || new Date().toISOString().slice(0, 10), signataire: record.client_nom || item.signataire };
+          upsertRemote('signaturesElectroniques', signed).catch(() => {});
+          return signed;
+        });
+      }
+
+      pushWorkflowNotification(data, {
+        id: `workflow-devis-commande-${record.id}`,
+        title: 'Commande issue du devis',
+        message: `${record.client_nom || 'Client'} a accepte ${ref}. Reception et planification a preparer.`,
+        path: '/commandes',
+        targetRole: 'responsable_labo',
+        tone: 'online',
+        source: ref,
+        justification: 'Validation client transformee automatiquement en commande.'
+      });
+    }
+  }
   if (resource === 'reclamations' && action === 'creation') {
     pushWorkflowAction(data, {
       origine: 'Reclamation',

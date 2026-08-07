@@ -1,4 +1,4 @@
-﻿-- TESTLAB - tables metier separees compatibles avec l'application React
+-- TESTLAB - tables metier separees compatibles avec l'application React
 -- A executer dans Supabase SQL Editor avant d'activer REACT_APP_SUPABASE_TYPED_TABLES=true.
 -- Le script cree une table par module, puis recopie les donnees existantes depuis smartlab_records.
 
@@ -41,7 +41,8 @@ declare
     'testlab_portail_fournisseur',
     'testlab_analyse_documentaire_ia',
     'testlab_audit_logs',
-    'testlab_notifications'
+    'testlab_notifications',
+    'testlab_profiles'
   ];
 begin
   foreach tbl in array tables loop
@@ -142,7 +143,8 @@ declare
     array['portailFournisseur','testlab_portail_fournisseur'],
     array['analyseDocumentaireIA','testlab_analyse_documentaire_ia'],
     array['auditLogs','testlab_audit_logs'],
-    array['notifications','testlab_notifications']
+    array['notifications','testlab_notifications'],
+    array['profiles','testlab_profiles']
   ];
 begin
   foreach pair slice 1 in array pairs loop

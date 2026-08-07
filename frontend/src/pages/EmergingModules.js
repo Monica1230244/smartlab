@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import OperationalRegisterPage from '../components/OperationalRegisterPage';
 
 function pageConfig({ resource, prefix, numberField = 'reference', title, subtitle, workflow, evidence, fields, columns, detailFields }) {
@@ -102,7 +102,7 @@ export function PortailClient() {
     { name: 'canal', label: 'Canal', options: ['portail', 'whatsapp', 'email', 'telephone'] },
     { name: 'rapport', label: 'Rapport / devis / commande' },
     { name: 'commentaire_client', label: 'Commentaire client', type: 'textarea', full: true },
-    { name: 'statut', label: 'Statut', options: ['demande', 'soumise', 'devis_valide', 'commande_creee', 'rapport_telecharge', 'satisfaction_recue'], defaultValue: 'demande' }
+    { name: 'statut', label: 'Statut', options: ['demande', 'soumise', 'devis_envoye', 'devis_valide', 'devis_refuse', 'commande_creee', 'rapport_telecharge', 'satisfaction_recue'], defaultValue: 'demande' }
   ];
   return <OperationalRegisterPage config={pageConfig({ resource: 'portailClient', prefix: 'PCL', title: 'Portail client', subtitle: 'Demandes clients, validations de devis, telechargement de rapports et enquetes.', workflow: ['Demande', 'Devis', 'Validation', 'Commande', 'Rapport', 'Satisfaction'], evidence: ['Client', 'Validation', 'Rapport', 'Enquete'], fields, columns: fields, detailFields: fields })} />;
 }
