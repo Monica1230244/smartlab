@@ -312,6 +312,18 @@ export default function Devis() {
     refresh();
   };
 
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setClientFilter('all');
+    setQuery('');
+    toast.success('Filtres reinitialises');
+  };
+
+  const exportQuotes = () => {
+    downloadCsv('devis-testlab.csv', filtered);
+    toast.success('Liste des devis exportee');
+  };
+
   const validateAndSend = async (record) => {
     if (!['responsable_technique', 'dg'].includes(activeRole)) { toast.error('Seul le RT ou le DG peut envoyer au client'); return; }
     const quote = { ...record, statut: 'envoye_client', canal_validation: 'client', code_validation: record.code_validation || buildValidationCode(record.numero), validation_expires_at: record.validation_expires_at || buildValidationExpiry(), date_envoi_client: new Date().toISOString(), envoye_par: roleLabel(activeRole, roleLabels), envoye_role: activeRole, historique_validations: appendHistory(record, 'Validation et envoi client', roleLabel(activeRole, roleLabels), activeRole) };
