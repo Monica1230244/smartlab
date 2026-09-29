@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
@@ -50,6 +50,28 @@ const MoteursSysteme = lazy(() => import('./pages/ArchitectureModules').then((mo
 
 function PageLoader() {
   return <div className="loadingScreen">Chargement du module TESTLAB...</div>;
+}
+
+function SyncStatusBanner() {
+  const [syncStatus, setSyncStatus] = useState(null);
+
+  useEffect(() => {
+    const handleStatus = (event) => setSyncStatus(event.detail || null);
+    window.addEventListener('smartlab:sync-status', handleStatus);
+    return () => window.removeEventListener('smartlab:sync-status', handleStatus);
+  }, []);
+
+  if (!syncStatus || syncStatus.status === 'online') return null;
+
+  return (
+    <div className="syncStatusBanner" role="status">
+      <div>
+        <strong>Synchronisation Supabase indisponible</strong>
+        <span>{syncStatus.message || 'Les donnees sont conservees localement sur cet appareil.'}</span>
+      </div>
+      <button type="button" onClick={() => setSyncStatus(null)} aria-label="Masquer le statut de synchronisation">x</button>
+    </div>
+  );
 }
 
 function ProtectedLayout() {
@@ -118,6 +140,7 @@ function App() {
           </Route>
         </Routes>
       </Suspense>
+      <SyncStatusBanner />
       <Toaster position="top-right" toastOptions={{ duration: 2200 }} />
     </>
   );

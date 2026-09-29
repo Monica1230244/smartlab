@@ -222,6 +222,20 @@ function emitStatus(status, message) {
   window.dispatchEvent(new CustomEvent('smartlab:sync-status', { detail: { status, message } }));
 }
 
+function describeSupabaseError(error, action = 'Synchronisation') {
+  const raw = String(error?.message || error || 'Erreur inconnue');
+  if (/Failed to fetch|NetworkError|Network request failed|nom distant|resolve|fetch resource/i.test(raw)) {
+    return action + ': projet Supabase injoignable. Verifiez VITE_SUPABASE_URL, la connexion internet et les restrictions reseau.';
+  }
+  if (/401|403|JWT|permission|not authorized|Invalid API key/i.test(raw)) {
+    return action + ': cle Supabase ou politiques RLS a verifier.';
+  }
+  if (/404|relation|schema|table|does not exist|smartlab_records/i.test(raw)) {
+    return action + ': table Supabase manquante ou schema non deploye.';
+  }
+  return action + ': ' + raw.slice(0, 180);
+}
+
 function getAuditActor() {
   try {
     const savedUser = JSON.parse(localStorage.getItem('smartlab_user') || 'null');
@@ -1034,7 +1048,7 @@ export async function listRecords(resource) {
     return records;
   } catch (error) {
     console.warn('Supabase indisponible, fallback local:', error);
-    emitStatus('offline', 'Mode local - creez la table smartlab_records dans Supabase');
+    emitStatus('offline', describeSupabaseError(error, 'Chargement Supabase'));
     return loadData()[resource] || [];
   }
 }
@@ -1062,7 +1076,7 @@ export async function upsertRecord(resource, record) {
     emitStatus('online', 'Modification synchronisee avec Supabase');
   } catch (error) {
     console.warn('Ecriture Supabase echouee:', error);
-    const message = error?.message || 'Ecriture Supabase echouee';
+    const message = describeSupabaseError(error, 'Enregistrement Supabase');
     emitStatus('offline', `Enregistre localement - ${message}`);
     return { ...nextRecord, __syncError: message };
   }
@@ -1083,7 +1097,7 @@ export async function deleteRecord(resource, id) {
     emitStatus('online', 'Suppression synchronisee avec Supabase');
   } catch (error) {
     console.warn('Suppression Supabase echouee:', error);
-    emitStatus('offline', 'Suppression locale - Supabase non pret');
+    emitStatus('offline', describeSupabaseError(error, 'Suppression Supabase'));
   }
 }
 

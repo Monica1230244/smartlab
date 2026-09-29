@@ -6273,3 +6273,56 @@ html[data-theme="light"] .qualityQuickGrid button {
     flex: 1;
   }
 }
+
+.syncStatusBanner {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10050;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 13px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.98), rgba(69, 26, 3, 0.94));
+  color: #fff7ed;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+}
+
+.syncStatusBanner div {
+  display: grid;
+  gap: 4px;
+}
+
+.syncStatusBanner strong {
+  font-size: 13px;
+}
+
+.syncStatusBanner span {
+  color: rgba(255, 247, 237, 0.86);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.syncStatusBanner button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 247, 237, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff7ed;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .syncStatusBanner {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+}
