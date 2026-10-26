@@ -98,13 +98,13 @@ export const menuByRole = {
 export const roleHome = {
   responsable_appel: '/',
   responsable_technique: '/',
-  responsable_qualite: '/assistant-audit-iso',
-  responsable_labo: '/essais',
-  responsable_metrologie: '/equipements',
-  responsable_achats: '/achats-approvisionnement',
-  responsable_finance: '/finances-avancees',
-  receptionniste: '/essais',
-  auditeur: '/assistant-audit-iso',
+  responsable_qualite: '/',
+  responsable_labo: '/',
+  responsable_metrologie: '/',
+  responsable_achats: '/',
+  responsable_finance: '/',
+  receptionniste: '/',
+  auditeur: '/',
   dg: '/'
 };
 
@@ -113,7 +113,7 @@ export function allowedPathsForRole(role) {
 }
 
 export function canAccessPath(role, pathname) {
-  if (!pathname || pathname === '/login') return true;
+  if (!pathname || pathname === '/login' || pathname === '/roles') return true;
   return allowedPathsForRole(role).includes(pathname);
 }
 

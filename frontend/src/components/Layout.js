@@ -369,7 +369,7 @@ function Layout({ publicMode = false }) {
           <div>
             <strong>{user?.name || 'TESTLAB'}</strong>
             <span>{roleLabels?.[currentRole] || 'Utilisateur'} - Version {APP_VERSION}</span>
-            <button type="button" className="refreshVersionButton" onClick={() => { logout(); navigate('/login', { replace: true }); }}>Deconnexion</button>
+            <button type="button" className="refreshVersionButton" onClick={() => { logout(); navigate('/roles', { replace: true }); }}>Deconnexion</button>
           </div>
         </div>
       </aside>}

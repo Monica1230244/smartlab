@@ -5,6 +5,7 @@ import './App.css';
 import Layout from './components/Layout';
 import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
+import RoleSelection from './pages/RoleSelection';
 import { canAccessPath, defaultRouteForRole } from './config/permissions';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -80,7 +81,7 @@ function ProtectedLayout() {
   const isClientValidation = location.pathname === '/devis' && new URLSearchParams(location.search).has('validation');
 
   if (loading) return <div className="loadingScreen">Chargement TESTLAB...</div>;
-  if (!user && !isClientValidation) return <Navigate to="/login" replace />;
+  if (!user && !isClientValidation) return <Navigate to="/roles" replace />;
   if (user && !isClientValidation && !canAccessPath(user.role, location.pathname)) {
     return <Navigate to={defaultRouteForRole(user.role)} replace />;
   }
@@ -92,6 +93,7 @@ function App() {
     <>
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route path="/roles" element={<RoleSelection />} />
           <Route path="/login" element={<Login />} />
           <Route element={<ProtectedLayout />}>
             <Route index element={<Dashboard />} />

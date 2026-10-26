@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { listRecords } from '../services/localStore';
 
 const CURRENT_ROLE_KEY = 'smartlab_current_role';
@@ -7,14 +8,20 @@ const CURRENT_ROLE_KEY = 'smartlab_current_role';
 const roleNames = {
   responsable_appel: 'Responsable des offres',
   responsable_technique: 'Responsable technique',
+  responsable_qualite: 'Responsable qualite',
   dg: 'Direction generale',
   responsable_labo: 'Responsable laboratoire',
+  responsable_metrologie: 'Responsable metrologie',
+  responsable_achats: 'Responsable achats',
+  responsable_finance: 'Responsable finance',
   receptionniste: 'Reception',
+  auditeur: 'Auditeur interne',
   default: 'Direction generale'
 };
 
 const resources = [
   'clients',
+  'demandesPrestations',
   'devis',
   'commandes',
   'essais',
@@ -27,6 +34,17 @@ const resources = [
   'projets',
   'catalogueEssais',
   'resultatsEssais',
+  'documentsQualite',
+  'actionsQualite',
+  'risquesOpportunites',
+  'achatsApprovisionnement',
+  'fournisseurs',
+  'consommablesStocks',
+  'factures',
+  'financesAvancees',
+  'satisfactionClients',
+  'competencesFormations',
+  'metrologieAvancee',
   'notifications'
 ];
 
@@ -223,13 +241,7 @@ function RecentPanel({ items }) {
   );
 }
 
-function QuickPanel() {
-  const links = [
-    { to: '/essais', label: 'Nouvel essai', icon: 'BE' },
-    { to: '/rapports', label: 'Nouveau rapport', icon: 'RP' },
-    { to: '/non-conformites', label: 'Nouvelle NC', icon: 'NC' },
-    { to: '/devis', label: 'Nouveau devis', icon: 'DV' }
-  ];
+function QuickPanel({ links }) {
   return (
     <section className="dashPanel dashSideCard">
       <div className="dashPanelHeader">
@@ -270,8 +282,187 @@ function DataTable({ title, badge, rows, columns, footerTo, footerLabel }) {
   );
 }
 
+function rowReference(row) {
+  return row.reference || row.numero || row.code || row.id || '-';
+}
+
+function rowLabel(row) {
+  return row.designation || row.client_nom || row.client || row.objet || row.description || row.titre || row.libelle || '-';
+}
+
+function buildRoleDashboard(role, data, computed) {
+  const count = (resource) => (data[resource] || []).length;
+  const open = (resource, closed = ['cloturee', 'cloture', 'terminee', 'realisee', 'paye', 'annule']) => (data[resource] || []).filter((item) => !closed.includes(String(item.statut || '').toLowerCase())).length;
+  const statusColumn = { key: 'statut', label: 'Statut', render: (row) => <span className={`statusBadge ${statusTone(row.statut)}`}>{row.statut || '-'}</span> };
+  const commonColumns = [
+    { key: 'reference', label: 'Reference', render: rowReference },
+    { key: 'objet', label: 'Element', render: rowLabel },
+    { key: 'responsable', label: 'Responsable', render: (row) => row.responsable || row.technicien || row.receptionne_par || '-' },
+    statusColumn,
+    { key: 'date', label: 'Date', render: (row) => row.date || row.date_reception || row.date_creation || row.echeance || '-' }
+  ];
+
+  const defaultView = {
+    eyebrow: 'TESTLAB MOBILE',
+    title: 'Tableau de bord Direction generale',
+    subtitle: 'Vue consolidee de l activite, des decisions et des risques du laboratoire.',
+    kpis: [
+      { label: 'Chiffre d affaires', value: formatMoney(computed.ca), note: 'Commandes enregistrees', tone: 'blue', icon: '$' },
+      { label: 'Essais', value: count('essais'), note: 'Objets d essais suivis', tone: 'purple', icon: 'LAB' },
+      { label: 'Conformite ISO', value: `${computed.conformityRate}%`, note: 'Resultats conformes', tone: 'green', icon: 'OK' },
+      { label: 'Reclamations ouvertes', value: computed.openReclamations.length, note: 'A traiter', tone: 'red', icon: 'MSG' },
+      { label: 'Alertes critiques', value: computed.criticalAlerts, note: 'Action requise', tone: 'amber', icon: '!' }
+    ],
+    quickLinks: [
+      { to: '/essais', label: 'Nouvel essai', icon: 'BE' },
+      { to: '/rapports', label: 'Nouveau rapport', icon: 'RP' },
+      { to: '/non-conformites', label: 'Nouvelle NC', icon: 'NC' },
+      { to: '/devis', label: 'Nouveau devis', icon: 'DV' }
+    ],
+    primaryTitle: 'Decisions et suivis prioritaires',
+    primaryRows: computed.decisions,
+    primaryColumns: [
+      { key: 'numero', label: 'Reference' },
+      { key: 'type', label: 'Type' },
+      { key: 'client_nom', label: 'Client' },
+      { key: 'montant', label: 'Montant', render: (row) => formatMoney(row.montant) },
+      statusColumn,
+      { key: 'date_demande', label: 'Date', render: (row) => row.date_demande || '-' }
+    ],
+    primaryFooterTo: '/devis',
+    primaryFooterLabel: 'Voir les demandes de direction',
+    secondaryTitle: 'Risques qualite ouverts',
+    secondaryRows: computed.openNc,
+    secondaryFooterTo: '/non-conformites',
+    secondaryFooterLabel: 'Voir toutes les non-conformites'
+  };
+
+  const views = {
+    responsable_appel: {
+      eyebrow: 'TESTLAB COMMERCIAL', title: 'Tableau de bord Offres', subtitle: 'Pilotez les demandes, devis, clients et commandes de votre portefeuille.',
+      kpis: [
+        { label: 'Clients actifs', value: count('clients'), note: 'Fiches clients', tone: 'blue', icon: 'CL' },
+        { label: 'Demandes ouvertes', value: open('demandesPrestations'), note: 'A qualifier', tone: 'amber', icon: 'DP' },
+        { label: 'Devis en attente', value: open('devis', ['valide_client', 'commande_creee', 'refuse', 'expire', 'annule']), note: 'A relancer ou soumettre', tone: 'purple', icon: 'DV' },
+        { label: 'Commandes creees', value: count('commandes'), note: 'Depuis les devis valides', tone: 'green', icon: 'CM' },
+        { label: 'Montant commandes', value: formatMoney(computed.ca), note: 'Somme des commandes', tone: 'blue', icon: '$' }
+      ],
+      quickLinks: [{ to: '/demandes-prestations', label: 'Nouvelle demande', icon: 'DP' }, { to: '/devis', label: 'Nouveau devis', icon: 'DV' }, { to: '/clients', label: 'Nouveau client', icon: 'CL' }, { to: '/commandes', label: 'Voir commandes', icon: 'CM' }],
+      primaryTitle: 'Devis a suivre', primaryRows: byRecent(data.devis).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/devis', primaryFooterLabel: 'Voir tous les devis',
+      secondaryTitle: 'Demandes de prestation ouvertes', secondaryRows: byRecent(data.demandesPrestations).filter((item) => item.statut !== 'cloturee').slice(0, 5), secondaryFooterTo: '/demandes-prestations', secondaryFooterLabel: 'Voir toutes les demandes'
+    },
+    responsable_technique: {
+      eyebrow: 'TESTLAB TECHNIQUE', title: 'Tableau de bord Technique', subtitle: 'Validez les prestations, résultats et rapports avant leur diffusion.',
+      kpis: [
+        { label: 'Essais a executer', value: open('essais'), note: 'Planifies ou en cours', tone: 'blue', icon: 'ES' },
+        { label: 'Resultats a valider', value: open('resultatsEssais', ['valide', 'valide_techniquement', 'exploitable']), note: 'Revue technique', tone: 'amber', icon: 'RS' },
+        { label: 'Rapports a verifier', value: open('rapports', ['valide', 'envoye', 'archive']), note: 'Avant diffusion', tone: 'purple', icon: 'RP' },
+        { label: 'Non-conformites', value: open('nonConformites'), note: 'Suivi technique', tone: 'red', icon: 'NC' },
+        { label: 'Equipements actifs', value: count('equipements'), note: 'Disponibles au labo', tone: 'green', icon: 'EQ' }
+      ],
+      quickLinks: [{ to: '/essais', label: 'Affecter un essai', icon: 'ES' }, { to: '/resultats-essais', label: 'Valider resultats', icon: 'RS' }, { to: '/rapports', label: 'Verifier rapport', icon: 'RP' }, { to: '/non-conformites', label: 'Declarer une NC', icon: 'NC' }],
+      primaryTitle: 'Resultats techniques a traiter', primaryRows: byRecent(data.resultatsEssais).filter((item) => !['valide', 'valide_techniquement', 'exploitable'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/resultats-essais', primaryFooterLabel: 'Voir tous les resultats',
+      secondaryTitle: 'Essais en cours', secondaryRows: byRecent(data.essais).filter((item) => !['termine', 'cloture'].includes(item.statut)).slice(0, 5), secondaryFooterTo: '/essais', secondaryFooterLabel: 'Voir tous les essais'
+    },
+    responsable_qualite: {
+      eyebrow: 'TESTLAB QUALITE ISO 17025 / ISO 9001', title: 'Tableau de bord Qualite', subtitle: 'Surveillez la conformite, les documents, les audits et les actions d amelioration.',
+      kpis: [
+        { label: 'Conformite globale', value: `${computed.conformityRate}%`, note: 'Resultats conformes', tone: 'green', icon: 'OK' },
+        { label: 'Documents en vigueur', value: (data.documentsQualite || []).filter((item) => item.statut === 'en_vigueur').length, note: `${count('documentsQualite')} documents au total`, tone: 'blue', icon: 'DQ' },
+        { label: 'Non-conformites ouvertes', value: open('nonConformites'), note: 'A traiter', tone: 'red', icon: 'NC' },
+        { label: 'Actions en cours', value: open('actionsQualite'), note: 'Correctives et preventives', tone: 'purple', icon: 'AC' },
+        { label: 'Audits planifies', value: open('audits', ['realise', 'cloture']), note: 'Programme qualite', tone: 'amber', icon: 'AQ' }
+      ],
+      quickLinks: [{ to: '/non-conformites', label: 'Enregistrer une NC', icon: 'NC' }, { to: '/actions-qualite', label: 'Creer une action', icon: 'AC' }, { to: '/audits', label: 'Planifier un audit', icon: 'AQ' }, { to: '/documents-qualite', label: 'Ajouter un document', icon: 'DQ' }],
+      primaryTitle: 'Actions qualite prioritaires', primaryRows: byRecent(data.actionsQualite).filter((item) => !['terminee', 'cloturee'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/actions-qualite', primaryFooterLabel: 'Voir toutes les actions',
+      secondaryTitle: 'Non-conformites ouvertes', secondaryRows: byRecent(data.nonConformites).filter((item) => item.statut !== 'cloturee').slice(0, 5), secondaryFooterTo: '/non-conformites', secondaryFooterLabel: 'Voir toutes les non-conformites'
+    },
+    responsable_labo: {
+      eyebrow: 'TESTLAB OPERATIONS', title: 'Tableau de bord Laboratoire', subtitle: 'Organisez la reception, l execution des essais et la production des rapports.',
+      kpis: [
+        { label: 'Objets d essais', value: count('essais'), note: 'Dossiers enregistres', tone: 'blue', icon: 'OE' },
+        { label: 'Essais en cours', value: open('essais'), note: 'A executer', tone: 'amber', icon: 'ES' },
+        { label: 'Resultats saisis', value: count('resultatsEssais'), note: 'Mesures disponibles', tone: 'purple', icon: 'RS' },
+        { label: 'Rapports produits', value: count('rapports'), note: 'Documents de resultat', tone: 'green', icon: 'RP' },
+        { label: 'Equipements', value: count('equipements'), note: 'Parc laboratoire', tone: 'blue', icon: 'EQ' }
+      ],
+      quickLinks: [{ to: '/essais', label: 'Nouvel objet d essai', icon: 'OE' }, { to: '/resultats-essais', label: 'Saisir un resultat', icon: 'RS' }, { to: '/rapports', label: 'Creer un rapport', icon: 'RP' }, { to: '/planning-projets', label: 'Ouvrir le planning', icon: 'PL' }],
+      primaryTitle: 'Essais a traiter', primaryRows: byRecent(data.essais).filter((item) => !['termine', 'cloture'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/essais', primaryFooterLabel: 'Voir tous les objets d essais',
+      secondaryTitle: 'Derniers resultats saisis', secondaryRows: byRecent(data.resultatsEssais).slice(0, 5), secondaryFooterTo: '/resultats-essais', secondaryFooterLabel: 'Voir tous les resultats'
+    },
+    responsable_metrologie: {
+      eyebrow: 'TESTLAB METROLOGIE', title: 'Tableau de bord Metrologie', subtitle: 'Pilotez les equipements, etalonnages, maintenances et alertes de conformite.',
+      kpis: [
+        { label: 'Equipements', value: count('equipements'), note: 'Parc enregistre', tone: 'blue', icon: 'EQ' },
+        { label: 'A etalonner', value: open('metrologieAvancee', ['conforme']), note: 'Operations ouvertes', tone: 'amber', icon: 'ET' },
+        { label: 'Hors service', value: (data.equipements || []).filter((item) => item.statut === 'hors_service').length, note: 'Action requise', tone: 'red', icon: 'HS' },
+        { label: 'Maintenances', value: open('actionsQualite'), note: 'Actions liees', tone: 'purple', icon: 'MA' },
+        { label: 'Stocks critiques', value: open('consommablesStocks'), note: 'A verifier', tone: 'green', icon: 'ST' }
+      ],
+      quickLinks: [{ to: '/equipements', label: 'Ajouter equipement', icon: 'EQ' }, { to: '/metrologie-avancee', label: 'Planifier etalonnage', icon: 'ET' }, { to: '/stocks-consommables', label: 'Voir les stocks', icon: 'ST' }, { to: '/non-conformites', label: 'Voir les alertes', icon: 'NC' }],
+      primaryTitle: 'Equipements a surveiller', primaryRows: byRecent(data.equipements).filter((item) => ['hors_service', 'a_surveiller', 'en_maintenance'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/equipements', primaryFooterLabel: 'Voir tous les equipements',
+      secondaryTitle: 'Operations metrologiques en cours', secondaryRows: byRecent(data.metrologieAvancee).filter((item) => item.statut !== 'conforme').slice(0, 5), secondaryFooterTo: '/metrologie-avancee', secondaryFooterLabel: 'Voir la metrologie'
+    },
+    responsable_achats: {
+      eyebrow: 'TESTLAB ACHATS', title: 'Tableau de bord Achats & Approvisionnements', subtitle: 'Suivez les besoins, fournisseurs, receptions, stocks et commandes du laboratoire.',
+      kpis: [
+        { label: 'Demandes d achats', value: count('achatsApprovisionnement'), note: 'Besoins enregistres', tone: 'blue', icon: 'AA' },
+        { label: 'A valider', value: open('achatsApprovisionnement'), note: 'En attente de traitement', tone: 'amber', icon: 'VL' },
+        { label: 'Fournisseurs', value: count('fournisseurs'), note: 'Base fournisseurs', tone: 'purple', icon: 'FR' },
+        { label: 'Stocks a surveiller', value: open('consommablesStocks'), note: 'Seuils et peremptions', tone: 'red', icon: 'ST' },
+        { label: 'Commandes', value: count('commandes'), note: 'Commandes laboratoire', tone: 'green', icon: 'CM' }
+      ],
+      quickLinks: [{ to: '/achats-approvisionnement', label: 'Nouvelle demande', icon: 'AA' }, { to: '/fournisseurs', label: 'Ajouter fournisseur', icon: 'FR' }, { to: '/stocks-consommables', label: 'Enregistrer stock', icon: 'ST' }, { to: '/portail-fournisseur', label: 'Portail fournisseur', icon: 'PF' }],
+      primaryTitle: 'Demandes d approvisionnement', primaryRows: byRecent(data.achatsApprovisionnement).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/achats-approvisionnement', primaryFooterLabel: 'Voir toutes les demandes',
+      secondaryTitle: 'Stocks et consommables a surveiller', secondaryRows: byRecent(data.consommablesStocks).filter((item) => !['conforme', 'disponible'].includes(item.statut)).slice(0, 5), secondaryFooterTo: '/stocks-consommables', secondaryFooterLabel: 'Voir tous les stocks'
+    },
+    responsable_finance: {
+      eyebrow: 'TESTLAB FINANCE', title: 'Tableau de bord Finance', subtitle: 'Suivez les factures, encaissements, commandes et resultats financiers du laboratoire.',
+      kpis: [
+        { label: 'Chiffre commandes', value: formatMoney(computed.ca), note: 'Commandes creees', tone: 'blue', icon: '$' },
+        { label: 'Factures', value: count('factures'), note: 'Emises et suivies', tone: 'purple', icon: 'FC' },
+        { label: 'Factures en attente', value: open('factures', ['paye', 'annulee']), note: 'A recouvrer', tone: 'amber', icon: 'AT' },
+        { label: 'Operations finance', value: count('financesAvancees'), note: 'Ecritures enregistrees', tone: 'green', icon: 'FI' },
+        { label: 'Clients', value: count('clients'), note: 'Comptes clients', tone: 'blue', icon: 'CL' }
+      ],
+      quickLinks: [{ to: '/factures', label: 'Nouvelle facture', icon: 'FC' }, { to: '/finances-avancees', label: 'Enregistrer operation', icon: 'FI' }, { to: '/commandes', label: 'Suivre commandes', icon: 'CM' }, { to: '/clients', label: 'Voir clients', icon: 'CL' }],
+      primaryTitle: 'Factures a suivre', primaryRows: byRecent(data.factures).filter((item) => !['paye', 'annulee'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/factures', primaryFooterLabel: 'Voir toutes les factures',
+      secondaryTitle: 'Dernieres commandes', secondaryRows: byRecent(data.commandes).slice(0, 5), secondaryFooterTo: '/commandes', secondaryFooterLabel: 'Voir toutes les commandes'
+    },
+    receptionniste: {
+      eyebrow: 'TESTLAB RECEPTION', title: 'Tableau de bord Reception', subtitle: 'Recevez les objets d essais, verifiez les informations et orientez les dossiers.',
+      kpis: [
+        { label: 'Objets a receptionner', value: open('essais'), note: 'Dossiers en attente', tone: 'amber', icon: 'OE' },
+        { label: 'Commandes actives', value: open('commandes'), note: 'A accueillir', tone: 'blue', icon: 'CM' },
+        { label: 'Clients', value: count('clients'), note: 'Fiches disponibles', tone: 'green', icon: 'CL' },
+        { label: 'Demandes nouvelles', value: open('demandesPrestations'), note: 'A transmettre', tone: 'purple', icon: 'DP' },
+        { label: 'Reclamations', value: open('reclamations'), note: 'A signaler', tone: 'red', icon: 'RC' }
+      ],
+      quickLinks: [{ to: '/essais', label: 'Recevoir un objet', icon: 'OE' }, { to: '/commandes', label: 'Voir commandes', icon: 'CM' }, { to: '/clients', label: 'Rechercher client', icon: 'CL' }, { to: '/demandes-prestations', label: 'Nouvelle demande', icon: 'DP' }],
+      primaryTitle: 'Objets d essais a receptionner', primaryRows: byRecent(data.essais).filter((item) => ['en_attente_reception', 'a_receptionner', 'en_attente'].includes(item.statut)).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/essais', primaryFooterLabel: 'Voir tous les objets d essais',
+      secondaryTitle: 'Commandes recentes', secondaryRows: byRecent(data.commandes).slice(0, 5), secondaryFooterTo: '/commandes', secondaryFooterLabel: 'Voir toutes les commandes'
+    },
+    auditeur: {
+      eyebrow: 'TESTLAB AUDIT', title: 'Tableau de bord Auditeur interne', subtitle: 'Consultez les preuves, ecarts, audits et actions sans modifier les donnees metier.',
+      kpis: [
+        { label: 'Documents qualite', value: count('documentsQualite'), note: 'Preuves documentaires', tone: 'blue', icon: 'DQ' },
+        { label: 'Audits', value: count('audits'), note: 'Programme et preuves', tone: 'purple', icon: 'AQ' },
+        { label: 'Non-conformites', value: count('nonConformites'), note: 'Ecarts traces', tone: 'red', icon: 'NC' },
+        { label: 'Actions', value: count('actionsQualite'), note: 'Plans d actions', tone: 'amber', icon: 'AC' },
+        { label: 'Risques', value: count('risquesOpportunites'), note: 'Matrice qualite', tone: 'green', icon: 'RI' }
+      ],
+      quickLinks: [{ to: '/documents-qualite', label: 'Consulter documents', icon: 'DQ' }, { to: '/audits', label: 'Voir les audits', icon: 'AQ' }, { to: '/actions-qualite', label: 'Verifier actions', icon: 'AC' }, { to: '/assistant-audit-iso', label: 'Preparation audit', icon: 'AI' }],
+      primaryTitle: 'Dernieres preuves qualite', primaryRows: byRecent(data.documentsQualite).slice(0, 6), primaryColumns: commonColumns, primaryFooterTo: '/documents-qualite', primaryFooterLabel: 'Voir tous les documents',
+      secondaryTitle: 'Ecarts et actions a verifier', secondaryRows: [...byRecent(data.nonConformites), ...byRecent(data.actionsQualite)].slice(0, 5), secondaryFooterTo: '/actions-qualite', secondaryFooterLabel: 'Voir les actions qualite'
+    }
+  };
+
+  return views[role] || defaultView;
+}
+
 function Dashboard() {
-  const [role, setRole] = useState(localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
+  const { user } = useAuth();
+  const [role, setRole] = useState(user?.role || localStorage.getItem(CURRENT_ROLE_KEY) || 'dg');
   const [data, setData] = useState(Object.fromEntries(resources.map((resource) => [resource, []])));
 
   useEffect(() => {
@@ -290,6 +481,10 @@ function Dashboard() {
       window.removeEventListener('smartlab:role-changed', roleHandler);
     };
   }, []);
+
+  useEffect(() => {
+    if (user?.role) setRole(user.role);
+  }, [user?.role]);
 
   const computed = useMemo(() => {
     const commandes = data.commandes || [];
@@ -332,12 +527,12 @@ function Dashboard() {
     return { ca, conformityRate, openReclamations, criticalAlerts, alerts, recent, decisions, openNc };
   }, [data]);
 
-  const kpis = [
-    { label: 'Chiffre d affaires (Mois)', value: formatMoney(computed.ca), note: '+ 12.4% vs mois precedent', tone: 'blue', icon: '$' },
-    { label: 'Essais realises (Mois)', value: (data.essais || []).length, note: '+ 8.7% vs mois precedent', tone: 'purple', icon: 'LAB' },
-    { label: 'Taux de conformite ISO', value: `${computed.conformityRate}%`, note: '+ 1.3% vs mois precedent', tone: 'green', icon: 'OK' },
-    { label: 'Reclamations ouvertes', value: computed.openReclamations.length, note: '-50% vs mois precedent', tone: 'red', icon: 'MSG' },
-    { label: 'Alertes critiques', value: computed.criticalAlerts, note: 'Action requise', tone: 'amber', icon: '!' }
+  const view = buildRoleDashboard(role, data, computed);
+  const secondaryColumns = [
+    { key: 'reference', label: 'Reference', render: rowReference },
+    { key: 'objet', label: 'Element', render: rowLabel },
+    { key: 'statut', label: 'Statut', render: (row) => <span className={`statusBadge ${statusTone(row.statut)}`}>{row.statut || '-'}</span> },
+    { key: 'date', label: 'Echeance / date', render: (row) => row.echeance || row.date || row.date_reception || '-' }
   ];
 
   return (
@@ -345,14 +540,15 @@ function Dashboard() {
       <div className="dashMockHeader">
         <div>
           <p className="eyebrow">TESTLAB MOBILE</p>
-          <h2>Dashboard</h2>
+          <h2>{view.title}</h2>
+          <span className="dashHeaderSubtitle">{view.subtitle}</span>
         </div>
         <div className="dashMockSearch">Rechercher un essai, client, echantillon...</div>
         <span className="dashRoleBadge">{roleNames[role] || roleNames.default}</span>
       </div>
 
       <div className="dashKpiGrid">
-        {kpis.map((card) => <KpiCard key={card.label} {...card} />)}
+        {view.kpis.map((card) => <KpiCard key={card.label} {...card} />)}
       </div>
 
       <div className="dashMainGrid">
@@ -364,44 +560,25 @@ function Dashboard() {
       <div className="dashContentGrid">
         <div className="dashLeftStack">
           <DataTable
-            title="Decisions DG attendues"
-            badge={computed.decisions.length}
-            rows={computed.decisions.slice(0, 4)}
-            columns={[
-              { key: 'numero', label: 'Reference' },
-              { key: 'type', label: 'Type' },
-              { key: 'client_nom', label: 'Client' },
-              { key: 'projet', label: 'Projet' },
-              { key: 'montant', label: 'Montant', render: (row) => formatMoney(row.montant) },
-              { key: 'priorite', label: 'Priorite', render: (row) => <span className={`statusBadge ${statusTone(row.priorite)}`}>{row.priorite}</span> },
-              { key: 'date_demande', label: 'Date demande' },
-              { key: 'actions', label: 'Actions', render: () => <span className="dashDecisionActions"><b>OK</b><b>...</b></span> }
-            ]}
-            footerTo="/devis"
-            footerLabel="Voir toutes les demandes"
+            title={view.primaryTitle}
+            badge={view.primaryRows.length}
+            rows={view.primaryRows.slice(0, 6)}
+            columns={view.primaryColumns}
+            footerTo={view.primaryFooterTo}
+            footerLabel={view.primaryFooterLabel}
           />
           <DataTable
-            title="Risques qualite ouverts"
-            badge={computed.openNc.length}
-            rows={computed.openNc.slice(0, 5)}
-            columns={[
-              { key: 'reference', label: 'Reference' },
-              { key: 'origine', label: 'Origine' },
-              { key: 'description', label: 'Description' },
-              { key: 'responsable', label: 'Responsable' },
-              { key: 'statut', label: 'Statut', render: (row) => <span className={`statusBadge ${statusTone(row.statut)}`}>{row.statut}</span> },
-              { key: 'niveau', label: 'Niveau', render: () => <span className="statusBadge danger">Majeur</span> },
-              { key: 'jours', label: 'Jours restants', render: () => '3 jours' },
-              { key: 'progression', label: 'Progression', render: () => <span className="dashProgress"><i style={{ width: '60%' }} /></span> },
-              { key: 'actions', label: 'Actions', render: () => <Link className="ghostButton" to="/non-conformites">Voir</Link> }
-            ]}
-            footerTo="/non-conformites"
-            footerLabel="Voir toutes les non-conformites"
+            title={view.secondaryTitle}
+            badge={view.secondaryRows.length}
+            rows={view.secondaryRows.slice(0, 5)}
+            columns={secondaryColumns}
+            footerTo={view.secondaryFooterTo}
+            footerLabel={view.secondaryFooterLabel}
           />
         </div>
         <div className="dashRightStack">
           <RecentPanel items={computed.recent} />
-          <QuickPanel />
+          <QuickPanel links={view.quickLinks} />
         </div>
       </div>
     </div>

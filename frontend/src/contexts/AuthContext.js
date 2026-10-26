@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
             ...savedUser,
             email: session.user?.email || savedUser.email || '',
             name: session.label || savedUser.name || session.user?.email || '',
-            role: session.role || savedUser.role || roleForEmail(session.user?.email),
+            role: session.role || roleForEmail(session.user?.email) || '',
             supabase_user_id: session.user?.id || savedUser.supabase_user_id || '',
             auth_provider: 'supabase'
           };
@@ -136,6 +136,10 @@ export const AuthProvider = ({ children }) => {
         if (!nextUser.role || !roleLabels[nextUser.role]) {
           await signOutSupabase();
           throw new Error('Compte authentifie, mais aucun role TESTLAB ne lui est attribue.');
+        }
+        if (role && nextUser.role !== role) {
+          await signOutSupabase();
+          throw new Error(`Ce compte est associe au role "${roleLabels[nextUser.role]}", pas au role selectionne.`);
         }
         localStorage.setItem(TOKEN_KEY, session.accessToken);
         setToken(session.accessToken);

@@ -1236,6 +1236,135 @@ button {
   width: 100%;
 }
 
+.roleSelectionPanel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 22px;
+  max-width: 860px;
+  padding: 34px;
+  width: 100%;
+}
+
+.roleSelectionHeader {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.roleSelectionHeader h2 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.roleSelectionHeader p,
+.roleSelectionHint {
+  color: var(--text3);
+  margin: 0;
+}
+
+.roleSelectionGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.roleSelectionCard {
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  display: flex;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px;
+  text-align: left;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.roleSelectionCard:hover,
+.roleSelectionCard:focus-visible {
+  background: var(--panel-soft-bg);
+  border-color: var(--accent);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.roleSelectionIcon,
+.loginRoleBadge strong {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 9px;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 42px;
+}
+
+.roleSelectionCardText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roleSelectionCardText strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleSelectionCardText small,
+.loginRoleBadge small {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.roleSelectionArrow {
+  color: var(--accent);
+  font-size: 20px;
+  margin-left: auto;
+}
+
+.roleSelectionHint {
+  font-size: 12px;
+  text-align: center;
+}
+
+.loginBackButton {
+  align-self: start;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0;
+}
+
+.loginRoleBadge {
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+}
+
+.loginRoleBadge span {
+  display: grid;
+  gap: 2px;
+  font-weight: 800;
+}
+
 .loginBrand {
   display: grid;
   justify-items: center;
@@ -3664,6 +3793,13 @@ tbody tr:hover {
   margin: 0;
 }
 
+.dashHeaderSubtitle {
+  color: var(--text2);
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
 .dashMockSearch {
   min-height: 44px;
   border: 1px solid var(--border);
@@ -4073,6 +4209,8 @@ html[data-theme="light"] .dashDonut::after { background: #fff; }
 }
 
 @media (max-width: 760px) {
+  .roleSelectionPanel { padding: 22px; }
+  .roleSelectionGrid { grid-template-columns: 1fr; }
   .dashMockHeader,
   .dashKpiGrid,
   .dashDonutWrap { grid-template-columns: 1fr; }

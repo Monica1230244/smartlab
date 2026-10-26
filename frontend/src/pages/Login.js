@@ -1,48 +1,54 @@
-import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { authProfiles, useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { authProfiles, defaultRouteForRole } from '../config/permissions';
+import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('responsable_appel');
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
   const { login, user, useSupabaseAuth } = useAuth();
   const navigate = useNavigate();
-  const selectedProfile = authProfiles.find((profile) => profile.role === role);
+  const selectedRole = searchParams.get('role') || '';
+  const selectedProfile = authProfiles.find((profile) => profile.role === selectedRole);
 
-  if (user) return <Navigate to="/" replace />;
+  useEffect(() => {
+    if (!selectedProfile) {
+      navigate('/roles', { replace: true });
+      return;
+    }
+    setEmail((current) => current || selectedProfile.email);
+  }, [navigate, selectedProfile]);
+
+  if (user) return <Navigate to={defaultRouteForRole(user.role)} replace />;
+  if (!selectedProfile) return null;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
-    const success = await login({ email, password, role });
+    const success = await login({ email, password, role: selectedRole });
     setLoading(false);
-    if (success) navigate('/', { replace: true });
+    if (success) navigate(defaultRouteForRole(selectedRole), { replace: true });
   };
 
   return (
     <div className="loginPage">
       <form className="loginPanel" onSubmit={handleSubmit}>
+        <button type="button" className="loginBackButton" onClick={() => navigate('/roles')}>
+          &lt; Changer de role
+        </button>
+
         <div className="loginBrand">
           <div className="brandMark">TL</div>
           <h1>TEST<span>LAB</span></h1>
           <p>{useSupabaseAuth ? 'Connexion securisee par Supabase Auth' : 'Connexion locale de demonstration'}</p>
         </div>
 
-        {!useSupabaseAuth && (
-          <label>
-            <span>Role utilisateur</span>
-            <select value={role} onChange={(event) => {
-              const nextRole = event.target.value;
-              const profile = authProfiles.find((item) => item.role === nextRole);
-              setRole(nextRole);
-              setEmail(profile?.email || '');
-            }}>
-              {authProfiles.map((profile) => <option key={profile.role} value={profile.role}>{profile.label}</option>)}
-            </select>
-          </label>
-        )}
+        <div className="loginRoleBadge">
+          <strong>{selectedProfile.initials}</strong>
+          <span><small>Role selectionne</small>{selectedProfile.label}</span>
+        </div>
 
         <label>
           <span>Email professionnel</span>
@@ -58,17 +64,8 @@ function Login() {
           {loading ? 'Verification...' : 'Se connecter'}
         </button>
 
-        {!useSupabaseAuth && <div className="loginProfiles">
-          {authProfiles.map((profile) => (
-            <button type="button" className={profile.role === role ? 'active' : ''} key={profile.role} onClick={() => { setRole(profile.role); setEmail(profile.email); }}>
-              <strong>{profile.initials}</strong>
-              <span>{profile.label}</span>
-            </button>
-          ))}
-        </div>}
-
         <small className="loginSecurityNote">
-          {useSupabaseAuth ? 'Votre role et vos permissions sont recuperes depuis votre compte securise.' : 'Le mode local est reserve aux demonstrations.'}
+          {useSupabaseAuth ? 'Le compte Supabase doit posseder ce role. Les menus et donnees sont ensuite limites a votre fonction.' : 'Le mode local est reserve aux demonstrations.'}
         </small>
       </form>
     </div>
