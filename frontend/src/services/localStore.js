@@ -225,7 +225,7 @@ function emitStatus(status, message) {
 function describeSupabaseError(error, action = 'Synchronisation') {
   const raw = String(error?.message || error || 'Erreur inconnue');
   if (/Failed to fetch|NetworkError|Network request failed|nom distant|resolve|fetch resource/i.test(raw)) {
-    return action + ': projet Supabase injoignable. Verifiez VITE_SUPABASE_URL, la connexion internet et les restrictions reseau.';
+    return action + ': projet Supabase injoignable. Verifiez l URL du projet Supabase, la connexion internet et les restrictions reseau.';
   }
   if (/401|403|JWT|permission|not authorized|Invalid API key/i.test(raw)) {
     return action + ': cle Supabase ou politiques RLS a verifier.';

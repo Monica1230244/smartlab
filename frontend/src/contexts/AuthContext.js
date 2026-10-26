@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { listRecords, upsertRecord } from '../services/localStore';
-import { SUPABASE_AUTH_ENABLED, signInWithSupabasePassword, signOutSupabase } from '../services/supabaseAuth';
+import {
+  SUPABASE_AUTH_ENABLED,
+  getCurrentSupabaseSession,
+  signInWithSupabasePassword,
+  signOutSupabase,
+  clearSupabaseSession
+} from '../services/supabaseAuth';
 import { authProfiles, roleLabels } from '../config/permissions';
 
 const AuthContext = createContext();
@@ -13,7 +19,18 @@ export { authProfiles };
 export const useAuth = () => useContext(AuthContext);
 
 function profileId(role) {
-  return `profile-${role}`;
+  return 'profile-' + role;
+}
+
+function roleForEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return authProfiles.find((profile) => profile.email.toLowerCase() === normalized)?.role || '';
+}
+
+function clearLocalIdentity() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(CURRENT_ROLE_KEY);
 }
 
 export const AuthProvider = ({ children }) => {
@@ -30,66 +47,100 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadProfile = async (baseUser) => {
-    if (!baseUser?.role) return baseUser;
     try {
       const profiles = await listRecords('profiles');
       const remoteProfile = profiles.find((profile) => (
-        profile.id === profileId(baseUser.role) || profile.role === baseUser.role || profile.email === baseUser.email
+        profile.id === profileId(baseUser?.role) ||
+        profile.supabase_user_id === baseUser?.supabase_user_id ||
+        profile.email?.toLowerCase() === baseUser?.email?.toLowerCase()
       ));
-      return remoteProfile ? { ...baseUser, ...remoteProfile } : baseUser;
+      if (remoteProfile) return { ...baseUser, ...remoteProfile, role: remoteProfile.role || baseUser.role || '' };
     } catch (error) {
       console.warn('Profil Supabase indisponible:', error);
-      return baseUser;
     }
+    return { ...baseUser, role: baseUser?.role || roleForEmail(baseUser?.email) };
   };
 
   useEffect(() => {
     let cancelled = false;
 
     const hydrateUser = async () => {
-      const savedUser = localStorage.getItem(USER_KEY);
-      if (token && savedUser) {
-        const parsedUser = JSON.parse(savedUser);
-        const syncedUser = await loadProfile(parsedUser);
-        if (!cancelled) applyUser(syncedUser);
+      try {
+        if (SUPABASE_AUTH_ENABLED) {
+          const session = await getCurrentSupabaseSession();
+          if (!session) {
+            clearLocalIdentity();
+            if (!cancelled) {
+              setToken(null);
+              setUser(null);
+            }
+            return;
+          }
+          const savedUser = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+          const baseUser = {
+            ...savedUser,
+            email: session.user?.email || savedUser.email || '',
+            name: session.label || savedUser.name || session.user?.email || '',
+            role: session.role || savedUser.role || roleForEmail(session.user?.email),
+            supabase_user_id: session.user?.id || savedUser.supabase_user_id || '',
+            auth_provider: 'supabase'
+          };
+          const syncedUser = await loadProfile(baseUser);
+          if (!syncedUser.role || !roleLabels[syncedUser.role]) {
+            await signOutSupabase();
+            clearLocalIdentity();
+            throw new Error('Votre compte Supabase n a pas encore de role TESTLAB attribue.');
+          }
+          if (!cancelled) {
+            localStorage.setItem(TOKEN_KEY, session.accessToken);
+            setToken(session.accessToken);
+            applyUser(syncedUser);
+          }
+        } else {
+          const savedUser = localStorage.getItem(USER_KEY);
+          if (token && savedUser) {
+            const parsedUser = JSON.parse(savedUser);
+            const syncedUser = await loadProfile(parsedUser);
+            if (!cancelled) applyUser(syncedUser);
+          }
+        }
+      } catch (error) {
+        clearLocalIdentity();
+        clearSupabaseSession();
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
+          if (error?.message && SUPABASE_AUTH_ENABLED) toast.error(error.message);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      if (!cancelled) setLoading(false);
     };
 
     hydrateUser();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token]);
 
   const login = async ({ email, password, role }) => {
-    const selectedProfile = authProfiles.find((item) => item.role === role);
-    if (!selectedProfile) {
-      toast.error('Selectionnez un role valide');
-      return false;
-    }
-    if (!password || password.length < 4) {
-      toast.error('Mot de passe requis');
-      return false;
-    }
-
     if (SUPABASE_AUTH_ENABLED) {
       try {
-        const session = await signInWithSupabasePassword({ email: email || selectedProfile.email, password });
-        const roleFromAuth = session.role || role;
-        const profile = authProfiles.find((item) => item.role === roleFromAuth) || selectedProfile;
+        const session = await signInWithSupabasePassword({ email, password });
         const baseUser = {
-          ...profile,
-          email: session.user?.email || email || profile.email,
-          name: session.label || profile.label,
+          email: session.user?.email || email,
+          name: session.label || session.user?.email || '',
+          role: session.role || roleForEmail(session.user?.email),
           supabase_user_id: session.user?.id || '',
           auth_provider: 'supabase'
         };
         const nextUser = await loadProfile(baseUser);
+        if (!nextUser.role || !roleLabels[nextUser.role]) {
+          await signOutSupabase();
+          throw new Error('Compte authentifie, mais aucun role TESTLAB ne lui est attribue.');
+        }
         localStorage.setItem(TOKEN_KEY, session.accessToken);
         setToken(session.accessToken);
         applyUser(nextUser);
-        toast.success(`Connecte Supabase: ${profile.label}`);
+        toast.success('Connexion securisee reussie');
         return true;
       } catch (error) {
         toast.error(error?.message || 'Connexion Supabase impossible');
@@ -97,25 +148,24 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    const baseUser = {
-      ...selectedProfile,
-      email: email || selectedProfile.email,
-      name: selectedProfile.label,
-      auth_provider: 'local_profile'
-    };
+    const selectedProfile = authProfiles.find((item) => item.role === role);
+    if (!selectedProfile || !password || password.length < 4) {
+      toast.error('Profil local ou mot de passe invalide');
+      return false;
+    }
+    const baseUser = { ...selectedProfile, email: email || selectedProfile.email, name: selectedProfile.label, auth_provider: 'local_profile' };
     const nextUser = await loadProfile(baseUser);
-    const nextToken = `smartlab-${role}-${Date.now()}`;
+    const nextToken = 'smartlab-' + role + '-' + Date.now();
     localStorage.setItem(TOKEN_KEY, nextToken);
     setToken(nextToken);
     applyUser(nextUser);
-    toast.success(`Connecte: ${selectedProfile.label}`);
+    toast.success('Connexion locale: ' + selectedProfile.label);
     return true;
   };
 
   const logout = async () => {
     if (SUPABASE_AUTH_ENABLED) await signOutSupabase();
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    clearLocalIdentity();
     setToken(null);
     setUser(null);
     toast.success('Deconnexion reussie');
@@ -126,23 +176,13 @@ export const AuthProvider = ({ children }) => {
       toast.error('Reconnectez-vous avant de modifier le profil');
       return false;
     }
-
-    const nextUser = {
-      ...(user || {}),
-      ...profile,
-      id: profileId(user.role),
-      role: user.role,
-      initials: user.initials,
-      label: user.label
-    };
+    const nextUser = { ...user, ...profile, id: profileId(user.role), role: user.role, initials: user.initials, label: user.label };
     applyUser(nextUser);
-
     const saved = await upsertRecord('profiles', nextUser);
     if (saved.__syncError) {
-      toast.error(`Profil enregistre localement, mais pas dans Supabase: ${saved.__syncError}`);
+      toast.error('Profil local uniquement: ' + saved.__syncError);
       return false;
     }
-
     toast.success('Profil synchronise avec Supabase');
     return true;
   };
@@ -153,5 +193,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-
