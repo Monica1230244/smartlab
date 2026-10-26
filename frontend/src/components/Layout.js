@@ -376,8 +376,8 @@ function Layout({ publicMode = false }) {
 
       <main className={publicMode ? 'main publicMain' : 'main'}>
         <header className="topbar">
-          {!publicMode && <button className="menuButton" onClick={() => setOpen((value) => !value)} aria-label="Menu">
-            Menu
+          {!publicMode && <button className="menuButton" onClick={() => setOpen((value) => !value)} aria-label="Ouvrir le menu" title="Ouvrir le menu">
+            <span aria-hidden="true">&#9776;</span>
           </button>}
           <div className="topbarTitle">
             <p className="eyebrow">TESTLAB mobile</p>
@@ -394,8 +394,9 @@ function Layout({ publicMode = false }) {
               className="themeToggleButton"
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+              title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
             >
-              {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              <span aria-hidden="true">{theme === 'dark' ? '\u2600' : '\u25D0'}</span>
             </button>
             <button
               type="button"
@@ -403,6 +404,7 @@ function Layout({ publicMode = false }) {
               onClick={toggleNotifications}
               aria-label="Notifications"
               aria-expanded={notificationsOpen}
+              title="Notifications"
             >
               <span className="notificationIcon" aria-hidden="true">{'\uD83D\uDD14'}</span>
               {notifications.length > 0 && <span>{notifications.length}</span>}

@@ -6326,3 +6326,499 @@ html[data-theme="light"] .qualityQuickGrid button {
     bottom: 12px;
   }
 }
+
+
+/* TESTLAB visual system pass: shared shell and responsive polish */
+:root {
+  --shell-sidebar-width: 258px;
+  --shell-topbar-height: 72px;
+  --shell-radius: 10px;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(9, 22, 39, 0.28), transparent 30%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sidebar {
+  width: var(--shell-sidebar-width);
+  background: linear-gradient(180deg, rgba(11, 24, 42, 0.99), rgba(8, 18, 32, 0.99));
+  border-right-color: rgba(107, 178, 235, 0.16);
+  box-shadow: 10px 0 36px rgba(0, 0, 0, 0.16);
+}
+
+.brand {
+  min-height: 72px;
+  padding: 16px 18px;
+  border-bottom-color: rgba(107, 178, 235, 0.16);
+}
+
+.brandMark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #238bff, #0ec7b0);
+  box-shadow: 0 8px 20px rgba(35, 139, 255, 0.22);
+}
+
+.brand strong {
+  font-size: 19px;
+  letter-spacing: 0.04em;
+}
+
+.navSectionLabel {
+  padding: 20px 18px 8px;
+  color: rgba(174, 198, 222, 0.58);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+}
+
+.navList {
+  gap: 3px;
+  padding: 0 10px;
+}
+
+.navLink {
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.navLink:hover {
+  background: rgba(41, 117, 187, 0.12);
+  border-color: rgba(88, 164, 226, 0.12);
+  transform: translateX(1px);
+}
+
+.navLink.active {
+  background: linear-gradient(90deg, rgba(34, 127, 224, 0.27), rgba(17, 199, 176, 0.08));
+  border-color: rgba(66, 155, 239, 0.2);
+  box-shadow: inset 0 0 18px rgba(38, 130, 225, 0.08);
+}
+
+.navIcon {
+  width: 25px;
+  color: #82a4c5;
+  font-size: 12px;
+}
+
+.navLink.active .navIcon {
+  color: #58c8ff;
+}
+
+.userCard {
+  margin: 12px 10px 10px;
+  padding: 12px 10px;
+  border: 1px solid rgba(107, 178, 235, 0.14);
+  border-radius: 10px;
+  background: rgba(14, 33, 56, 0.72);
+}
+
+.userCard strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main {
+  margin-left: var(--shell-sidebar-width);
+}
+
+.topbar {
+  min-height: var(--shell-topbar-height);
+  padding: 0 28px;
+  background: rgba(8, 20, 35, 0.86);
+  border-bottom-color: rgba(107, 178, 235, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.topbarTitle {
+  min-width: 210px;
+}
+
+.topbar h1 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.eyebrow {
+  color: #7394b6;
+  font-size: 9px;
+}
+
+.topbarSearch {
+  max-width: 460px;
+}
+
+.topbarSearch input {
+  min-height: 40px;
+  border-radius: 8px;
+  background: rgba(18, 38, 64, 0.78);
+  border-color: rgba(107, 178, 235, 0.2);
+}
+
+.topbarSearch input::placeholder {
+  color: #7893ae;
+}
+
+.topbarActions {
+  gap: 8px;
+}
+
+.authRolePill {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.themeToggleButton,
+.notificationButton {
+  position: relative;
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  justify-content: center;
+  padding: 0;
+  border-radius: 9px;
+  background: rgba(18, 38, 64, 0.82);
+  border-color: rgba(107, 178, 235, 0.18);
+  font-size: 17px;
+}
+
+.themeToggleButton:hover,
+.notificationButton:hover {
+  background: rgba(42, 122, 203, 0.18);
+  border-color: rgba(73, 167, 247, 0.5);
+}
+
+.notificationButton > span:not(.notificationIcon) {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 1px 4px;
+  border: 2px solid #09182b;
+  display: grid;
+  place-items: center;
+}
+
+.notificationButton .notificationIcon {
+  line-height: 1;
+}
+
+.notificationsPanel {
+  top: 52px;
+  min-width: 340px;
+  border-radius: 10px;
+  border-color: rgba(92, 165, 224, 0.24);
+  background: rgba(10, 25, 43, 0.98);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
+}
+
+.content {
+  min-height: calc(100vh - var(--shell-topbar-height));
+  padding: 28px;
+}
+
+.pageStack {
+  gap: 20px;
+}
+
+.pageHeader h2,
+.welcomeBand h2 {
+  font-size: clamp(20px, 2vw, 28px);
+  letter-spacing: -0.01em;
+}
+
+.pageHeader p,
+.welcomeBand p {
+  line-height: 1.5;
+}
+
+.welcomeBand,
+.editorPanel,
+.tablePanel,
+.statCard,
+.workflowBoard {
+  border-radius: var(--shell-radius);
+  border-color: rgba(107, 178, 235, 0.16);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+.welcomeBand,
+.workflowBoard {
+  background: linear-gradient(135deg, rgba(15, 34, 58, 0.94), rgba(12, 26, 45, 0.94));
+}
+
+.statCard {
+  min-height: 132px;
+  background: linear-gradient(155deg, rgba(15, 35, 59, 0.94), rgba(11, 25, 43, 0.96));
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.statCard:hover {
+  border-color: rgba(71, 166, 244, 0.36);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
+}
+
+.tablePanel,
+.editorPanel {
+  background: rgba(12, 28, 48, 0.91);
+}
+
+.tableTools,
+.formHeader {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(107, 178, 235, 0.12);
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton,
+.dangerButton {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 9px 14px;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #258df4, #1677dc);
+  box-shadow: 0 8px 18px rgba(22, 119, 220, 0.2);
+}
+
+.primaryButton:hover {
+  background: linear-gradient(135deg, #3b9cff, #2183e5);
+  transform: translateY(-1px);
+}
+
+.secondaryButton,
+.ghostButton {
+  background: rgba(19, 42, 69, 0.72);
+  border: 1px solid rgba(107, 178, 235, 0.2);
+}
+
+.secondaryButton:hover,
+.ghostButton:hover {
+  border-color: rgba(71, 166, 244, 0.5);
+  color: #72cbff;
+}
+
+.tablePanel table th {
+  background: rgba(8, 22, 38, 0.6);
+  color: #81a4c6;
+}
+
+.tablePanel table tbody tr:hover {
+  background: rgba(41, 126, 211, 0.08);
+}
+
+/* The light mode keeps the same information hierarchy as the dark mode. */
+html[data-theme="light"] body {
+  background: linear-gradient(180deg, #f7fbff, #eef4fa);
+  color: #14253d;
+}
+
+html[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, #ffffff, #f3f7fc);
+  border-right-color: #d9e4ef;
+  box-shadow: 8px 0 28px rgba(45, 74, 106, 0.08);
+}
+
+html[data-theme="light"] .brand,
+html[data-theme="light"] .topbar {
+  border-color: #d9e4ef;
+}
+
+html[data-theme="light"] .navLink {
+  color: #526982;
+}
+
+html[data-theme="light"] .navLink:hover {
+  background: #edf5fc;
+  border-color: #d6e6f5;
+  color: #183b62;
+}
+
+html[data-theme="light"] .navLink.active {
+  background: linear-gradient(90deg, #e4f1ff, #e9fbf8);
+  border-color: #b7d7f2;
+  color: #096ac7;
+}
+
+html[data-theme="light"] .navSectionLabel,
+html[data-theme="light"] .eyebrow {
+  color: #7890a8;
+}
+
+html[data-theme="light"] .topbar {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(45, 74, 106, 0.06);
+}
+
+html[data-theme="light"] .topbarSearch input,
+html[data-theme="light"] .themeToggleButton,
+html[data-theme="light"] .notificationButton {
+  background: #f6f9fc;
+  border-color: #cfdeeb;
+  color: #203957;
+}
+
+html[data-theme="light"] .notificationsPanel {
+  background: #ffffff;
+  border-color: #cbddea;
+  box-shadow: 0 18px 42px rgba(45, 74, 106, 0.16);
+}
+
+html[data-theme="light"] .welcomeBand,
+html[data-theme="light"] .workflowBoard,
+html[data-theme="light"] .statCard,
+html[data-theme="light"] .tablePanel,
+html[data-theme="light"] .editorPanel {
+  background: linear-gradient(155deg, #ffffff, #f7fbff);
+  border-color: #d5e2ed;
+  box-shadow: 0 10px 26px rgba(45, 74, 106, 0.08);
+}
+
+html[data-theme="light"] .statCard:hover {
+  border-color: #9ec9ed;
+  box-shadow: 0 14px 30px rgba(45, 74, 106, 0.13);
+}
+
+html[data-theme="light"] .tablePanel table th {
+  background: #f2f7fb;
+  color: #5d7690;
+}
+
+html[data-theme="light"] .tablePanel table tbody tr:hover {
+  background: #f0f7fd;
+}
+
+@media (max-width: 1080px) {
+  .sidebar {
+    width: 232px;
+  }
+
+  .main {
+    margin-left: 232px;
+  }
+
+  .content {
+    padding: 22px;
+  }
+
+  .topbar {
+    padding: 0 20px;
+  }
+
+  .authRolePill {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    width: min(86vw, 300px);
+    transform: translateX(-105%);
+    transition: transform 200ms ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main {
+    margin-left: 0;
+  }
+
+  .topbar {
+    min-height: 64px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .menuButton {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 18px;
+  }
+
+  .topbarTitle {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+  }
+
+  .topbarSearch {
+    display: none;
+  }
+
+  .topbarActions {
+    margin-left: 0;
+  }
+
+  .content {
+    min-height: calc(100vh - 64px);
+    padding: 16px 12px 24px;
+  }
+
+  .pageHeader,
+  .welcomeBand,
+  .formHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .headerActions > button {
+    flex: 1 1 auto;
+  }
+
+  .notificationsPanel {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: 62px;
+    min-width: 0;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+  }
+}
