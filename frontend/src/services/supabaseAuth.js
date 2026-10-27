@@ -1,6 +1,6 @@
 const DEFAULT_SUPABASE_URL = 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YviZNw_iz7AADmR';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 
 // Supabase Auth is the secure default. Set VITE_SUPABASE_AUTH=false only for local demos.
 export const SUPABASE_AUTH_ENABLED = import.meta.env.VITE_SUPABASE_AUTH !== 'false';
