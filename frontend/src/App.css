@@ -1265,6 +1265,37 @@ button {
   margin: 0;
 }
 
+.roleLookupForm {
+  display: grid;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 560px;
+  width: 100%;
+}
+
+.roleLookupForm .primaryButton {
+  justify-self: center;
+  min-width: 210px;
+}
+
+.roleLookupStatus {
+  border-radius: 8px;
+  font-size: 12px;
+  margin: 0;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.roleLookupStatus.success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #35d47b;
+}
+
+.roleLookupStatus.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ff8b8b;
+}
+
 .roleSelectionGrid {
   display: grid;
   gap: 10px;

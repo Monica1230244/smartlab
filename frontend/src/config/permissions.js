@@ -11,6 +11,24 @@
   dg: 'Direction generale'
 };
 
+export function normalizeRoleValue(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+export function resolveRole(value) {
+  const normalized = normalizeRoleValue(value);
+  if (!normalized) return '';
+  return Object.entries(roleLabels).find(([key, label]) => (
+    normalized === normalizeRoleValue(key) || normalized === normalizeRoleValue(label)
+  ))?.[0] || '';
+}
+
 export const authProfiles = [
   { role: 'responsable_appel', label: roleLabels.responsable_appel, email: 'offres@testlab.com', initials: 'RO' },
   { role: 'responsable_technique', label: roleLabels.responsable_technique, email: 'rt@testlab.com', initials: 'RT' },

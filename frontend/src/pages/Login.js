@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { authProfiles, defaultRouteForRole } from '../config/permissions';
+import { authProfiles, defaultRouteForRole, resolveRole, roleLabels } from '../config/permissions';
 import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
@@ -10,19 +10,19 @@ function Login() {
   const [searchParams] = useSearchParams();
   const { login, user, useSupabaseAuth } = useAuth();
   const navigate = useNavigate();
-  const selectedRole = searchParams.get('role') || '';
+  const selectedRole = resolveRole(searchParams.get('role'));
   const selectedProfile = authProfiles.find((profile) => profile.role === selectedRole);
+  const selectedLabel = roleLabels[selectedRole] || selectedRole;
+  const selectedInitials = selectedProfile?.initials || selectedRole.split('_').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
-    if (!selectedProfile) {
+    if (!selectedRole) {
       navigate('/roles', { replace: true });
-      return;
     }
-    setEmail((current) => current || selectedProfile.email);
-  }, [navigate, selectedProfile]);
+  }, [navigate, selectedRole]);
 
   if (user) return <Navigate to={defaultRouteForRole(user.role)} replace />;
-  if (!selectedProfile) return null;
+  if (!selectedRole) return null;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -46,8 +46,8 @@ function Login() {
         </div>
 
         <div className="loginRoleBadge">
-          <strong>{selectedProfile.initials}</strong>
-          <span><small>Role selectionne</small>{selectedProfile.label}</span>
+          <strong>{selectedInitials}</strong>
+          <span><small>Role verifie dans la base</small>{selectedLabel}</span>
         </div>
 
         <label>

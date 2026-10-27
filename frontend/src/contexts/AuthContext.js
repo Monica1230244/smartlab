@@ -8,7 +8,7 @@ import {
   signOutSupabase,
   clearSupabaseSession
 } from '../services/supabaseAuth';
-import { authProfiles, roleLabels } from '../config/permissions';
+import { authProfiles, resolveRole, roleLabels } from '../config/permissions';
 
 const AuthContext = createContext();
 const TOKEN_KEY = 'smartlab_token';
@@ -50,15 +50,15 @@ export const AuthProvider = ({ children }) => {
     try {
       const profiles = await listRecords('profiles');
       const remoteProfile = profiles.find((profile) => (
-        profile.id === profileId(baseUser?.role) ||
+        (baseUser?.auth_provider !== 'supabase' && profile.id === profileId(baseUser?.role)) ||
         profile.supabase_user_id === baseUser?.supabase_user_id ||
         profile.email?.toLowerCase() === baseUser?.email?.toLowerCase()
       ));
-      if (remoteProfile) return { ...baseUser, ...remoteProfile, role: remoteProfile.role || baseUser.role || '' };
+      if (remoteProfile) return { ...baseUser, ...remoteProfile, role: resolveRole(remoteProfile.role) || resolveRole(baseUser.role) || '' };
     } catch (error) {
       console.warn('Profil Supabase indisponible:', error);
     }
-    return { ...baseUser, role: baseUser?.role || roleForEmail(baseUser?.email) };
+    return { ...baseUser, role: resolveRole(baseUser?.role) || (baseUser?.auth_provider === 'local_profile' ? roleForEmail(baseUser?.email) : '') };
   };
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
             ...savedUser,
             email: session.user?.email || savedUser.email || '',
             name: session.label || savedUser.name || session.user?.email || '',
-            role: session.role || roleForEmail(session.user?.email) || '',
+            role: resolveRole(session.role),
             supabase_user_id: session.user?.id || savedUser.supabase_user_id || '',
             auth_provider: 'supabase'
           };
@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }) => {
         const baseUser = {
           email: session.user?.email || email,
           name: session.label || session.user?.email || '',
-          role: session.role || roleForEmail(session.user?.email),
+          role: resolveRole(session.role),
           supabase_user_id: session.user?.id || '',
           auth_provider: 'supabase'
         };

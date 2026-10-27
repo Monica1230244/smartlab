@@ -49,7 +49,18 @@ const RESOURCE_TABLES = {
 const today = new Date().toISOString().slice(0, 10);
 
 const seedData = {
-  profiles: [],
+  profiles: [
+    { id: 'profile-responsable_appel', role: 'responsable_appel', label: 'Responsable des offres', email: 'offres@testlab.com', initials: 'RO', active: true },
+    { id: 'profile-responsable_technique', role: 'responsable_technique', label: 'Responsable technique', email: 'rt@testlab.com', initials: 'RT', active: true },
+    { id: 'profile-responsable_qualite', role: 'responsable_qualite', label: 'Responsable qualite', email: 'qualite@testlab.com', initials: 'RQ', active: true },
+    { id: 'profile-responsable_labo', role: 'responsable_labo', label: 'Responsable laboratoire', email: 'labo@testlab.com', initials: 'RL', active: true },
+    { id: 'profile-responsable_metrologie', role: 'responsable_metrologie', label: 'Responsable metrologie', email: 'metrologie@testlab.com', initials: 'RM', active: true },
+    { id: 'profile-responsable_achats', role: 'responsable_achats', label: 'Responsable achats', email: 'achats@testlab.com', initials: 'RA', active: true },
+    { id: 'profile-responsable_finance', role: 'responsable_finance', label: 'Responsable finance', email: 'finance@testlab.com', initials: 'RF', active: true },
+    { id: 'profile-receptionniste', role: 'receptionniste', label: 'Reception', email: 'reception@testlab.com', initials: 'RC', active: true },
+    { id: 'profile-auditeur', role: 'auditeur', label: 'Auditeur interne', email: 'audit@testlab.com', initials: 'AU', active: true },
+    { id: 'profile-dg', role: 'dg', label: 'Direction generale', email: 'dg@testlab.com', initials: 'DG', active: true }
+  ],
   clients: [
     { id: 'cli-1', code: 'CLI-001', raison_sociale: 'Sogea BTP Benin', contact_nom: 'M. Fonton', telephone: '+229 97 12 34 56', secteur: 'BTP', email: 'contact@sogea.bj' },
     { id: 'cli-2', code: 'CLI-002', raison_sociale: 'AGETUR Benin', contact_nom: 'Mme Ahoton', telephone: '+229 95 67 89 01', secteur: 'Infrastructure', email: 'secretariat@agetur.bj' },
