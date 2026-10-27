@@ -3,7 +3,8 @@ const STORAGE_KEY = 'smartlab_mobile_records_v2';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xyfhlgdyzxxvhryjvqcm.supabase.co';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EmGwHAduz7UAe5h_YvizNw_iz7AADmR';
 const SUPABASE_TABLE = import.meta.env.VITE_SUPABASE_TABLE || 'smartlab_records';
-const USE_TYPED_TABLES = import.meta.env.VITE_SUPABASE_TYPED_TABLES === 'true';
+const USE_TYPED_TABLES = import.meta.env.VITE_SUPABASE_TYPED_TABLES !== 'false';
+const STORAGE_MODE_KEY = 'smartlab_supabase_storage_mode';
 const RESOURCE_TABLES = {
   clients: 'testlab_clients',
   essais: 'testlab_objets_essais',
@@ -192,20 +193,43 @@ function headers(extra = {}) {
   };
 }
 
-function tableForResource(resource) {
-  return USE_TYPED_TABLES ? (RESOURCE_TABLES[resource] || resource) : SUPABASE_TABLE;
+function getPreferredStorageMode() {
+  try {
+    const saved = localStorage.getItem(STORAGE_MODE_KEY);
+    if (saved === 'typed' || saved === 'legacy') return saved;
+  } catch (error) {
+    // Storage can be unavailable in private browsing; use the configured default.
+  }
+  return USE_TYPED_TABLES ? 'typed' : 'legacy';
 }
 
-function resourceUrl(resource) {
-  const table = tableForResource(resource);
-  if (USE_TYPED_TABLES) {
+function setPreferredStorageMode(mode) {
+  try {
+    localStorage.setItem(STORAGE_MODE_KEY, mode);
+  } catch (error) {
+    // The application can still work for the current session without persistence.
+  }
+}
+
+function storageModes() {
+  const preferred = getPreferredStorageMode();
+  return preferred === 'typed' ? ['typed', 'legacy'] : ['legacy', 'typed'];
+}
+
+function tableForResource(resource, mode = getPreferredStorageMode()) {
+  return mode === 'typed' ? (RESOURCE_TABLES[resource] || resource) : SUPABASE_TABLE;
+}
+
+function resourceUrl(resource, mode = getPreferredStorageMode()) {
+  const table = tableForResource(resource, mode);
+  if (mode === 'typed') {
     return `${SUPABASE_URL}/rest/v1/${table}?select=id,payload,updated_at&order=id.asc`;
   }
   return `${SUPABASE_URL}/rest/v1/${table}?resource=eq.${encodeURIComponent(resource)}&select=id,resource,payload,updated_at&order=id.asc`;
 }
 
-function rowUrl(resource, id) {
-  const table = tableForResource(resource);
+function rowUrl(resource, id, mode = getPreferredStorageMode()) {
+  const table = tableForResource(resource, mode);
   return `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
 }
 
@@ -242,7 +266,7 @@ function describeSupabaseError(error, action = 'Synchronisation') {
     return action + ': cle Supabase ou politiques RLS a verifier.';
   }
   if (/404|relation|schema|table|does not exist|smartlab_records/i.test(raw)) {
-    return action + ': table Supabase manquante ou schema non deploye.';
+    return action + ': schema TESTLAB non deploye. Executez le script Supabase des tables metier.';
   }
   return action + ': ' + raw.slice(0, 180);
 }
@@ -1019,11 +1043,11 @@ function runWorkflowAutomations(data, resource, action, record) {
   }
 }
 
-async function upsertRemote(resource, record) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableForResource(resource)}`, {
+async function upsertRemote(resource, record, mode = getPreferredStorageMode()) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableForResource(resource, mode)}`, {
     method: 'POST',
     headers: headers({ Prefer: 'resolution=merge-duplicates,return=representation' }),
-    body: JSON.stringify(USE_TYPED_TABLES ? {
+    body: JSON.stringify(mode === 'typed' ? {
       id: record.id,
       payload: record,
       updated_at: new Date().toISOString()
@@ -1038,30 +1062,35 @@ async function upsertRemote(resource, record) {
   return response.json();
 }
 
-async function seedRemoteResource(resource) {
+async function seedRemoteResource(resource, mode) {
   const records = seedData[resource] || [];
   if (records.length === 0) return;
-  await Promise.all(records.map((record) => upsertRemote(resource, record)));
+  await Promise.all(records.map((record) => upsertRemote(resource, record, mode)));
 }
 
 export async function listRecords(resource) {
-  try {
-    const response = await fetch(resourceUrl(resource), { headers: headers() });
-    if (!response.ok) throw new Error(await response.text());
-    const rows = await response.json();
-    if (rows.length === 0 && (seedData[resource] || []).length > 0) {
-      await seedRemoteResource(resource);
-      return listRecords(resource);
+  let lastError = null;
+  for (const mode of storageModes()) {
+    try {
+      const response = await fetch(resourceUrl(resource, mode), { headers: headers() });
+      if (!response.ok) throw new Error(await response.text());
+      const rows = await response.json();
+      setPreferredStorageMode(mode);
+      if (rows.length === 0 && (seedData[resource] || []).length > 0) {
+        await seedRemoteResource(resource, mode);
+        return listRecords(resource);
+      }
+      const records = rows.map((row) => row.payload);
+      saveLocalResource(resource, records);
+      emitStatus('online', 'Base Supabase connectee');
+      return records;
+    } catch (error) {
+      lastError = error;
     }
-    const records = rows.map((row) => row.payload);
-    saveLocalResource(resource, records);
-    emitStatus('online', 'Base Supabase connectee');
-    return records;
-  } catch (error) {
-    console.warn('Supabase indisponible, fallback local:', error);
-    emitStatus('offline', describeSupabaseError(error, 'Chargement Supabase'));
-    return loadData()[resource] || [];
   }
+  console.warn('Supabase indisponible, fallback local:', lastError);
+  emitStatus('offline', describeSupabaseError(lastError, 'Chargement Supabase'));
+  return loadData()[resource] || [];
 }
 
 export async function upsertRecord(resource, record) {
@@ -1082,17 +1111,21 @@ export async function upsertRecord(resource, record) {
   syncWorkflowNotifications(data);
   saveData(data);
 
-  try {
-    await upsertRemote(resource, nextRecord);
-    emitStatus('online', 'Modification synchronisee avec Supabase');
-  } catch (error) {
-    console.warn('Ecriture Supabase echouee:', error);
-    const message = describeSupabaseError(error, 'Enregistrement Supabase');
-    emitStatus('offline', `Enregistre localement - ${message}`);
-    return { ...nextRecord, __syncError: message };
+  let lastError = null;
+  for (const mode of storageModes()) {
+    try {
+      await upsertRemote(resource, nextRecord, mode);
+      setPreferredStorageMode(mode);
+      emitStatus('online', 'Modification synchronisee avec Supabase');
+      return nextRecord;
+    } catch (error) {
+      lastError = error;
+    }
   }
-
-  return nextRecord;
+  console.warn('Ecriture Supabase echouee:', lastError);
+  const message = describeSupabaseError(lastError, 'Enregistrement Supabase');
+  emitStatus('offline', `Enregistre localement - ${message}`);
+  return { ...nextRecord, __syncError: message };
 }
 
 export async function deleteRecord(resource, id) {
@@ -1102,14 +1135,20 @@ export async function deleteRecord(resource, id) {
   appendAuditLog(data, resource, 'suppression', previous || { id }, previous);
   saveData(data);
 
-  try {
-    const response = await fetch(rowUrl(resource, id), { method: 'DELETE', headers: headers() });
-    if (!response.ok) throw new Error(await response.text());
-    emitStatus('online', 'Suppression synchronisee avec Supabase');
-  } catch (error) {
-    console.warn('Suppression Supabase echouee:', error);
-    emitStatus('offline', describeSupabaseError(error, 'Suppression Supabase'));
+  let lastError = null;
+  for (const mode of storageModes()) {
+    try {
+      const response = await fetch(rowUrl(resource, id, mode), { method: 'DELETE', headers: headers() });
+      if (!response.ok) throw new Error(await response.text());
+      setPreferredStorageMode(mode);
+      emitStatus('online', 'Suppression synchronisee avec Supabase');
+      return;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  console.warn('Suppression Supabase echouee:', lastError);
+  emitStatus('offline', describeSupabaseError(lastError, 'Suppression Supabase'));
 }
 
 export async function getStats() {
