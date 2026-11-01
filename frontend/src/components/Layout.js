@@ -301,7 +301,7 @@ function Layout({ publicMode = false }) {
   };
 
   return (
-    <div className="shell">
+    <div className={`shell ${location.pathname === '/' ? 'dashboardShell' : ''}`}>
       {!publicMode && <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
           <div className="brandMark">TL</div>

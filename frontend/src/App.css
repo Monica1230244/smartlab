@@ -21,6 +21,84 @@
   --modal-overlay: rgba(0, 0, 0, 0.64);
 }
 
+/* Dashboard header: keep one clear page heading instead of duplicating the shell header. */
+.dashboardShell .topbar {
+  justify-content: flex-end;
+}
+
+.dashboardShell .topbarTitle,
+.dashboardShell .topbarSearch {
+  display: none;
+}
+
+.dashboardShell .menuButton {
+  margin-right: auto;
+}
+
+.dashboardShell .content {
+  padding-top: 24px;
+}
+
+.dashboardShell .dashMockHeader {
+  grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.5fr) auto;
+  gap: 22px;
+  padding: 2px 2px 6px;
+}
+
+.dashboardShell .dashMockHeader h2 {
+  font-size: clamp(23px, 2.2vw, 32px);
+  letter-spacing: -0.02em;
+}
+
+.dashboardShell .dashMockSearch {
+  min-height: 42px;
+  gap: 10px;
+  padding: 0 14px;
+  background: rgba(18, 38, 64, 0.78);
+  border-color: rgba(107, 178, 235, 0.22);
+}
+
+.dashboardShell .dashMockSearch > span {
+  color: var(--accent);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.dashboardShell .dashMockSearch input {
+  min-height: 40px;
+  padding: 0;
+}
+
+.dashboardShell .dashKpiCard,
+.dashboardShell .dashPanel {
+  border-color: rgba(107, 178, 235, 0.18);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="light"] .dashboardShell .dashMockSearch {
+  background: #fff;
+  border-color: rgba(53, 111, 166, 0.2);
+}
+
+@media (max-width: 760px) {
+  .dashboardShell .topbar {
+    justify-content: flex-start;
+  }
+
+  .dashboardShell .dashMockHeader {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dashboardShell .dashMockSearch {
+    display: flex;
+  }
+
+  .dashboardShell .dashRoleBadge {
+    justify-self: start;
+  }
+}
+
 .essaisWorkspace {
   display: grid;
   gap: 16px;

@@ -543,7 +543,10 @@ function Dashboard() {
           <h2>{view.title}</h2>
           <span className="dashHeaderSubtitle">{view.subtitle}</span>
         </div>
-        <div className="dashMockSearch">Rechercher un essai, client, echantillon...</div>
+        <label className="dashMockSearch">
+          <span aria-hidden="true">⌕</span>
+          <input aria-label="Rechercher dans le tableau de bord" placeholder="Rechercher un essai, client, echantillon..." />
+        </label>
         <span className="dashRoleBadge">{roleNames[role] || roleNames.default}</span>
       </div>
 
