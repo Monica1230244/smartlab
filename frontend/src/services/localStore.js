@@ -262,8 +262,11 @@ function describeSupabaseError(error, action = 'Synchronisation') {
   if (/Failed to fetch|NetworkError|Network request failed|nom distant|resolve|fetch resource/i.test(raw)) {
     return action + ': projet Supabase injoignable. Verifiez l URL du projet Supabase, la connexion internet et les restrictions reseau.';
   }
-  if (/401|403|JWT|permission|not authorized|Invalid API key/i.test(raw)) {
-    return action + ': cle Supabase ou politiques RLS a verifier.';
+  if (/403|permission|not authorized|row-level security|RLS/i.test(raw)) {
+    return action + ': acces refuse par les politiques RLS. Executez la migration Supabase Auth TESTLAB.';
+  }
+  if (/401|JWT|Invalid API key/i.test(raw)) {
+    return action + ': cle Supabase invalide ou session expiree.';
   }
   if (/404|relation|schema|table|does not exist|smartlab_records/i.test(raw)) {
     return action + ': schema TESTLAB non deploye. Executez le script Supabase des tables metier.';
